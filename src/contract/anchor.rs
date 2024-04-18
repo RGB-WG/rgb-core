@@ -22,93 +22,50 @@
 
 use std::cmp::Ordering;
 
-use bp::dbc::opret::OpretProof;
+use bp::dbc::opret::{OpretError, OpretProof};
 use bp::dbc::tapret::TapretProof;
-use bp::dbc::Anchor;
-use bp::Txid;
-use commit_verify::mpc;
-use strict_encoding::StrictDumb;
+use bp::dbc::Method;
+use bp::{dbc, Tx};
+use commit_verify::mpc::Commitment;
+use commit_verify::{mpc, ConvolveVerifyError, EmbedVerifyError};
+use strict_encoding::{StrictDeserialize, StrictDumb, StrictSerialize};
 
-use crate::{BundleId, ContractId, TransitionBundle, WitnessId, WitnessOrd, XChain, LIB_NAME_RGB};
+use crate::{WitnessOrd, XWitnessId, LIB_NAME_RGB};
 
-#[derive(Clone, Eq, PartialEq, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct AnchoredBundle {
-    pub anchor: XAnchor,
-    pub bundle: TransitionBundle,
+#[display(doc_comments)]
+pub enum DbcError {
+    /// transaction doesn't contain OP_RETURN output.
+    NoOpretOutput,
+
+    /// first OP_RETURN output inside the transaction already contains some
+    /// data.
+    InvalidOpretScript,
+
+    /// commitment doesn't match the message.
+    CommitmentMismatch,
+
+    /// the proof is invalid and the commitment can't be verified since the
+    /// original container can't be restored from it.
+    UnrestorableProof,
+
+    /// the proof does not match to the proof generated for the same message
+    /// during the verification.
+    ProofMismatch,
+
+    /// the message is invalid since a valid commitment to it can't be created.
+    ImpossibleMessage,
+
+    /// the proof is invalid and the commitment can't be verified.
+    InvalidProof,
 }
 
-impl AnchoredBundle {
-    #[inline]
-    pub fn bundle_id(&self) -> BundleId { self.bundle.bundle_id() }
-}
-
-impl Ord for AnchoredBundle {
-    fn cmp(&self, other: &Self) -> Ordering { self.bundle_id().cmp(&other.bundle_id()) }
-}
-
-impl PartialOrd for AnchoredBundle {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-pub type XAnchor<P = mpc::MerkleProof> = XChain<AnchorSet<P>>;
-
-impl<P: mpc::Proof + StrictDumb> XAnchor<P> {
-    #[inline]
-    pub fn witness_id(&self) -> Option<WitnessId> { self.maybe_map_ref(|set| set.txid()) }
-
-    #[inline]
-    pub fn witness_id_unchecked(&self) -> WitnessId { self.map_ref(|set| set.txid_unchecked()) }
-}
-
-impl XAnchor<mpc::MerkleBlock> {
-    pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
-        match self {
-            XAnchor::Bitcoin(anchor) | XAnchor::Liquid(anchor) => anchor.known_bundle_ids(),
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn to_merkle_proof(
-        &self,
-        contract_id: ContractId,
-    ) -> Result<XAnchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
-        self.clone().into_merkle_proof(contract_id)
-    }
-
-    pub fn into_merkle_proof(
-        self,
-        contract_id: ContractId,
-    ) -> Result<XAnchor<mpc::MerkleProof>, mpc::LeafNotKnown> {
-        self.try_map(|a| a.into_merkle_proof(contract_id))
-    }
-}
-
-impl XAnchor<mpc::MerkleProof> {
-    pub fn to_merkle_block(
-        &self,
-        contract_id: ContractId,
-        bundle_id: BundleId,
-    ) -> Result<XAnchor<mpc::MerkleBlock>, mpc::InvalidProof> {
-        self.clone().into_merkle_block(contract_id, bundle_id)
-    }
-
-    pub fn into_merkle_block(
-        self,
-        contract_id: ContractId,
-        bundle_id: BundleId,
-    ) -> Result<XAnchor<mpc::MerkleBlock>, mpc::InvalidProof> {
-        self.try_map(|a| a.into_merkle_block(contract_id, bundle_id))
-    }
-}
-
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Tapret(strict_dumb!()))]
 #[cfg_attr(
@@ -116,129 +73,47 @@ impl XAnchor<mpc::MerkleProof> {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
-pub enum AnchorSet<P: mpc::Proof + StrictDumb = mpc::MerkleProof> {
+pub enum DbcProof {
+    #[from]
     #[strict_type(tag = 0x01)]
-    Tapret(Anchor<P, TapretProof>),
+    Tapret(TapretProof),
+
+    #[from]
     #[strict_type(tag = 0x02)]
-    Opret(Anchor<P, OpretProof>),
-    #[strict_type(tag = 0x03)]
-    Dual {
-        tapret: Anchor<P, TapretProof>,
-        opret: Anchor<P, OpretProof>,
-    },
+    Opret(OpretProof),
 }
 
-impl<P: mpc::Proof + StrictDumb> AnchorSet<P> {
-    pub fn txid(&self) -> Option<Txid> {
+impl StrictSerialize for DbcProof {}
+impl StrictDeserialize for DbcProof {}
+
+impl dbc::Proof for DbcProof {
+    type Error = DbcError;
+    const METHOD: Method = Method::OpretFirst;
+
+    fn verify(&self, msg: &Commitment, tx: &Tx) -> Result<(), Self::Error> {
         match self {
-            AnchorSet::Tapret(a) => Some(a.txid),
-            AnchorSet::Opret(a) => Some(a.txid),
-            AnchorSet::Dual { tapret, opret } if tapret.txid == opret.txid => Some(tapret.txid),
-            _ => None,
+            DbcProof::Tapret(tapret) => tapret.verify(msg, tx).map_err(|err| match err {
+                ConvolveVerifyError::CommitmentMismatch => DbcError::CommitmentMismatch,
+                ConvolveVerifyError::ImpossibleMessage => DbcError::ImpossibleMessage,
+                ConvolveVerifyError::InvalidProof => DbcError::InvalidProof,
+            }),
+            DbcProof::Opret(opret) => opret.verify(msg, tx).map_err(|err| match err {
+                EmbedVerifyError::CommitmentMismatch => DbcError::CommitmentMismatch,
+                EmbedVerifyError::InvalidMessage(OpretError::NoOpretOutput) => {
+                    DbcError::NoOpretOutput
+                }
+                EmbedVerifyError::InvalidMessage(OpretError::InvalidOpretScript) => {
+                    DbcError::InvalidOpretScript
+                }
+                EmbedVerifyError::InvalidProof => DbcError::UnrestorableProof,
+                EmbedVerifyError::ProofMismatch => DbcError::ProofMismatch,
+            }),
         }
-    }
-
-    pub fn txid_unchecked(&self) -> Txid {
-        match self {
-            AnchorSet::Tapret(a) => a.txid,
-            AnchorSet::Opret(a) => a.txid,
-            AnchorSet::Dual { tapret, opret: _ } => tapret.txid,
-        }
-    }
-
-    pub fn from_split(
-        tapret: Option<Anchor<P, TapretProof>>,
-        opret: Option<Anchor<P, OpretProof>>,
-    ) -> Option<Self> {
-        Some(match (tapret, opret) {
-            (Some(tapret), Some(opret)) => Self::Dual { tapret, opret },
-            (Some(tapret), None) => Self::Tapret(tapret),
-            (None, Some(opret)) => Self::Opret(opret),
-            (None, None) => return None,
-        })
-    }
-
-    #[allow(clippy::type_complexity)]
-    pub fn as_split(&self) -> (Option<&Anchor<P, TapretProof>>, Option<&Anchor<P, OpretProof>>) {
-        match self {
-            AnchorSet::Tapret(tapret) => (Some(tapret), None),
-            AnchorSet::Opret(opret) => (None, Some(opret)),
-            AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
-        }
-    }
-
-    #[allow(clippy::type_complexity)]
-    pub fn into_split(self) -> (Option<Anchor<P, TapretProof>>, Option<Anchor<P, OpretProof>>) {
-        match self {
-            AnchorSet::Tapret(tapret) => (Some(tapret), None),
-            AnchorSet::Opret(opret) => (None, Some(opret)),
-            AnchorSet::Dual { tapret, opret } => (Some(tapret), Some(opret)),
-        }
-    }
-
-    pub fn mpc_proofs(&self) -> impl Iterator<Item = &P> {
-        let (t, o) = self.as_split();
-        t.map(|a| &a.mpc_proof)
-            .into_iter()
-            .chain(o.map(|a| &a.mpc_proof))
     }
 }
 
-impl AnchorSet<mpc::MerkleProof> {
-    pub fn to_merkle_block(
-        &self,
-        contract_id: ContractId,
-        bundle_id: BundleId,
-    ) -> Result<AnchorSet<mpc::MerkleBlock>, mpc::InvalidProof> {
-        self.clone().into_merkle_block(contract_id, bundle_id)
-    }
-
-    pub fn into_merkle_block(
-        self,
-        contract_id: ContractId,
-        bundle_id: BundleId,
-    ) -> Result<AnchorSet<mpc::MerkleBlock>, mpc::InvalidProof> {
-        let (tapret, opret) = self.into_split();
-        let tapret = tapret
-            .map(|t| t.into_merkle_block(contract_id, bundle_id))
-            .transpose()?;
-        let opret = opret
-            .map(|o| o.into_merkle_block(contract_id, bundle_id))
-            .transpose()?;
-        Ok(AnchorSet::from_split(tapret, opret).expect("one must be non-None"))
-    }
-}
-
-impl AnchorSet<mpc::MerkleBlock> {
-    pub fn known_bundle_ids(&self) -> impl Iterator<Item = (BundleId, ContractId)> + '_ {
-        self.mpc_proofs().flat_map(|p| {
-            p.to_known_message_map()
-                .into_iter()
-                .map(|(p, m)| (m.into(), p.into()))
-        })
-    }
-
-    pub fn to_merkle_proof(
-        &self,
-        contract_id: ContractId,
-    ) -> Result<AnchorSet<mpc::MerkleProof>, mpc::LeafNotKnown> {
-        self.clone().into_merkle_proof(contract_id)
-    }
-
-    pub fn into_merkle_proof(
-        self,
-        contract_id: ContractId,
-    ) -> Result<AnchorSet<mpc::MerkleProof>, mpc::LeafNotKnown> {
-        let (tapret, opret) = self.into_split();
-        let tapret = tapret
-            .map(|t| t.into_merkle_proof(contract_id))
-            .transpose()?;
-        let opret = opret
-            .map(|o| o.into_merkle_proof(contract_id))
-            .transpose()?;
-        Ok(AnchorSet::from_split(tapret, opret).expect("one must be non-None"))
-    }
-}
+/// Anchor which DBC proof is either Tapret or Opret.
+pub type EAnchor<P = mpc::MerkleProof> = dbc::Anchor<P, DbcProof>;
 
 /// Txid and height information ordered according to the RGB consensus rules.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
@@ -252,7 +127,7 @@ impl AnchorSet<mpc::MerkleBlock> {
 #[display("{witness_id}/{witness_ord}")]
 pub struct WitnessAnchor {
     pub witness_ord: WitnessOrd,
-    pub witness_id: WitnessId,
+    pub witness_id: XWitnessId,
 }
 
 impl PartialOrd for WitnessAnchor {
@@ -273,7 +148,7 @@ impl Ord for WitnessAnchor {
 }
 
 impl WitnessAnchor {
-    pub fn from_mempool(witness_id: WitnessId) -> Self {
+    pub fn from_mempool(witness_id: XWitnessId) -> Self {
         WitnessAnchor {
             witness_ord: WitnessOrd::OffChain,
             witness_id,

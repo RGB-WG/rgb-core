@@ -28,7 +28,7 @@ use bp::stl::bp_core_stl;
 use commit_verify::stl::commit_verify_stl;
 use commit_verify::CommitmentLayout;
 use rgb::stl::bp_tx_stl;
-use rgb::{SubSchema, Transition, TransitionBundle};
+use rgb::{Schema, Transition, TransitionBundle};
 use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::parse_args;
 use strict_types::SystemBuilder;
@@ -93,7 +93,7 @@ Schema vesper lexicon=types+commitments
 "
     )
     .unwrap();
-    let layout = SubSchema::commitment_layout();
+    let layout = Schema::commitment_layout();
     writeln!(file, "{layout}").unwrap();
     let tt = sys.type_tree("RGB.Schema").unwrap();
     writeln!(file, "{tt}").unwrap();
@@ -123,7 +123,7 @@ Transition vesper lexicon=types+commitments
     writeln!(
         file,
         "{{-
-  Description: RGB Anchored Bundle
+  Description: RGB Anchored Bundles
   Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
   Copyright (C) 2024 LNP/BP Standards Association. All rights reserved.
   License: Apache-2.0
@@ -135,8 +135,8 @@ Bundles vesper lexicon=types+commitments
     .unwrap();
     let layout = TransitionBundle::commitment_layout();
     writeln!(file, "{layout}").unwrap();
-    let tt = sys.type_tree("RGB.InputMap").unwrap();
+    let tt = sys.type_tree("RGB.DbcProof").unwrap();
     writeln!(file, "{tt}").unwrap();
-    let tt = sys.type_tree("RGB.AnchoredBundle").unwrap();
+    let tt = sys.type_tree("RGB.TransitionBundle").unwrap();
     writeln!(file, "{tt}").unwrap();
 }

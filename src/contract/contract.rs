@@ -36,8 +36,8 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use crate::{
     Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, DataState, ExposedSeal,
     ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach,
-    RevealedData, RevealedValue, SchemaId, SubSchema, Transition, TypedAssigns, VoidState,
-    WitnessAnchor, WitnessId, XChain, XOutputSeal, LIB_NAME_RGB,
+    RevealedData, RevealedValue, Schema, SchemaId, Transition, TypedAssigns, VoidState,
+    WitnessAnchor, XChain, XOutputSeal, XWitnessId, LIB_NAME_RGB,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -117,11 +117,11 @@ pub enum AssignmentWitness {
     #[from]
     #[display(inner)]
     #[strict_type(tag = 1)]
-    Present(WitnessId),
+    Present(XWitnessId),
 }
 
-impl From<Option<WitnessId>> for AssignmentWitness {
-    fn from(value: Option<WitnessId>) -> Self {
+impl From<Option<XWitnessId>> for AssignmentWitness {
+    fn from(value: Option<XWitnessId>) -> Self {
         match value {
             None => AssignmentWitness::Absent,
             Some(id) => AssignmentWitness::Present(id),
@@ -184,7 +184,7 @@ impl<State: KnownState> OutputAssignment<State> {
     /// witness-based and the anchor chain doesn't match the seal chain.
     pub fn with_witness<Seal: ExposedSeal>(
         seal: XChain<Seal>,
-        witness_id: WitnessId,
+        witness_id: XWitnessId,
         state: State,
         opid: OpId,
         ty: AssignmentType,
@@ -299,11 +299,9 @@ pub struct ContractHistory {
     #[getter(as_copy)]
     schema_id: SchemaId,
     #[getter(as_copy)]
-    root_schema_id: Option<SchemaId>,
-    #[getter(as_copy)]
     contract_id: ContractId,
     #[getter(skip)]
-    global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalOrd, RevealedData>>,
+    global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalOrd, DataState>>,
     rights: LargeOrdSet<OutputAssignment<VoidState>>,
     fungibles: LargeOrdSet<OutputAssignment<RevealedValue>>,
     data: LargeOrdSet<OutputAssignment<RevealedData>>,
@@ -315,15 +313,9 @@ impl ContractHistory {
     ///
     /// If genesis violates RGB consensus rules and wasn't checked against the
     /// schema before adding to the history.
-    pub fn with(
-        schema_id: SchemaId,
-        root_schema_id: Option<SchemaId>,
-        contract_id: ContractId,
-        genesis: &Genesis,
-    ) -> Self {
+    pub fn with(schema_id: SchemaId, contract_id: ContractId, genesis: &Genesis) -> Self {
         let mut state = ContractHistory {
             schema_id,
-            root_schema_id,
             contract_id,
             global: empty!(),
             rights: empty!(),
@@ -429,7 +421,7 @@ impl ContractHistory {
 
     fn add_assignments<Seal: ExposedSeal>(
         &mut self,
-        witness_id: Option<WitnessId>,
+        witness_id: Option<XWitnessId>,
         opid: OpId,
         assignments: &Assignments<Seal>,
     ) {
@@ -438,7 +430,7 @@ impl ContractHistory {
             assignments: &[Assign<State, Seal>],
             opid: OpId,
             ty: AssignmentType,
-            witness_id: Option<WitnessId>,
+            witness_id: Option<XWitnessId>,
         ) {
             for (no, seal, state) in assignments
                 .iter()
@@ -487,7 +479,7 @@ impl ContractHistory {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct ContractState {
-    pub schema: SubSchema,
+    pub schema: Schema,
     pub history: ContractHistory,
 }
 
@@ -504,7 +496,7 @@ impl ContractState {
     /// # Safety
     ///
     /// If the specified state type is not part of the schema.
-    pub unsafe fn global_unchecked(&self, state_type: GlobalStateType) -> SmallVec<&RevealedData> {
+    pub unsafe fn global_unchecked(&self, state_type: GlobalStateType) -> SmallVec<&DataState> {
         let schema = self
             .schema
             .global_types

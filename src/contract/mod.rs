@@ -20,6 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod meta;
 mod global;
 mod data;
 mod fungible;
@@ -35,7 +36,7 @@ mod contract;
 mod xchain;
 mod commit;
 
-pub use anchor::{AnchorSet, AnchoredBundle, Layer1, WitnessAnchor, XAnchor};
+pub use anchor::{DbcError, DbcProof, EAnchor, Layer1, WitnessAnchor};
 pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
     TypedAssigns,
@@ -56,13 +57,14 @@ pub use fungible::{
     InvalidFieldElement, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError, RevealedValue,
 };
 pub use global::{GlobalState, GlobalValues};
+pub use meta::{MetaValue, Metadata, MetadataError};
 pub use operations::{
-    Extension, Genesis, Input, Inputs, Issuer, Metadata, OpRef, Operation, Redeemed, Transition,
+    AssetTags, Extension, Genesis, Identity, Input, Inputs, OpRef, Operation, Redeemed, Transition,
     Valencies,
 };
 pub use seal::{
-    ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessId, WitnessOrd,
-    WitnessPos, XGenesisSeal, XGraphSeal, XOutputSeal, XPubWitness, XWitness,
+    ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessOrd, WitnessPos,
+    XGenesisSeal, XGraphSeal, XOutputSeal, XWitnessId, XWitnessTx,
 };
 pub use state::{ConcealedState, ConfidentialState, ExposedState, RevealedState, StateType};
 pub use xchain::{

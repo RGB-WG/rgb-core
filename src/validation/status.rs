@@ -30,8 +30,8 @@ use strict_types::SemId;
 use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
-    BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, SecretSeal, StateType,
-    Vin, WitnessId, XChain, XGraphSeal,
+    AssignmentType, BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId,
+    SecretSeal, StateType, Vin, XChain, XGraphSeal, XOutputSeal, XWitnessId,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -57,7 +57,7 @@ pub enum Validity {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct Status {
-    pub absent_pub_witnesses: Vec<WitnessId>,
+    pub absent_pub_witnesses: Vec<XWitnessId>,
     pub unmined_terminals: Vec<Txid>,
     pub failures: Vec<Failure>,
     pub warnings: Vec<Warning>,
@@ -196,7 +196,7 @@ pub enum Failure {
     /// schema {expected} used by the contract. This means that the consignment
     /// is invalid.
     SchemaMismatch {
-        /// Expected schema id required by the contracts genesis.
+        /// Expected schema id required by the contract genesis.
         expected: SchemaId,
         /// Actual schema id provided by the consignment.
         actual: SchemaId,
@@ -210,12 +210,14 @@ pub enum Failure {
     /// schema owned state #{0} uses semantic data type absent in type library
     /// ({1}).
     SchemaOwnedSemIdUnknown(schema::AssignmentType, SemId),
-    /// schema metadata in {0} uses semantic data type absent in type library
+    /// schema metadata #{0} uses semantic data type absent in type library
     /// ({1}).
-    SchemaOpMetaSemIdUnknown(OpFullType, SemId),
+    SchemaMetaSemIdUnknown(schema::MetaType, SemId),
 
     /// schema for {0} has zero inputs.
     SchemaOpEmptyInputs(OpFullType),
+    /// schema for {0} references undeclared metadata type {1}.
+    SchemaOpMetaTypeUnknown(OpFullType, schema::MetaType),
     /// schema for {0} references undeclared global state type {1}.
     SchemaOpGlobalTypeUnknown(OpFullType, schema::GlobalStateType),
     /// schema for {0} references undeclared owned state type {1}.
@@ -223,49 +225,12 @@ pub enum Failure {
     /// schema for {0} references undeclared valency type {1}.
     SchemaOpValencyTypeUnknown(OpFullType, schema::ValencyType),
 
-    /// invalid schema - no match with root schema requirements for global state
-    /// type #{0}.
-    SubschemaGlobalStateMismatch(schema::GlobalStateType),
-    /// invalid schema - no match with root schema requirements for assignment
-    /// type #{0}.
-    SubschemaAssignmentTypeMismatch(schema::AssignmentType),
-    /// invalid schema - no match with root schema requirements for valency
-    /// type #{0}.
-    SubschemaValencyTypeMismatch(schema::ValencyType),
-    /// invalid schema - no match with root schema requirements for transition
-    /// type #{0}.
-    SubschemaTransitionTypeMismatch(schema::TransitionType),
-    /// invalid schema - no match with root schema requirements for extension
-    /// type #{0}.
-    SubschemaExtensionTypeMismatch(schema::ExtensionType),
-
-    /// invalid schema - no match with root schema requirements for metadata
-    /// type (required {expected}, found {actual}).
-    SubschemaOpMetaMismatch {
-        op_type: OpFullType,
-        expected: SemId,
-        actual: SemId,
-    },
-    /// invalid schema - no match with root schema requirements for global state
-    /// type #{1} used in {0}.
-    SubschemaOpGlobalStateMismatch(OpFullType, schema::GlobalStateType),
-    /// invalid schema - no match with root schema requirements for input
-    /// type #{1} used in {0}.
-    SubschemaOpInputMismatch(OpFullType, schema::AssignmentType),
-    /// invalid schema - no match with root schema requirements for redeem
-    /// type #{1} used in {0}.
-    SubschemaOpRedeemMismatch(OpFullType, schema::ValencyType),
-    /// invalid schema - no match with root schema requirements for assignment
-    /// type #{1} used in {0}.
-    SubschemaOpAssignmentsMismatch(OpFullType, schema::AssignmentType),
-    /// invalid schema - no match with root schema requirements for valency
-    /// type #{1} used in {0}.
-    SubschemaOpValencyMismatch(OpFullType, schema::ValencyType),
-
     /// operation {0} uses invalid state extension type {1}.
     SchemaUnknownExtensionType(OpId, schema::ExtensionType),
     /// operation {0} uses invalid state transition type {1}.
     SchemaUnknownTransitionType(OpId, schema::TransitionType),
+    /// operation {0} uses invalid metadata type {1}.
+    SchemaUnknownMetaType(OpId, schema::MetaType),
     /// operation {0} uses invalid global state type {1}.
     SchemaUnknownGlobalStateType(OpId, schema::GlobalStateType),
     /// operation {0} uses invalid assignment type {1}.
@@ -279,6 +244,8 @@ pub enum Failure {
     /// number of global state entries of type {1} in operation {0} exceeds
     /// schema-defined maximum for that global state type ({2} vs {3}).
     SchemaGlobalStateLimit(OpId, schema::GlobalStateType, u16, u16),
+    /// required metadata type {1} is not present in the operation {0}.
+    SchemaNoMetadata(OpId, schema::MetaType),
     /// invalid metadata in operation {0} not matching semantic type id {1}.
     SchemaInvalidMetadata(OpId, SemId),
     /// invalid global state value in operation {0}, state type #{1} which does
@@ -301,8 +268,12 @@ pub enum Failure {
     /// transition bundle {0} referenced in consignment terminals is absent from
     /// the consignment.
     TerminalBundleAbsent(BundleId),
-    /// transition bundle {0} is absent from the consignment.
+    /// transition bundle {0} is absent in the consignment.
     BundleAbsent(BundleId),
+    /// anchor for transitio bundle {0} is absent in the consignment.
+    AnchorAbsent(BundleId),
+    /// witness id for transition bundle {0} is absent in the consignment.
+    WitnessIdAbsent(BundleId),
     /// operation {0} is under a different contract {1}.
     ContractMismatch(OpId, ContractId),
 
@@ -312,10 +283,17 @@ pub enum Failure {
     BundleExtraTransition(BundleId, OpId),
     /// transition bundle {0} references non-existing input in witness {2} for
     /// the state transition {1}.
-    BundleInvalidInput(BundleId, OpId, WitnessId),
+    BundleInvalidInput(BundleId, OpId, XWitnessId),
     /// transition bundle {0} doesn't commit to the input {1} in the witness {2}
     /// which is an input of the state transition {3}.
-    BundleInvalidCommitment(BundleId, Vin, WitnessId, OpId),
+    BundleInvalidCommitment(BundleId, Vin, XWitnessId, OpId),
+
+    // Errors checking asset tags
+    /// asset type provided in genesis references unknown fungible state of type
+    /// {0}.
+    AssetTagNoState(AssignmentType),
+    /// fungible state {0} has no asset tag defined.
+    FungibleStateNoTag(AssignmentType),
 
     // Errors checking seal closing
     /// transition {opid} references state type {state_type} absent in the
@@ -327,27 +305,30 @@ pub enum Failure {
     },
     /// transition {0} references non-existing previous output {1}.
     NoPrevOut(OpId, Opout),
-    /// anchors used inside bundle {0} reference different public witness ids.
-    AnchorSetInvalid(BundleId),
     /// seal defined in the history as a part of operation output {0} is
     /// confidential and can't be validated.
     ConfidentialSeal(Opout),
     /// witness {0} is not known to the transaction resolver.
-    SealNoWitnessTx(WitnessId),
+    SealNoWitnessTx(XWitnessId),
     /// witness layer 1 {anchor} doesn't match seal definition {seal}.
     SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
-    /// seal {1:?} is defined on {0} which is not in the set of layers allowed
+    /// seal {1} is defined on {0} which is not in the set of layers allowed
     /// by the contract genesis.
     SealLayerMismatch(Layer1, XGraphSeal),
+    /// seal {1} has a different closing method from the bundle {0} requirement.
+    SealInvalidMethod(BundleId, XOutputSeal),
     /// transition bundle {0} doesn't close seal with the witness {1}. Details:
     /// {2}
-    SealsInvalid(BundleId, WitnessId, String),
+    SealsInvalid(BundleId, XWitnessId, String),
     /// single-use seals for the operation {0} were not validated, which
     /// probably indicates unanchored state transition.
     SealsUnvalidated(OpId),
+    /// anchor provides different type of DBC proof than required by the bundle
+    /// {0}.
+    AnchorMethodMismatch(BundleId),
     /// transition bundle {0} is not properly anchored to the witness {1}.
     /// Details: {2}
-    MpcInvalid(BundleId, WitnessId, InvalidProof),
+    MpcInvalid(BundleId, XWitnessId, InvalidProof),
 
     // State extensions errors
     /// valency {valency} redeemed by state extension {opid} references
@@ -393,8 +374,8 @@ pub enum Failure {
     /// invalid bulletproofs in {0}:{1}: {2}
     BulletproofsInvalid(OpId, schema::AssignmentType, String),
     /// evaluation of AluVM script for operation {0} has failed with the code
-    /// {1:?}
-    ScriptFailure(OpId, Option<u8>),
+    /// {1:?} and message {2:?}.
+    ScriptFailure(OpId, Option<u8>, Option<String>),
 
     /// Custom error by external services on top of RGB Core.
     #[display(inner)]
@@ -415,9 +396,6 @@ pub enum Warning {
     TerminalSealAbsent(OpId, XChain<SecretSeal>),
     /// terminal witness transaction {0} is not yet mined.
     TerminalWitnessNotMined(Txid),
-    /// transition bundle {0} doesn't close all the seals defined for its
-    /// inputs.
-    UnclosedSeals(BundleId),
 
     /// Custom warning by external services on top of RGB Core.
     #[display(inner)]

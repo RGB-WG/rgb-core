@@ -24,13 +24,20 @@
 //! state transitions, extensions, genesis, outputs, assignments &
 //! single-use-seal data.
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::rc::Rc;
+use std::collections::BTreeMap;
+
+use aluvm::library::{Lib, LibId};
+use amplify::confinement::Confined;
+use strict_types::TypeSystem;
 
 use crate::{
-    AnchoredBundle, AssetTag, AssignmentType, BundleId, Genesis, OpId, OpRef, Operation,
-    SecretSeal, SubSchema, WitnessId, XChain,
+    BundleId, EAnchor, Genesis, OpId, OpRef, Operation, Schema, SecretSeal, TransitionBundle,
+    XChain, XWitnessId,
 };
+
+pub const CONSIGNMENT_MAX_LIBS: usize = 1024;
+
+pub type Scripts = Confined<BTreeMap<LibId, Lib>, 0, CONSIGNMENT_MAX_LIBS>;
 
 pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
 
@@ -39,11 +46,11 @@ impl<'consignment, C: ConsignmentApi> CheckedConsignment<'consignment, C> {
 }
 
 impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'consignment, C> {
-    type Iter<'placeholder> = C::Iter<'placeholder>;
+    fn schema(&self) -> &Schema { self.0.schema() }
 
-    fn schema(&self) -> &SubSchema { self.0.schema() }
+    fn types(&self) -> &TypeSystem { self.0.types() }
 
-    fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag> { self.0.asset_tags() }
+    fn scripts(&self) -> &Scripts { self.0.scripts() }
 
     fn operation(&self, opid: OpId) -> Option<OpRef> {
         self.0.operation(opid).filter(|op| op.id() == opid)
@@ -51,17 +58,23 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 
     fn genesis(&self) -> &Genesis { self.0.genesis() }
 
-    fn terminals(&self) -> BTreeSet<(BundleId, XChain<SecretSeal>)> { self.0.terminals() }
-
-    fn bundle_ids<'a>(&self) -> Self::Iter<'a> { self.0.bundle_ids() }
-
-    fn anchored_bundle(&self, bundle_id: BundleId) -> Option<Rc<AnchoredBundle>> {
-        self.0
-            .anchored_bundle(bundle_id)
-            .filter(|ab| ab.bundle.bundle_id() == bundle_id)
+    fn terminals<'iter>(&self) -> impl Iterator<Item = (BundleId, XChain<SecretSeal>)> + 'iter {
+        self.0.terminals()
     }
 
-    fn op_witness_id(&self, opid: OpId) -> Option<WitnessId> { self.0.op_witness_id(opid) }
+    fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter { self.0.bundle_ids() }
+
+    fn bundle(&self, bundle_id: BundleId) -> Option<&TransitionBundle> {
+        self.0
+            .bundle(bundle_id)
+            .filter(|b| b.bundle_id() == bundle_id)
+    }
+
+    fn anchor(&self, bundle_id: BundleId) -> Option<(XWitnessId, &EAnchor)> {
+        self.0.anchor(bundle_id)
+    }
+
+    fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId> { self.0.op_witness_id(opid) }
 }
 
 /// Trait defining common data access API for all storage-related RGB structures
@@ -72,16 +85,17 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 /// invalid or absent data, the API must always return [`None`] or empty
 /// collections/iterators.
 pub trait ConsignmentApi {
-    /// Iterator for all bundle ids present in the consignment.
-    type Iter<'a>: Iterator<Item = BundleId>;
-
     /// Returns reference to the schema object used by the consignment.
-    fn schema(&self) -> &SubSchema;
+    fn schema(&self) -> &Schema;
 
-    /// Asset tags uses in the confidential asset validation.
-    fn asset_tags(&self) -> &BTreeMap<AssignmentType, AssetTag>;
+    /// Returns reference to the type system.
+    fn types(&self) -> &TypeSystem;
 
-    /// Retrieves reference to a operation (genesis, state transition or state
+    /// Returns reference to a collection of AluVM libraries used for the
+    /// validation.
+    fn scripts(&self) -> &Scripts;
+
+    /// Retrieves reference to an operation (genesis, state transition or state
     /// extension) matching the provided id, or `None` otherwise
     fn operation(&self, opid: OpId) -> Option<OpRef>;
 
@@ -97,14 +111,17 @@ pub trait ConsignmentApi {
     /// - if the consignment contains concealed state (known by the receiver),
     ///   it will be computationally inefficient to understand which of the
     ///   state transitions represent the final state
-    fn terminals(&self) -> BTreeSet<(BundleId, XChain<SecretSeal>)>;
+    fn terminals<'iter>(&self) -> impl Iterator<Item = (BundleId, XChain<SecretSeal>)> + 'iter;
 
     /// Returns iterator over all bundle ids present in the consignment.
-    fn bundle_ids<'a>(&self) -> Self::Iter<'a>;
+    fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter;
 
-    /// Returns reference to an anchored bundle given a bundle id.
-    fn anchored_bundle(&self, bundle_id: BundleId) -> Option<Rc<AnchoredBundle>>;
+    /// Returns reference to a bundle given a bundle id.
+    fn bundle(&self, bundle_id: BundleId) -> Option<&TransitionBundle>;
+
+    /// Returns a grip given a bundle id.
+    fn anchor(&self, bundle_id: BundleId) -> Option<(XWitnessId, &EAnchor)>;
 
     /// Returns witness id for a given operation.
-    fn op_witness_id(&self, opid: OpId) -> Option<WitnessId>;
+    fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId>;
 }

@@ -23,59 +23,37 @@
 use std::cmp::Ordering;
 use std::collections::{btree_map, btree_set, BTreeMap};
 use std::iter;
-use std::str::FromStr;
 
-use amplify::confinement::{Confined, SmallBlob, SmallOrdSet, TinyOrdMap, TinyOrdSet};
-use amplify::hex::FromHex;
-use amplify::{hex, Wrapper};
+use amplify::confinement::{Confined, SmallOrdSet, TinyOrdMap, TinyOrdSet};
+use amplify::Wrapper;
 use commit_verify::{
     CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, ReservedBytes,
     StrictHash,
 };
-use strict_encoding::{StrictDeserialize, StrictEncode, StrictSerialize};
+use strict_encoding::stl::AsciiPrintable;
+use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    AltLayer1Set, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
+    AltLayer1Set, AssetTag, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
     ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
-    GenesisSeal, GlobalState, GraphSeal, OpDisclose, OpId, Opout, SecretSeal, TypedAssigns,
-    VoidState, XChain, LIB_NAME_RGB,
+    GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose, OpId, Opout, SecretSeal,
+    TypedAssigns, VoidState, XChain, LIB_NAME_RGB,
 };
 
-#[derive(
-    Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Default, From
-)]
-#[display(LowerHex)]
-#[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
+#[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = StrictHash)]
-pub struct Metadata(SmallBlob);
-
-#[cfg(feature = "serde")]
-mod _serde {
-    use serde_crate::de::Error;
-    use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
-
-    use super::*;
-
-    impl Serialize for Metadata {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer {
-            serializer.serialize_str(&self.to_string())
-        }
-    }
-
-    impl<'de> Deserialize<'de> for Metadata {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de> {
-            let s = String::deserialize(deserializer)?;
-            Self::from_hex(&s).map_err(D::Error::custom)
-        }
-    }
-}
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct AssetTags(TinyOrdMap<AssignmentType, AssetTag>);
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
 #[wrapper(Deref)]
@@ -203,7 +181,7 @@ pub trait Operation {
     fn extension_type(&self) -> Option<ExtensionType>;
 
     /// Returns metadata associated with the operation, if any.
-    fn metadata(&self) -> &SmallBlob;
+    fn metadata(&self) -> &Metadata;
 
     /// Returns reference to a full set of metadata (in form of [`GlobalState`]
     /// wrapper structure) for the contract operation.
@@ -273,17 +251,17 @@ pub trait Operation {
     fn disclose_hash(&self) -> DiscloseHash { self.disclose().commit_id() }
 }
 
-/// Issuer is a binary string which must be encoded into the issuer identity in
-/// the application.
+/// An ASCII printable string up to 4096 chars representing identity of the
+/// developer.
 ///
 /// We deliberately do not define the internal structure of the identity such
 /// that it can be updated without changes to the consensus level.
 ///
-/// Contract validity doesn't assume any checks on the issuer identity; these
+/// Contract or schema validity doesn't assume any checks on the identity; these
 /// checks must be performed at the application level.
-#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, Default, From, Display)]
-#[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
-#[display(LowerHex)]
+#[derive(Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From, Display)]
+#[wrapper(Deref, FromStr)]
+#[display(inner)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[derive(CommitEncode)]
@@ -293,12 +271,14 @@ pub trait Operation {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct Issuer(SmallBlob);
+pub struct Identity(RString<AsciiPrintable, AsciiPrintable, 0, 4096>);
 
-impl FromStr for Issuer {
-    type Err = hex::Error;
+impl Default for Identity {
+    fn default() -> Self { Self::from("") }
+}
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Issuer::from_hex(s) }
+impl From<&'static str> for Identity {
+    fn from(s: &'static str) -> Self { Self(RString::from(s)) }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -316,12 +296,13 @@ pub struct Genesis {
     pub timestamp: i64,
     pub testnet: bool,
     pub alt_layers1: AltLayer1Set,
+    pub asset_tags: AssetTags,
     pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
-    pub issuer: Issuer,
-    pub script: ReservedBytes<1, 0>,
+    pub issuer: Identity,
+    pub validator: ReservedBytes<1, 0>,
 }
 
 impl StrictSerialize for Genesis {}
@@ -344,8 +325,8 @@ pub struct Extension {
     pub assignments: Assignments<GenesisSeal>,
     pub redeemed: Redeemed,
     pub valencies: Valencies,
-    pub witness: ReservedBytes<1, 0>,
-    pub script: ReservedBytes<1, 0>,
+    pub validator: ReservedBytes<1, 0>,
+    pub witness: ReservedBytes<2, 0>,
 }
 
 impl StrictSerialize for Extension {}
@@ -376,8 +357,8 @@ pub struct Transition {
     pub inputs: Inputs,
     pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
-    pub witness: ReservedBytes<1, 0>,
-    pub script: ReservedBytes<1, 0>,
+    pub validator: ReservedBytes<1, 0>,
+    pub witness: ReservedBytes<2, 0>,
 }
 
 impl StrictSerialize for Transition {}
@@ -478,7 +459,7 @@ impl Operation for Genesis {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn metadata(&self) -> &SmallBlob { &self.metadata }
+    fn metadata(&self) -> &Metadata { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
@@ -520,7 +501,7 @@ impl Operation for Extension {
     fn extension_type(&self) -> Option<ExtensionType> { Some(self.extension_type) }
 
     #[inline]
-    fn metadata(&self) -> &SmallBlob { &self.metadata }
+    fn metadata(&self) -> &Metadata { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
@@ -562,7 +543,7 @@ impl Operation for Transition {
     fn extension_type(&self) -> Option<ExtensionType> { None }
 
     #[inline]
-    fn metadata(&self) -> &SmallBlob { &self.metadata }
+    fn metadata(&self) -> &Metadata { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
@@ -640,7 +621,7 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
-    fn metadata(&self) -> &SmallBlob {
+    fn metadata(&self) -> &Metadata {
         match self {
             OpRef::Genesis(op) => op.metadata(),
             OpRef::Transition(op) => op.metadata(),
@@ -691,6 +672,8 @@ impl<'op> Operation for OpRef<'op> {
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
     use amplify::ByteArray;
     use baid58::ToBaid58;
 

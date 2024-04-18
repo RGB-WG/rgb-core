@@ -38,9 +38,9 @@ use strict_encoding::StrictDumb;
 
 use crate::{
     Assign, AssignmentType, Assignments, BundleId, ConcealedAttach, ConcealedData, ConcealedState,
-    ConfidentialState, ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis,
-    GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, SchemaId, SecretSeal,
-    Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
+    ConfidentialState, DataState, ExposedSeal, ExposedState, Extension, ExtensionType, Ffv,
+    Genesis, GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, SchemaId,
+    SecretSeal, Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -246,6 +246,7 @@ pub struct BaseCommitment {
     pub testnet: bool,
     pub alt_layers1: StrictHash,
     pub issuer: StrictHash,
+    pub asset_tags: StrictHash,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -289,6 +290,7 @@ impl Genesis {
             testnet: self.testnet,
             alt_layers1: self.alt_layers1.commit_id(),
             issuer: self.issuer.commit_id(),
+            asset_tags: self.asset_tags.commit_id(),
         };
         OpCommitment {
             ffv: self.ffv,
@@ -300,7 +302,7 @@ impl Genesis {
             redeemed: Redeemed::default().commit_id(),
             valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
-            script: self.script.commit_id(),
+            script: self.validator.commit_id(),
         }
     }
 
@@ -319,7 +321,7 @@ impl Transition {
             redeemed: Redeemed::default().commit_id(),
             valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
-            script: self.script.commit_id(),
+            script: self.validator.commit_id(),
         }
     }
 }
@@ -336,7 +338,7 @@ impl Extension {
             redeemed: self.redeemed.commit_id(),
             valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
-            script: self.script.commit_id(),
+            script: self.validator.commit_id(),
         }
     }
 }
@@ -414,10 +416,10 @@ impl<Seal: ExposedSeal> MerkleLeaves for Assignments<Seal> {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GlobalCommitment {
     pub ty: GlobalStateType,
-    pub state: ConcealedData,
+    pub state: DataState,
 }
 
 impl CommitEncode for GlobalCommitment {
@@ -439,7 +441,7 @@ impl MerkleLeaves for GlobalState {
             .flat_map(|(ty, list)| {
                 list.iter().map(|val| GlobalCommitment {
                     ty: *ty,
-                    state: val.conceal(),
+                    state: val.clone(),
                 })
             })
             .collect::<Vec<_>>()
