@@ -143,7 +143,7 @@ impl ToBaid58<32> for SchemaId {
 impl FromBaid58<32> for SchemaId {}
 impl Display for SchemaId {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if !f.alternate() {
+        if f.alternate() {
             f.write_str("urn:lnp-bp:sc:")?;
         }
         if f.sign_minus() {
@@ -176,6 +176,9 @@ pub struct Schema {
     pub flags: ReservedBytes<1, 0>,
 
     pub name: TypeName,
+    pub timestamp: i64,
+    pub developer: Identity,
+
     pub meta_types: TinyOrdMap<MetaType, SemId>,
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
     pub owned_types: TinyOrdMap<AssignmentType, OwnedStateSchema>,
@@ -184,7 +187,7 @@ pub struct Schema {
     pub extensions: TinyOrdMap<ExtensionType, ExtensionSchema>,
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
 
-    pub developer: Identity,
+    pub reserved: ReservedBytes<8, 0>,
 }
 
 impl CommitEncode for Schema {
@@ -204,6 +207,8 @@ impl CommitEncode for Schema {
         e.commit_to_map(&self.transitions);
 
         e.commit_to_serialized(&self.developer);
+
+        e.commit_to_serialized(&self.reserved);
     }
 }
 
@@ -274,26 +279,23 @@ mod test {
     #[test]
     fn display() {
         let dumb = SchemaId::strict_dumb();
-        assert_eq!(
-            dumb.to_string(),
-            "urn:lnp-bp:sc:111111-11111111-11111111-11111111-11#comedy-vega-mary"
-        );
-        assert_eq!(&format!("{dumb:-}"), "urn:lnp-bp:sc:111111-11111111-11111111-11111111-11");
+        assert_eq!(dumb.to_string(), "111111-11111111-11111111-11111111-11#comedy-vega-mary");
+        assert_eq!(&format!("{dumb:-}"), "111111-11111111-11111111-11111111-11");
 
         let less_dumb = SchemaId::from_byte_array(*b"EV4350-'4vwj'4;v-w94w'e'vFVVDhpq");
         assert_eq!(
             less_dumb.to_string(),
+            "5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz#distant-thermos-arctic"
+        );
+        assert_eq!(&format!("{less_dumb:-}"), "5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz");
+        assert_eq!(
+            &format!("{less_dumb:#}"),
             "urn:lnp-bp:sc:5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz#\
              distant-thermos-arctic"
         );
         assert_eq!(
-            &format!("{less_dumb:-}"),
+            &format!("{less_dumb:-#}"),
             "urn:lnp-bp:sc:5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz"
         );
-        assert_eq!(
-            &format!("{less_dumb:#}"),
-            "5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz#distant-thermos-arctic"
-        );
-        assert_eq!(&format!("{less_dumb:-#}"), "5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz");
     }
 }

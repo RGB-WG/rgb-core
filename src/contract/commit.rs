@@ -278,7 +278,7 @@ pub struct OpCommitment {
     pub redeemed: StrictHash,
     pub valencies: StrictHash,
     pub witness: MerkleHash,
-    pub script: StrictHash,
+    pub validator: StrictHash,
 }
 
 impl Genesis {
@@ -302,7 +302,7 @@ impl Genesis {
             redeemed: Redeemed::default().commit_id(),
             valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
-            script: self.validator.commit_id(),
+            validator: self.validator.commit_id(),
         }
     }
 
@@ -321,7 +321,7 @@ impl Transition {
             redeemed: Redeemed::default().commit_id(),
             valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
-            script: self.validator.commit_id(),
+            validator: self.validator.commit_id(),
         }
     }
 }
@@ -338,7 +338,7 @@ impl Extension {
             redeemed: self.redeemed.commit_id(),
             valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
-            script: self.validator.commit_id(),
+            validator: self.validator.commit_id(),
         }
     }
 }
