@@ -44,9 +44,10 @@ extern crate commit_verify;
 extern crate serde_crate as serde;
 extern crate core;
 
-pub mod contract;
+mod contract;
 pub mod schema;
 pub mod validation;
+#[macro_use]
 pub mod vm;
 #[cfg(feature = "stl")]
 pub mod stl;
@@ -57,7 +58,7 @@ pub mod prelude {
     pub use schema::*;
 
     use super::*;
-    pub use super::{schema, vm};
+    pub use super::{schema, stl, validation, vm};
 }
 
 pub use prelude::*;
