@@ -403,27 +403,6 @@ impl InstructionSet for ContractOp {
 }
 
 impl Bytecode for ContractOp {
-    fn byte_count(&self) -> u16 {
-        match self {
-            ContractOp::CnP(_, _) |
-            ContractOp::CnS(_, _) |
-            ContractOp::CnG(_, _) |
-            ContractOp::CnC(_, _) => 4,
-
-            ContractOp::LdS(_, _, _) |
-            ContractOp::LdP(_, _, _) |
-            ContractOp::LdF(_, _, _) |
-            ContractOp::LdC(_, _, _) |
-            ContractOp::LdG(_, _, _) |
-            ContractOp::LdM(_, _) => 4,
-
-            ContractOp::PcVs(_) => 3,
-            ContractOp::PcCs(_, _) => 5,
-
-            ContractOp::Fail(_) => 1,
-        }
-    }
-
     fn instr_range() -> RangeInclusive<u8> { INSTR_CONTRACT_FROM..=INSTR_CONTRACT_TO }
 
     fn instr_byte(&self) -> u8 {

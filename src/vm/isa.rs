@@ -87,14 +87,6 @@ impl InstructionSet for RgbIsa {
 }
 
 impl Bytecode for RgbIsa {
-    fn byte_count(&self) -> u16 {
-        match self {
-            RgbIsa::Contract(op) => op.byte_count(),
-            RgbIsa::Timechain(op) => op.byte_count(),
-            RgbIsa::Fail(_) => 0,
-        }
-    }
-
     fn instr_range() -> RangeInclusive<u8> { INSTR_RGBISA_FROM..=INSTR_RGBISA_TO }
 
     fn instr_byte(&self) -> u8 {
