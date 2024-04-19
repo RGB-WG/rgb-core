@@ -156,7 +156,7 @@ pub enum ContractOp {
     /// If verification succeeds, doesn't change `st0` value; otherwise sets it
     /// to `false` and stops execution.
     #[display("pcis    {0}")]
-    Pcis(/** owned state type */ AssignmentType),
+    Pcps(/** owned state type */ AssignmentType),
 
     /// All other future unsupported operations, which must set `st0` to
     /// `false` and stop the execution.
@@ -183,7 +183,7 @@ impl InstructionSet for ContractOp {
             ContractOp::CnC(_, _) |
             ContractOp::LdM(_, _) => bset![],
             ContractOp::Pcvs(_) => bset![],
-            ContractOp::Pcas(_) | ContractOp::Pcis(_) => bset![Reg::A(RegA::A64, Reg32::Reg0)],
+            ContractOp::Pcas(_) | ContractOp::Pcps(_) => bset![Reg::A(RegA::A64, Reg32::Reg0)],
             ContractOp::Fail(_) => bset![],
         }
     }
@@ -206,7 +206,7 @@ impl InstructionSet for ContractOp {
             ContractOp::LdM(_, reg) => {
                 bset![Reg::S(*reg)]
             }
-            ContractOp::Pcvs(_) | ContractOp::Pcas(_) | ContractOp::Pcis(_) => {
+            ContractOp::Pcvs(_) | ContractOp::Pcas(_) | ContractOp::Pcps(_) => {
                 bset![]
             }
             ContractOp::Fail(_) => bset![],
@@ -226,7 +226,7 @@ impl InstructionSet for ContractOp {
             ContractOp::LdC(_, _, _) => 8,
             ContractOp::LdM(_, _) => 6,
             ContractOp::Pcvs(_) => 1024,
-            ContractOp::Pcas(_) | ContractOp::Pcis(_) => 512,
+            ContractOp::Pcas(_) | ContractOp::Pcps(_) => 512,
             ContractOp::Fail(_) => u64::MAX,
         }
     }
@@ -406,7 +406,7 @@ impl InstructionSet for ContractOp {
                 }
             }
 
-            ContractOp::Pcis(owned_state) => {
+            ContractOp::Pcps(owned_state) => {
                 let Some(sum) = *regs.get_n(RegA::A64, Reg32::Reg0) else {
                     fail!()
                 };
@@ -474,7 +474,7 @@ impl Bytecode for ContractOp {
 
             ContractOp::Pcvs(_) => INSTR_PCVS,
             ContractOp::Pcas(_) => INSTR_PCAS,
-            ContractOp::Pcis(_) => INSTR_PCIS,
+            ContractOp::Pcps(_) => INSTR_PCPS,
 
             ContractOp::Fail(other) => *other,
         }
@@ -536,7 +536,7 @@ impl Bytecode for ContractOp {
 
             ContractOp::Pcvs(state_type) => writer.write_u16(*state_type)?,
             ContractOp::Pcas(owned_type) => writer.write_u16(*owned_type)?,
-            ContractOp::Pcis(owned_type) => writer.write_u16(*owned_type)?,
+            ContractOp::Pcps(owned_type) => writer.write_u16(*owned_type)?,
 
             ContractOp::Fail(_) => {}
         }
@@ -603,7 +603,7 @@ impl Bytecode for ContractOp {
 
             INSTR_PCVS => Self::Pcvs(reader.read_u16()?.into()),
             INSTR_PCAS => Self::Pcas(reader.read_u16()?.into()),
-            INSTR_PCIS => Self::Pcis(reader.read_u16()?.into()),
+            INSTR_PCPS => Self::Pcps(reader.read_u16()?.into()),
 
             x => Self::Fail(x),
         })

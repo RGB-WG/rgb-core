@@ -45,7 +45,7 @@ pub const INSTR_LDM: u8 = 0b11_001_010;
 
 pub const INSTR_PCVS: u8 = 0b11_010_000;
 pub const INSTR_PCAS: u8 = 0b11_010_001;
-pub const INSTR_PCIS: u8 = 0b11_010_010;
+pub const INSTR_PCPS: u8 = 0b11_010_010;
 // Reserved 0b11_010_011
 pub const INSTR_CONTRACT_FROM: u8 = 0b11_000_000;
 pub const INSTR_CONTRACT_TO: u8 = 0b11_010_011;
