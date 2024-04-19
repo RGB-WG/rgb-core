@@ -227,9 +227,6 @@ impl InstructionSet for ContractOp {
         }
         macro_rules! load_inputs {
             ($state_type:ident) => {{
-                if !context.prev_state.contains_key($state_type) {
-                    return ExecStep::Next;
-                }
                 let Some(prev_state) = context.prev_state.get($state_type) else {
                     fail!()
                 };
@@ -245,9 +242,6 @@ impl InstructionSet for ContractOp {
         }
         macro_rules! load_outputs {
             ($state_type:ident) => {{
-                if !context.owned_state.has_type(*$state_type) {
-                    return ExecStep::Next;
-                }
                 let Some(new_state) = context.owned_state.get(*$state_type) else {
                     fail!()
                 };
