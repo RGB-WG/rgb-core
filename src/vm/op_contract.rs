@@ -240,9 +240,6 @@ impl InstructionSet for ContractOp {
         }
         macro_rules! load_inputs {
             ($state_type:ident) => {{
-                if !context.prev_state.contains_key($state_type) {
-                    return ExecStep::Next;
-                }
                 let Some(prev_state) = context.prev_state.get($state_type) else {
                     fail!()
                 };
@@ -258,9 +255,6 @@ impl InstructionSet for ContractOp {
         }
         macro_rules! load_outputs {
             ($state_type:ident) => {{
-                if !context.owned_state.has_type(*$state_type) {
-                    return ExecStep::Next;
-                }
                 let Some(new_state) = context.owned_state.get(*$state_type) else {
                     fail!()
                 };
@@ -436,26 +430,6 @@ impl InstructionSet for ContractOp {
 }
 
 impl Bytecode for ContractOp {
-    fn byte_count(&self) -> u16 {
-        match self {
-            ContractOp::CnP(_, _) |
-            ContractOp::CnS(_, _) |
-            ContractOp::CnG(_, _) |
-            ContractOp::CnC(_, _) => 4,
-
-            ContractOp::LdS(_, _, _) |
-            ContractOp::LdP(_, _, _) |
-            ContractOp::LdF(_, _, _) |
-            ContractOp::LdC(_, _, _) |
-            ContractOp::LdG(_, _, _) |
-            ContractOp::LdM(_, _) => 4,
-
-            ContractOp::Pcvs(_) | ContractOp::Pcas(_) | ContractOp::Pcis(_) => 3,
-
-            ContractOp::Fail(_) => 1,
-        }
-    }
-
     fn instr_range() -> RangeInclusive<u8> { INSTR_CONTRACT_FROM..=INSTR_CONTRACT_TO }
 
     fn instr_byte(&self) -> u8 {
