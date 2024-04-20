@@ -34,26 +34,26 @@ macro_rules! rgbasm {
 
 #[macro_export]
 macro_rules! isa_instr {
-    (pcvs $no:literal) => {{ RgbIsa::Contract(ContractOp::Pcvs($no.into())) }};
-    (pcas $no:literal) => {{ RgbIsa::Contract(ContractOp::Pcas($no.into())) }};
-    (pcps $no:literal) => {{ RgbIsa::Contract(ContractOp::Pcps($no.into())) }};
-    (cng $t:literal,a8[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnG($t.into(), Reg32::from(u5::with($a_idx)))) }};
-    (cnc $t:literal,a16[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnC($t.into(), Reg32::from(u5::with($a_idx)))) }};
-    (ldg $t:literal,a8[$a_idx:literal],s16[$s_idx:literal]) => {{
+    (pcvs $no:ident) => {{ RgbIsa::Contract(ContractOp::Pcvs($no.into())) }};
+    (pcas $no:ident) => {{ RgbIsa::Contract(ContractOp::Pcas($no.into())) }};
+    (pcps $no:ident) => {{ RgbIsa::Contract(ContractOp::Pcps($no.into())) }};
+    (cng $t:ident,a8[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnG($t.into(), Reg32::from(u5::with($a_idx)))) }};
+    (cnc $t:ident,a16[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnC($t.into(), Reg32::from(u5::with($a_idx)))) }};
+    (ldg $t:ident,a8[$a_idx:literal],s16[$s_idx:literal]) => {{
         RgbIsa::Contract(ContractOp::LdG(
             GlobalStateType::from($t as u16),
             Reg16::from(u4::with($a_idx)),
             RegS::from($s_idx),
         ))
     }};
-    (ldp $t:literal,a16[$a_idx:literal],s16[$s_idx:literal]) => {{
+    (ldp $t:ident,a16[$a_idx:literal],s16[$s_idx:literal]) => {{
         RgbIsa::Contract(ContractOp::LdP(
             AssignmentType::from($t as u16),
             Reg16::from(u4::with($a_idx)),
             RegS::from($s_idx),
         ))
     }};
-    (lds $t:literal,a16[$a_idx:literal],s16[$s_idx:literal]) => {{
+    (lds $t:ident,a16[$a_idx:literal],s16[$s_idx:literal]) => {{
         RgbIsa::Contract(ContractOp::LdS(
             AssignmentType::from($t as u16),
             Reg16::from(u4::with($a_idx)),
