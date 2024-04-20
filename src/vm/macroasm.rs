@@ -24,7 +24,7 @@
 macro_rules! rgbasm {
     ($( $tt:tt )+) => {{ #[allow(unused_imports)] {
         use amplify::num::{u4, u5};
-        use $crate::{AssignmentType, GlobalStateType};
+        use $crate::{AssignmentType, GlobalStateType, MetaType};
         use $crate::vm::{RgbIsa, ContractOp, TimechainOp};
         use $crate::vm::aluasm_isa;
         use $crate::isa_instr;
@@ -39,6 +39,13 @@ macro_rules! isa_instr {
     (pcps $no:ident) => {{ RgbIsa::Contract(ContractOp::Pcps($no.into())) }};
     (cng $t:ident,a8[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnG($t.into(), Reg32::from(u5::with($a_idx)))) }};
     (cnc $t:ident,a16[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnC($t.into(), Reg32::from(u5::with($a_idx)))) }};
+    (ldm $t:ident,a8[$a_idx:literal],s16[$s_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::LdM(
+            MetaType::from($t as u16),
+            Reg16::from(u4::with($a_idx)),
+            RegS::from($s_idx),
+        ))
+    }};
     (ldg $t:ident,a8[$a_idx:literal],s16[$s_idx:literal]) => {{
         RgbIsa::Contract(ContractOp::LdG(
             GlobalStateType::from($t as u16),
