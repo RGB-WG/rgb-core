@@ -29,7 +29,7 @@ use commit_verify::{CommitId, CommitmentId, Conceal, DigestExt, Sha256};
 use strict_encoding::StrictEncode;
 
 use super::{ConfidentialState, ExposedState};
-use crate::{ConcealedState, MediaType, RevealedState, StateType, LIB_NAME_RGB};
+use crate::{impl_serde_baid58, ConcealedState, MediaType, RevealedState, StateType, LIB_NAME_RGB};
 
 /// Unique data attachment identifier
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
@@ -37,11 +37,6 @@ use crate::{ConcealedState, MediaType, RevealedState, StateType, LIB_NAME_RGB};
 #[display(Self::to_baid58_string)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
 pub struct AttachId(
     #[from]
     #[from([u8; 32])]
@@ -63,6 +58,8 @@ impl AttachId {
     pub fn to_baid58_string(&self) -> String { format!("{::<#.2}", self.to_baid58()) }
     pub fn to_mnemonic(&self) -> String { self.to_baid58().mnemonic() }
 }
+
+impl_serde_baid58!(AttachId);
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]

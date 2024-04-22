@@ -98,5 +98,43 @@ mod _ffv {
     }
 }
 
+#[macro_export]
+macro_rules! impl_serde_baid58 {
+    ($ty:ty) => {
+        #[cfg(feature = "serde")]
+        mod _serde {
+            use amplify::ByteArray;
+            use serde_crate::de::Error;
+            use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
+
+            use super::*;
+
+            impl Serialize for $ty {
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where S: Serializer {
+                    if serializer.is_human_readable() {
+                        self.to_string().serialize(serializer)
+                    } else {
+                        self.to_byte_array().serialize(serializer)
+                    }
+                }
+            }
+
+            impl<'de> Deserialize<'de> for $ty {
+                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+                where D: Deserializer<'de> {
+                    if deserializer.is_human_readable() {
+                        let s = String::deserialize(deserializer)?;
+                        Self::from_str(&s).map_err(D::Error::custom)
+                    } else {
+                        let bytes = <[u8; 32]>::deserialize(deserializer)?;
+                        Ok(Self::from_byte_array(bytes))
+                    }
+                }
+            }
+        }
+    };
+}
+
 // TODO: Validate strict type data
 // TODO: Add parsed global and structured state to the ContractState

@@ -40,7 +40,7 @@ use strict_types::SemId;
 use super::{
     AssignmentType, ExtensionSchema, GenesisSchema, OwnedStateSchema, TransitionSchema, ValencyType,
 };
-use crate::{Ffv, GlobalStateSchema, Identity, Occurrences, LIB_NAME_RGB};
+use crate::{impl_serde_baid58, Ffv, GlobalStateSchema, Identity, Occurrences, LIB_NAME_RGB};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -115,11 +115,6 @@ impl TransitionType {
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
 pub struct SchemaId(
     #[from]
     #[from([u8; 32])]
@@ -162,6 +157,8 @@ impl FromStr for SchemaId {
 impl SchemaId {
     pub fn to_mnemonic(&self) -> String { self.to_baid58().mnemonic() }
 }
+
+impl_serde_baid58!(SchemaId);
 
 #[derive(Clone, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]

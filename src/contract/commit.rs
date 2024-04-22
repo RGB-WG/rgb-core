@@ -37,10 +37,11 @@ use commit_verify::{
 use strict_encoding::StrictDumb;
 
 use crate::{
-    Assign, AssignmentType, Assignments, BundleId, ConcealedAttach, ConcealedData, ConcealedState,
-    ConfidentialState, DataState, ExposedSeal, ExposedState, Extension, ExtensionType, Ffv,
-    Genesis, GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, SchemaId,
-    SecretSeal, Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
+    impl_serde_baid58, Assign, AssignmentType, Assignments, BundleId, ConcealedAttach,
+    ConcealedData, ConcealedState, ConfidentialState, DataState, ExposedSeal, ExposedState,
+    Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Operation,
+    PedersenCommitment, Redeemed, SchemaId, SecretSeal, Transition, TransitionBundle,
+    TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -48,11 +49,6 @@ use crate::{
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
 pub struct ContractId(
     #[from]
     #[from([u8; 32])]
@@ -102,6 +98,8 @@ impl From<mpc::ProtocolId> for ContractId {
 impl From<ContractId> for mpc::ProtocolId {
     fn from(id: ContractId) -> Self { mpc::ProtocolId::from_inner(id.into_inner()) }
 }
+
+impl_serde_baid58!(ContractId);
 
 /// Unique operation (genesis, extensions & state transition) identifier
 /// equivalent to the commitment hash
