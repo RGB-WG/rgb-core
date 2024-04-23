@@ -24,6 +24,11 @@
           extensions = [ ];
           targets = [ "wasm32-unknown-unknown" ];
         };
+
+        stableWithLlvm = pkgs.rust-bin.nightly.latest.default.override {
+          extensions = [ "rustfmt" "llvm-tools-preview" ];
+          targets = [ ];
+        };
       in
       with pkgs;
       {
@@ -60,6 +65,15 @@
               chromedriver
               wasm-pack
             ];
+          };
+
+          codecov = mkShell {
+            buildInputs = [
+              stableWithLlvm
+            ];
+            CARGO_INCREMENTAL = "0";
+            RUSTFLAGS = "-Cinstrument-coverage";
+            RUSTDOCFLAGS = "-Cinstrument-coverage";
           };
         };
       }
