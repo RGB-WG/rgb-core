@@ -14,28 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install latest stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
       - name: Build & test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --workspace --all-features --no-fail-fast
+        run: nix develop .#stable -c cargo test --workspace --all-features --no-fail-fast
   wasm-testing:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install rust nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - uses: Swatinem/rust-cache@v2
-      - uses: jetli/wasm-pack-action@v0.3.0
-      - name: Add wasm32 target
-        run: rustup target add wasm32-unknown-unknown
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
       - name: Test in headless Chrome
-        run: wasm-pack test --headless --chrome
+        run: nix develop .#wasm -c wasm-pack test --headless --chrome
