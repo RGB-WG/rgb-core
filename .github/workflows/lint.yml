@@ -14,47 +14,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install rustc nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: rustfmt
-      - uses: actions-rs/cargo@v1
-        name: Formatting
-        with:
-          command: fmt
-          args: --all -- --check
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+      - name: Formatting
+        run: nix develop .#nightly -c cargo fmt --all -- --check
   clippy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install rustc stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          components: clippy
-      - uses: actions-rs/cargo@v1
-        name: Clippy
-        with:
-          command: clippy
-          args: --workspace --all-features --all-targets -- -D warnings
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+      - name: Clippy
+        run: nix develop .#stable -c cargo clippy --workspace --all-features --all-targets -- -D warnings
   doc:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install rustc nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          components: rust-docs
-      - uses: actions-rs/cargo@v1
-        name: Doc
-        with:
-          command: doc
-          args: --workspace --all-features
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+      - name: Doc
+        run: nix develop .#stable -c cargo doc --workspace --all-features
   typos:
     runs-on: ubuntu-latest
     steps:
