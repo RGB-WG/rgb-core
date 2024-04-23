@@ -14,12 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # NOTE: Dont use nix here everything should be based on the ubuntu-latest
       - name: Install rust stable
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
-      - name: Default build
+      - name: Latest Ubuntu build check
         uses: actions-rs/cargo@v1
         with:
           command: check
@@ -34,21 +35,12 @@ jobs:
           - serde
     steps:
       - uses: actions/checkout@v4
-      - name: Install rust stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - name: Feature ${{ matrix.feature }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --no-default-features --features=${{ matrix.feature }}
-      - name: Defaults + ${{ matrix.feature }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --features=${{ matrix.feature }}
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+      - name: Check feature ${{ matrix.feature }} only
+        run: nix develop .#stable -c cargo check --no-default-features --features=${{ matrix.feature }}
+      - name: Check feature ${{ matrix.feature }} with defaults
+        run: nix develop .#stable -c cargo check --features=${{ matrix.feature }}
   platforms:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -57,6 +49,7 @@ jobs:
         os: [ ubuntu-20.04, ubuntu-22.04, macos-12, macos-13, windows-2019, windows-2022 ]
     steps:
       - uses: actions/checkout@v4
+      # NOTE: Dont use nix in platform checks everything should based on the host system
       - name: Install rust stable
         uses: actions-rs/toolchain@v1
         with:
