@@ -274,11 +274,16 @@ pub trait Operation {
 pub struct Identity(RString<AsciiPrintable, AsciiPrintable, 1, 4096>);
 
 impl Default for Identity {
-    fn default() -> Self { Self::from("anonym") }
+    fn default() -> Self { Self::from("ssi:anonymous") }
 }
 
 impl From<&'static str> for Identity {
     fn from(s: &'static str) -> Self { Self(RString::from(s)) }
+}
+
+impl Identity {
+    pub fn is_empty(&self) -> bool { self.is_anonymous() }
+    pub fn is_anonymous(&self) -> bool { self == &default!() }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
