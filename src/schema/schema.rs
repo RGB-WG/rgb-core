@@ -195,6 +195,9 @@ impl CommitEncode for Schema {
         e.commit_to_serialized(&self.flags);
 
         e.commit_to_serialized(&self.name);
+        e.commit_to_serialized(&self.timestamp);
+        e.commit_to_serialized(&self.developer);
+
         e.commit_to_map(&self.meta_types);
         e.commit_to_map(&self.global_types);
         e.commit_to_map(&self.owned_types);
@@ -202,8 +205,6 @@ impl CommitEncode for Schema {
         e.commit_to_serialized(&self.genesis);
         e.commit_to_map(&self.extensions);
         e.commit_to_map(&self.transitions);
-
-        e.commit_to_serialized(&self.developer);
 
         e.commit_to_serialized(&self.reserved);
     }

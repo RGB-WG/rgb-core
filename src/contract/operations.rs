@@ -294,6 +294,7 @@ pub struct Genesis {
     pub schema_id: SchemaId,
     pub flags: ReservedBytes<1, 0>,
     pub timestamp: i64,
+    pub issuer: Identity,
     pub testnet: bool,
     pub alt_layers1: AltLayer1Set,
     pub asset_tags: AssetTags,
@@ -301,7 +302,6 @@ pub struct Genesis {
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
-    pub issuer: Identity,
     pub validator: ReservedBytes<1, 0>,
 }
 

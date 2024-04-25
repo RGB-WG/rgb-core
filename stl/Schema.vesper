@@ -11,6 +11,8 @@ SchemaId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:schema#2024-02-03
   Ffv serialized
   ReservedBytes1 serialized
   TypeName serialized
+  I64 serialized
+  Identity serialized
   SemId map len=0..MAX8
     MetaType mapKey
     SemId mapValue
@@ -29,7 +31,6 @@ SchemaId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:schema#2024-02-03
   TransitionSchema map len=0..MAX8
     TransitionType mapKey
     TransitionSchema mapValue
-  Identity serialized
   ReservedBytes8 serialized
 
 Schema rec
