@@ -28,7 +28,7 @@ use aluvm::library::LibId;
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{ByteArray, Bytes32};
 use armor::StrictArmor;
-use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
+use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use commit_verify::{
     CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, ReservedBytes, Sha256,
 };
@@ -40,7 +40,7 @@ use strict_types::SemId;
 use super::{
     AssignmentType, ExtensionSchema, GenesisSchema, OwnedStateSchema, TransitionSchema, ValencyType,
 };
-use crate::{impl_serde_baid58, Ffv, GlobalStateSchema, Identity, Occurrences, LIB_NAME_RGB};
+use crate::{impl_serde_baid64, Ffv, GlobalStateSchema, Identity, Occurrences, LIB_NAME_RGB};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -129,36 +129,24 @@ impl CommitmentId for SchemaId {
     const TAG: &'static str = "urn:lnp-bp:rgb:schema#2024-02-03";
 }
 
-impl ToBaid58<32> for SchemaId {
-    const HRI: &'static str = "sc";
-    const CHUNKING: Option<Chunking> = CHUNKING_32;
-    fn to_baid58_payload(&self) -> [u8; 32] { self.to_byte_array() }
-    fn to_baid58_string(&self) -> String { self.to_string() }
+impl DisplayBaid64 for SchemaId {
+    const HRI: &'static str = "rgb:sch";
+    const CHUNKING: bool = false;
+    const PREFIX: bool = true;
+    const EMBED_CHECKSUM: bool = false;
+    const MNEMONIC: bool = true;
+    fn to_baid64_payload(&self) -> [u8; 32] { self.to_byte_array() }
 }
-impl FromBaid58<32> for SchemaId {}
-impl Display for SchemaId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if f.alternate() {
-            f.write_str("urn:lnp-bp:sc:")?;
-        }
-        if f.sign_minus() {
-            write!(f, "{:.2}", self.to_baid58())
-        } else {
-            write!(f, "{:#.2}", self.to_baid58())
-        }
-    }
-}
+impl FromBaid64Str for SchemaId {}
 impl FromStr for SchemaId {
-    type Err = Baid58ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::from_baid58_maybe_chunked_str(s.trim_start_matches("urn:lnp-bp:"), ':', '#')
-    }
+    type Err = Baid64ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid64_str(s) }
 }
-impl SchemaId {
-    pub fn to_mnemonic(&self) -> String { self.to_baid58().mnemonic() }
+impl Display for SchemaId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { self.fmt_baid64(f) }
 }
 
-impl_serde_baid58!(SchemaId);
+impl_serde_baid64!(SchemaId);
 
 #[derive(Clone, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -277,23 +265,28 @@ mod test {
     #[test]
     fn display() {
         let dumb = SchemaId::strict_dumb();
-        assert_eq!(dumb.to_string(), "111111-11111111-11111111-11111111-11#comedy-vega-mary");
-        assert_eq!(&format!("{dumb:-}"), "111111-11111111-11111111-11111111-11");
+        assert_eq!(
+            dumb.to_string(),
+            "rgb:sch:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA#distant-history-exotic"
+        );
+        assert_eq!(
+            &format!("{dumb:-}"),
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA#distant-history-exotic"
+        );
 
         let less_dumb = SchemaId::from_byte_array(*b"EV4350-'4vwj'4;v-w94w'e'vFVVDhpq");
         assert_eq!(
             less_dumb.to_string(),
-            "5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz#distant-thermos-arctic"
+            "rgb:sch:RVY0MzUwLSc0dndqJzQ7di13OTR3J2UndkZWVkRocHE#lemon-diamond-cartoon"
         );
-        assert_eq!(&format!("{less_dumb:-}"), "5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz");
+        assert_eq!(
+            &format!("{less_dumb:-}"),
+            "RVY0MzUwLSc0dndqJzQ7di13OTR3J2UndkZWVkRocHE#lemon-diamond-cartoon"
+        );
         assert_eq!(
             &format!("{less_dumb:#}"),
-            "urn:lnp-bp:sc:5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz#\
-             distant-thermos-arctic"
+            "rgb:sch:RVY0MzUwLSc0dndqJzQ7di13OTR3J2UndkZWVkRocHE"
         );
-        assert_eq!(
-            &format!("{less_dumb:-#}"),
-            "urn:lnp-bp:sc:5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz"
-        );
+        assert_eq!(&format!("{less_dumb:-#}"), "RVY0MzUwLSc0dndqJzQ7di13OTR3J2UndkZWVkRocHE");
     }
 }

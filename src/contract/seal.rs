@@ -314,7 +314,7 @@ mod test {
         let secret = reveal.to_secret_seal();
         assert_eq!(
             secret.to_string(),
-            "bc:utxob:28Hk9S1-nBLPw4u9j-Zwaftwz8s-k5Y6G7bug-qvoeGn5BF-GPEJoY3"
+            "bc:utxob:lD72u61i-sxCEKth-vqjH0mI-kcEwa1Q-fbnPLon-tDtXveO-keHh0"
         );
         assert_eq!(reveal.to_secret_seal(), reveal.conceal())
     }

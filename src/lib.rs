@@ -99,7 +99,7 @@ mod _ffv {
 }
 
 #[macro_export]
-macro_rules! impl_serde_baid58 {
+macro_rules! impl_serde_baid64 {
     ($ty:ty) => {
         #[cfg(feature = "serde")]
         mod _serde {

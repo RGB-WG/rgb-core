@@ -5,11 +5,11 @@ version = 3
 [[package]]
 name = "aluvm"
 version = "0.11.0-beta.5"
-source = "git+https://github.com/AluVM/rust-aluvm?branch=feat/rm-bytecount#a02daa56f94b4d80cf009d66c2378cd7809f19d7"
+source = "git+https://github.com/AluVM/rust-aluvm?branch=develop#d8efe3007a5680a99cf86159b8dcc81cf1ed7278"
 dependencies = [
  "amplify",
- "ascii-armor 0.2.0",
- "baid58",
+ "ascii-armor",
+ "baid64",
  "blake3",
  "getrandom",
  "half",
@@ -121,25 +121,11 @@ dependencies = [
 
 [[package]]
 name = "ascii-armor"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "743d90b41a39d6e3920eef64a70f6411097cbb47141606a45b2a96533ec7111c"
+version = "0.4.0"
+source = "git+https://github.com/UBIDECO/ascii-armor#38dc9767f36db3957ac3dade280a04d9a72b6be4"
 dependencies = [
  "amplify",
- "baid58",
- "base85",
- "sha2",
- "strict_encoding",
-]
-
-[[package]]
-name = "ascii-armor"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44ce552de9efa4fdee1a7920f3587e17689bf4a4ba149a7892f91820673c1e29"
-dependencies = [
- "amplify",
- "baid58",
+ "baid64",
  "base85",
  "sha2",
  "strict_encoding",
@@ -152,22 +138,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1fdabc7756949593fe60f30ec81974b613357de856987752631dea1e3394c80"
 
 [[package]]
-name = "baid58"
-version = "0.4.4"
+name = "baid64"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc0585242d87ed976e05db6ae86a0f771f140104a4b6c91b4c3e43b9b2357486"
+checksum = "7b8b80494235048845f856b267a4a1d97df59fd14ed7ca92652f834ce93becc6"
 dependencies = [
- "base58",
- "blake3",
+ "amplify",
+ "base64",
  "mnemonic",
  "sha2",
 ]
 
 [[package]]
-name = "base58"
-version = "0.2.0"
+name = "base64"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6107fe1be6682a68940da878d9e9f5e90ca5745b3dec9fd1bb393c8777d4f581"
+checksum = "9475866fec1451be56a3c2400fd081ff546538961565ccb5b7142cbd22bc7a51"
 
 [[package]]
 name = "base85"
@@ -215,7 +201,7 @@ dependencies = [
 [[package]]
 name = "bp-consensus"
 version = "0.11.0-beta.5"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#ff275566b6546c39d6a37579861b918104fd859d"
+source = "git+https://github.com/BP-WG/bp-core?branch=develop#970147b7cfa3dd3013ceec5bc6eacaea7c0d7bb9"
 dependencies = [
  "amplify",
  "chrono",
@@ -229,7 +215,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.11.0-beta.5"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#ff275566b6546c39d6a37579861b918104fd859d"
+source = "git+https://github.com/BP-WG/bp-core?branch=develop#970147b7cfa3dd3013ceec5bc6eacaea7c0d7bb9"
 dependencies = [
  "amplify",
  "bp-consensus",
@@ -247,7 +233,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.11.0-beta.5"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#ff275566b6546c39d6a37579861b918104fd859d"
+source = "git+https://github.com/BP-WG/bp-core?branch=develop#970147b7cfa3dd3013ceec5bc6eacaea7c0d7bb9"
 dependencies = [
  "amplify",
  "base85",
@@ -261,10 +247,10 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.11.0-beta.5"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.11#ff275566b6546c39d6a37579861b918104fd859d"
+source = "git+https://github.com/BP-WG/bp-core?branch=develop#970147b7cfa3dd3013ceec5bc6eacaea7c0d7bb9"
 dependencies = [
  "amplify",
- "baid58",
+ "baid64",
  "bp-consensus",
  "bp-dbc",
  "commit_verify",
@@ -309,7 +295,7 @@ dependencies = [
 [[package]]
 name = "commit_encoding_derive"
 version = "0.11.0-beta.5"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#f51e1e0d010b1531acc939d2443af552e8755bb7"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#5e50b251aa5a5c4d83c47dad609a15ef3d50800f"
 dependencies = [
  "amplify",
  "amplify_syn",
@@ -321,7 +307,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.11.0-beta.5"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#f51e1e0d010b1531acc939d2443af552e8755bb7"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#5e50b251aa5a5c4d83c47dad609a15ef3d50800f"
 dependencies = [
  "amplify",
  "commit_encoding_derive",
@@ -600,8 +586,8 @@ version = "0.11.0-beta.5"
 dependencies = [
  "aluvm",
  "amplify",
- "ascii-armor 0.3.0",
- "baid58",
+ "ascii-armor",
+ "baid64",
  "bp-core",
  "chrono",
  "commit_verify",
@@ -778,7 +764,7 @@ dependencies = [
 [[package]]
 name = "single_use_seals"
 version = "0.11.0-beta.5"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.11#f51e1e0d010b1531acc939d2443af552e8755bb7"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#5e50b251aa5a5c4d83c47dad609a15ef3d50800f"
 dependencies = [
  "amplify_derive",
 ]
@@ -786,8 +772,7 @@ dependencies = [
 [[package]]
 name = "strict_encoding"
 version = "2.7.0-beta.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c463f8ea993e323740d78544473e791adb91ac659f5bf2c1a59db64a34f99fc"
+source = "git+https://github.com/strict-types/strict-encoding?branch=develop#7c46c97c10655612a1c71b984faa62ffc543b226"
 dependencies = [
  "amplify",
  "half",
@@ -798,8 +783,7 @@ dependencies = [
 [[package]]
 name = "strict_encoding_derive"
 version = "2.7.0-beta.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "475fa6f1fdde6e0555422b5111ad34bde30a1459af3599f920c3af9829772c0e"
+source = "git+https://github.com/strict-types/strict-encoding?branch=develop#7c46c97c10655612a1c71b984faa62ffc543b226"
 dependencies = [
  "amplify_syn",
  "heck",
@@ -811,12 +795,11 @@ dependencies = [
 [[package]]
 name = "strict_types"
 version = "2.7.0-beta.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "152bd04284e9093f23a911d0d89b7dd950a461af1ed5e243f6215fbcd45e9445"
+source = "git+https://github.com/strict-types/strict-types?branch=develop#a2e860f36f24b477712551a6db349edcf08efb3e"
 dependencies = [
  "amplify",
- "ascii-armor 0.2.0",
- "baid58",
+ "ascii-armor",
+ "baid64",
  "half",
  "indexmap",
  "serde",
