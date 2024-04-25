@@ -14,7 +14,7 @@ rust-version = "1.75.0"
 exclude = [".github"]
 
 [lib]
-name = "rgb"
+name = "rgbcore"
 crate-type = ["cdylib", "rlib"] # We need this for WASM
 
 [[bin]]

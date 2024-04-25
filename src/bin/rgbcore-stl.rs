@@ -27,8 +27,8 @@ use aluvm::stl::aluvm_stl;
 use bp::stl::bp_core_stl;
 use commit_verify::stl::commit_verify_stl;
 use commit_verify::CommitmentLayout;
-use rgb::stl::bp_tx_stl;
-use rgb::{Schema, Transition, TransitionBundle};
+use rgbcore::stl::bp_tx_stl;
+use rgbcore::{Schema, Transition, TransitionBundle};
 use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::parse_args;
 use strict_types::SystemBuilder;
@@ -36,7 +36,7 @@ use strict_types::SystemBuilder;
 fn main() {
     let (format, dir) = parse_args();
 
-    let rgb = rgb::stl::rgb_core_stl();
+    let rgb = rgbcore::stl::rgb_core_stl();
 
     rgb.serialize(
         format,
