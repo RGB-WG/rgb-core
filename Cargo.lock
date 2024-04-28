@@ -5,7 +5,7 @@ version = 3
 [[package]]
 name = "aluvm"
 version = "0.11.0-beta.5"
-source = "git+https://github.com/AluVM/rust-aluvm?branch=develop#d8efe3007a5680a99cf86159b8dcc81cf1ed7278"
+source = "git+https://github.com/AluVM/rust-aluvm?branch=develop#25be42a16519383daaa6ba50e65654ff0a1721aa"
 dependencies = [
  "amplify",
  "ascii-armor",
@@ -121,8 +121,9 @@ dependencies = [
 
 [[package]]
 name = "ascii-armor"
-version = "0.4.0"
-source = "git+https://github.com/UBIDECO/ascii-armor#38dc9767f36db3957ac3dade280a04d9a72b6be4"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "673486110323d50d9f33d99f0f526726b4721b1b596284351e75d3692225abe8"
 dependencies = [
  "amplify",
  "baid64",
@@ -417,9 +418,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.14.3"
+version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
+checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 
 [[package]]
 name = "heck"
@@ -586,7 +587,6 @@ version = "0.11.0-beta.5"
 dependencies = [
  "aluvm",
  "amplify",
- "ascii-armor",
  "baid64",
  "bp-core",
  "chrono",
@@ -689,18 +689,18 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.198"
+version = "1.0.199"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9846a40c979031340571da2545a4e5b7c4163bdae79b301d5f86d03979451fcc"
+checksum = "0c9f6e76df036c77cd94996771fb40db98187f096dd0b9af39c6c6e452ba966a"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.198"
+version = "1.0.199"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e88edab869b01783ba905e7d0153f9fc1a6505a96e4ad3018011eedb838566d9"
+checksum = "11bd257a6541e141e42ca6d24ae26f7714887b47e89aa739099104c7e4d3b7fc"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -772,7 +772,7 @@ dependencies = [
 [[package]]
 name = "strict_encoding"
 version = "2.7.0-beta.3"
-source = "git+https://github.com/strict-types/strict-encoding?branch=develop#7c46c97c10655612a1c71b984faa62ffc543b226"
+source = "git+https://github.com/strict-types/strict-encoding?branch=develop#901e26ee8b01b3bcff4d7ac76acff2fcc633634b"
 dependencies = [
  "amplify",
  "half",
@@ -783,7 +783,7 @@ dependencies = [
 [[package]]
 name = "strict_encoding_derive"
 version = "2.7.0-beta.3"
-source = "git+https://github.com/strict-types/strict-encoding?branch=develop#7c46c97c10655612a1c71b984faa62ffc543b226"
+source = "git+https://github.com/strict-types/strict-encoding?branch=develop#901e26ee8b01b3bcff4d7ac76acff2fcc633634b"
 dependencies = [
  "amplify_syn",
  "heck",
@@ -795,7 +795,7 @@ dependencies = [
 [[package]]
 name = "strict_types"
 version = "2.7.0-beta.3"
-source = "git+https://github.com/strict-types/strict-types?branch=develop#a2e860f36f24b477712551a6db349edcf08efb3e"
+source = "git+https://github.com/strict-types/strict-types?branch=develop#4effa0b28804f7798a17f5dc6b4411ce6515f2f5"
 dependencies = [
  "amplify",
  "ascii-armor",
@@ -1113,9 +1113,9 @@ checksum = "bec47e5bfd1bff0eeaf6d8b485cc1074891a197ab4225d504cb7a1ab88b02bf0"
 
 [[package]]
 name = "winnow"
-version = "0.6.6"
+version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0c976aaaa0e1f90dbb21e9587cdaf1d9679a1cde8875c0d6bd83ab96a208352"
+checksum = "14b9415ee827af173ebb3f15f9083df5a122eb93572ec28741fb153356ea2578"
 dependencies = [
  "memchr",
 ]

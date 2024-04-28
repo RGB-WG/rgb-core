@@ -27,7 +27,6 @@ use std::str::FromStr;
 use aluvm::library::LibId;
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{ByteArray, Bytes32};
-use armor::StrictArmor;
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use commit_verify::{
     CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, ReservedBytes, Sha256,
@@ -247,13 +246,6 @@ impl Schema {
             .chain(self.extensions.values().filter_map(|i| i.validator))
             .map(|site| site.lib)
     }
-}
-
-impl StrictArmor for Schema {
-    type Id = SchemaId;
-    const PLATE_TITLE: &'static str = "RGB SCHEMA";
-
-    fn armor_id(&self) -> Self::Id { self.schema_id() }
 }
 
 #[cfg(test)]
