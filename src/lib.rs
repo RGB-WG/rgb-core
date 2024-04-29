@@ -58,7 +58,9 @@ pub mod prelude {
     pub use schema::*;
 
     use super::*;
-    pub use super::{schema, stl, validation, vm};
+    pub use super::{schema, validation, vm};
+    #[cfg(feature = "stl")]
+    pub use super::stl;
 }
 
 pub use prelude::*;
