@@ -57,10 +57,10 @@ pub mod prelude {
     pub use contract::*;
     pub use schema::*;
 
-    use super::*;
-    pub use super::{schema, validation, vm};
     #[cfg(feature = "stl")]
     pub use super::stl;
+    use super::*;
+    pub use super::{schema, validation, vm};
 }
 
 pub use prelude::*;

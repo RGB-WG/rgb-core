@@ -2,9 +2,15 @@ name: Codecov
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master
+      - develop
+      - 'v[0-9]+.[0-9]+'
   pull_request:
-    branches: [ master ]
+    branches:
+      - master
+      - develop
+      - 'v[0-9]+.[0-9]+'
 
 env:
   CARGO_TERM_COLOR: always
@@ -14,38 +20,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Set up toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, llvm-tools-preview
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
       - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
-        env:
-          CARGO_INCREMENTAL: "0"
-          RUSTFLAGS: "-Cinstrument-coverage"
-          RUSTDOCFLAGS: "-Cinstrument-coverage"
+        run: nix develop .#codecov -c cargo build --release
       - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features --no-fail-fast
-        env:
-          CARGO_INCREMENTAL: "0"
-          RUSTFLAGS: "-Cinstrument-coverage"
-          RUSTDOCFLAGS: "-Cinstrument-coverage"
+        run: nix develop .#codecov -c cargo test --all-features --no-fail-fast
       - name: Install grcov
-        run: if [[ ! -e ~/.cargo/bin/grcov ]]; then cargo install grcov; fi
+        run: nix develop .#codecov -c cargo install grcov
       - name: Generate coverage
-        run: grcov . --binary-path target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../**' --ignore '/*' -o coverage.lcov
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        run: nix develop .#codecov -c grcov . --binary-path target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../**' --ignore '/*' -o coverage.lcov
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
         with:
           files: ./coverage.lcov
           flags: rust
-          fail_ci_if_error: true
+          # TODO: set true when CODECOV_TOKEN is set
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
