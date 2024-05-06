@@ -10,3 +10,4 @@
 *.swp
 
 /dep_test
+default*.profraw

@@ -29,7 +29,7 @@ use amplify::confinement::{Confined, MediumOrdMap, U16 as U16MAX};
 use amplify::hex::{FromHex, ToHex};
 use amplify::num::u256;
 use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
-use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32CHECKSUM};
+use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use commit_verify::{
     mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, Conceal, DigestExt, MerkleHash,
     MerkleLeaves, ReservedBytes, Sha256, StrictHash,
@@ -37,10 +37,11 @@ use commit_verify::{
 use strict_encoding::StrictDumb;
 
 use crate::{
-    Assign, AssignmentType, Assignments, BundleId, ConcealedAttach, ConcealedData, ConcealedState,
-    ConfidentialState, DataState, ExposedSeal, ExposedState, Extension, ExtensionType, Ffv,
-    Genesis, GlobalState, GlobalStateType, Operation, PedersenCommitment, Redeemed, SchemaId,
-    SecretSeal, Transition, TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
+    impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ConcealedAttach,
+    ConcealedData, ConcealedState, ConfidentialState, DataState, ExposedSeal, ExposedState,
+    Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Operation,
+    PedersenCommitment, Redeemed, SchemaId, SecretSeal, Transition, TransitionBundle,
+    TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -48,11 +49,6 @@ use crate::{
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
 pub struct ContractId(
     #[from]
     #[from([u8; 32])]
@@ -72,27 +68,21 @@ impl ContractId {
     }
 }
 
-impl ToBaid58<32> for ContractId {
+impl DisplayBaid64 for ContractId {
     const HRI: &'static str = "rgb";
-    const CHUNKING: Option<Chunking> = CHUNKING_32CHECKSUM;
-    fn to_baid58_payload(&self) -> [u8; 32] { self.to_byte_array() }
-    fn to_baid58_string(&self) -> String { self.to_string() }
+    const CHUNKING: bool = true;
+    const PREFIX: bool = true;
+    const EMBED_CHECKSUM: bool = false;
+    const MNEMONIC: bool = false;
+    fn to_baid64_payload(&self) -> [u8; 32] { self.to_byte_array() }
 }
-impl FromBaid58<32> for ContractId {}
-impl Display for ContractId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if f.alternate() {
-            write!(f, "{::^}", self.to_baid58())
-        } else {
-            write!(f, "{::^.3}", self.to_baid58())
-        }
-    }
-}
+impl FromBaid64Str for ContractId {}
 impl FromStr for ContractId {
-    type Err = Baid58ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::from_baid58_maybe_chunked_str(s, ':', '#')
-    }
+    type Err = Baid64ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid64_str(s) }
+}
+impl Display for ContractId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { self.fmt_baid64(f) }
 }
 
 impl From<mpc::ProtocolId> for ContractId {
@@ -102,6 +92,8 @@ impl From<mpc::ProtocolId> for ContractId {
 impl From<ContractId> for mpc::ProtocolId {
     fn from(id: ContractId) -> Self { mpc::ProtocolId::from_inner(id.into_inner()) }
 }
+
+impl_serde_baid64!(ContractId);
 
 /// Unique operation (genesis, extensions & state transition) identifier
 /// equivalent to the commitment hash
@@ -243,9 +235,9 @@ pub struct BaseCommitment {
     pub flags: ReservedBytes<1, 0>,
     pub schema_id: SchemaId,
     pub timestamp: i64,
+    pub issuer: StrictHash,
     pub testnet: bool,
     pub alt_layers1: StrictHash,
-    pub issuer: StrictHash,
     pub asset_tags: StrictHash,
 }
 
@@ -278,7 +270,7 @@ pub struct OpCommitment {
     pub redeemed: StrictHash,
     pub valencies: StrictHash,
     pub witness: MerkleHash,
-    pub script: StrictHash,
+    pub validator: StrictHash,
 }
 
 impl Genesis {
@@ -302,7 +294,7 @@ impl Genesis {
             redeemed: Redeemed::default().commit_id(),
             valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
-            script: self.validator.commit_id(),
+            validator: self.validator.commit_id(),
         }
     }
 
@@ -321,7 +313,7 @@ impl Transition {
             redeemed: Redeemed::default().commit_id(),
             valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
-            script: self.validator.commit_id(),
+            validator: self.validator.commit_id(),
         }
     }
 }
@@ -338,7 +330,7 @@ impl Extension {
             redeemed: self.redeemed.commit_id(),
             valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
-            script: self.validator.commit_id(),
+            validator: self.validator.commit_id(),
         }
     }
 }

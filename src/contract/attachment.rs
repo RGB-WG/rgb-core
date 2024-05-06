@@ -20,49 +20,48 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::fmt;
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 use amplify::{ByteArray, Bytes32};
-use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
+use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use bp::secp256k1::rand::{random, Rng, RngCore};
 use commit_verify::{CommitId, CommitmentId, Conceal, DigestExt, Sha256};
 use strict_encoding::StrictEncode;
 
 use super::{ConfidentialState, ExposedState};
-use crate::{ConcealedState, MediaType, RevealedState, StateType, LIB_NAME_RGB};
+use crate::{impl_serde_baid64, ConcealedState, MediaType, RevealedState, StateType, LIB_NAME_RGB};
 
 /// Unique data attachment identifier
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
-#[display(Self::to_baid58_string)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
 pub struct AttachId(
     #[from]
     #[from([u8; 32])]
     Bytes32,
 );
 
-impl ToBaid58<32> for AttachId {
-    const HRI: &'static str = "stashfs";
-    const CHUNKING: Option<Chunking> = CHUNKING_32;
-    fn to_baid58_payload(&self) -> [u8; 32] { self.to_byte_array() }
-    fn to_baid58_string(&self) -> String { self.to_string() }
+impl DisplayBaid64 for AttachId {
+    const HRI: &'static str = "rgb:fs";
+    const CHUNKING: bool = true;
+    const PREFIX: bool = true;
+    const EMBED_CHECKSUM: bool = false;
+    const MNEMONIC: bool = true;
+    fn to_baid64_payload(&self) -> [u8; 32] { self.to_byte_array() }
 }
-impl FromBaid58<32> for AttachId {}
+impl FromBaid64Str for AttachId {}
 impl FromStr for AttachId {
-    type Err = Baid58ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid58_chunked_str(s, ':', '#') }
+    type Err = Baid64ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid64_str(s) }
 }
-impl AttachId {
-    pub fn to_baid58_string(&self) -> String { format!("{::<#.2}", self.to_baid58()) }
-    pub fn to_mnemonic(&self) -> String { self.to_baid58().mnemonic() }
+impl Display for AttachId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { self.fmt_baid64(f) }
 }
+
+impl_serde_baid64!(AttachId);
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -159,25 +158,26 @@ mod test {
     #[test]
     fn attach_id_display() {
         const ID: &str =
-            "stashfs:8JEvTX-J6sD5U4n-1p7GEERY-MPN9ijjs-9ZM4ysJ3-qhgyqM#juice-empty-joker";
+            "rgb:fs:bGxsbGxs-bGxsbGx-sbGxsbG-xsbGxsb-GxsbGxs-bGxsbGw#invite-potato-oval";
         let id = AttachId::from_byte_array([0x6c; 32]);
         assert_eq!(ID, id.to_string());
-        assert_eq!(ID, id.to_baid58_string());
-        assert_eq!("juice-empty-joker", id.to_mnemonic());
+        assert_eq!(ID, id.to_baid64_string());
+        assert_eq!("invite-potato-oval", id.to_baid64_mnemonic());
     }
 
     #[test]
     fn attach_id_from_str() {
         let id = AttachId::from_byte_array([0x6c; 32]);
         assert_eq!(
-            Ok(id),
+            id,
             AttachId::from_str(
-                "stashfs:8JEvTX-J6sD5U4n-1p7GEERY-MPN9ijjs-9ZM4ysJ3-qhgyqM#juice-empty-joker"
+                "rgb:fs:bGxsbGxs-bGxsbGx-sbGxsbG-xsbGxsb-GxsbGxs-bGxsbGw#invite-potato-oval"
             )
+            .unwrap()
         );
         assert_eq!(
-            Ok(id),
-            AttachId::from_str("stashfs:8JEvTX-J6sD5U4n-1p7GEERY-MPN9ijjs-9ZM4ysJ3-qhgyqM")
+            id,
+            AttachId::from_str("rgb:fs:bGxsbGxs-bGxsbGx-sbGxsbG-xsbGxsb-GxsbGxs-bGxsbGw").unwrap()
         );
     }
 }

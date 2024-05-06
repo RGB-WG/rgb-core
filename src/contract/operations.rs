@@ -271,14 +271,19 @@ pub trait Operation {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct Identity(RString<AsciiPrintable, AsciiPrintable, 0, 4096>);
+pub struct Identity(RString<AsciiPrintable, AsciiPrintable, 1, 4096>);
 
 impl Default for Identity {
-    fn default() -> Self { Self::from("") }
+    fn default() -> Self { Self::from("ssi:anonymous") }
 }
 
 impl From<&'static str> for Identity {
     fn from(s: &'static str) -> Self { Self(RString::from(s)) }
+}
+
+impl Identity {
+    pub fn is_empty(&self) -> bool { self.is_anonymous() }
+    pub fn is_anonymous(&self) -> bool { self == &default!() }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -294,6 +299,7 @@ pub struct Genesis {
     pub schema_id: SchemaId,
     pub flags: ReservedBytes<1, 0>,
     pub timestamp: i64,
+    pub issuer: Identity,
     pub testnet: bool,
     pub alt_layers1: AltLayer1Set,
     pub asset_tags: AssetTags,
@@ -301,7 +307,6 @@ pub struct Genesis {
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
     pub valencies: Valencies,
-    pub issuer: Identity,
     pub validator: ReservedBytes<1, 0>,
 }
 
@@ -675,49 +680,46 @@ mod test {
     use std::str::FromStr;
 
     use amplify::ByteArray;
-    use baid58::ToBaid58;
+    use baid64::DisplayBaid64;
 
     use super::*;
 
     #[test]
     fn contract_id_display() {
-        const ID: &str = "rgb:pkXwpsb-aemTWhtSg-VDGF25hEi-jtTAnPjzh-B63ZwSehE-WvfhF9";
+        const ID: &str = "rgb:bGxsbGxs-bGxsbGx-sbGxsbG-xsbGxsb-GxsbGxs-bGxsbGw";
         let id = ContractId::from_byte_array([0x6c; 32]);
-        assert_eq!(ID.len(), 58);
-        assert_eq!(ID.replace('-', ""), format!("{id:#}"));
+        assert_eq!(ID.len(), 52);
         assert_eq!(ID, id.to_string());
-        assert_eq!(ID, id.to_baid58_string());
+        assert_eq!(ID, id.to_baid64_string());
     }
 
     #[test]
     fn contract_id_from_str() {
         let id = ContractId::from_byte_array([0x6c; 32]);
         assert_eq!(
-            Ok(id),
-            ContractId::from_str("rgb:pkXwpsb-aemTWhtSg-VDGF25hEi-jtTAnPjzh-B63ZwSehE-WvfhF9")
+            id,
+            ContractId::from_str("rgb:bGxsbGxs-bGxsbGx-sbGxsbG-xsbGxsb-GxsbGxs-bGxsbGw").unwrap()
         );
         assert_eq!(
-            Ok(id),
-            ContractId::from_str("pkXwpsb-aemTWhtSg-VDGF25hEi-jtTAnPjzh-B63ZwSehE-WvfhF9")
+            id,
+            ContractId::from_str("bGxsbGxs-bGxsbGx-sbGxsbG-xsbGxsb-GxsbGxs-bGxsbGw").unwrap()
         );
         assert_eq!(
-            Ok(id),
-            ContractId::from_str("rgb:pkXwpsbaemTWhtSgVDGF25hEijtTAnPjzhB63ZwSehEWvfhF9")
+            id,
+            ContractId::from_str("rgb:bGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGw").unwrap()
         );
         assert_eq!(
-            Ok(id),
-            ContractId::from_str("pkXwpsbaemTWhtSgVDGF25hEijtTAnPjzhB63ZwSehEWvfhF9")
+            id,
+            ContractId::from_str("bGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGw").unwrap()
         );
 
         // Wrong separator placement
         assert!(
-            ContractId::from_str("rgb:pkXwpsb-aemTWhtSg-VDGF25hEi-jtTAnPjzh-B63ZwSeh-EWvfhF9")
-                .is_err()
+            ContractId::from_str("rgb:bGxsbGx-sbGxsbGx-sbGxsbG-xsbGxsb-GxsbGxs-bGxsbGw").is_ok()
         );
         // Wrong separator number
         assert!(
-            ContractId::from_str("rgb:pkXwpsb-aemTWhtSg-VDGF25hEi-jtTAnPjzh-B63ZwSehEWvfhF9")
-                .is_err()
+            ContractId::from_str("rgb:bGxs-bGxs-bGxsbGx-sbGxsbG-xsbGxsb-GxsbGxs-bGxsbGw").is_ok()
         );
     }
 }

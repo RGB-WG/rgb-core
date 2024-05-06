@@ -2,9 +2,15 @@ name: Lints
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master
+      - develop
+      - 'v[0-9]+.[0-9]+'
   pull_request:
-    branches: [ master ]
+    branches:
+      - master
+      - develop
+      - 'v[0-9]+.[0-9]+'
 
 env:
   CARGO_TERM_COLOR: always
@@ -13,50 +19,29 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install rustc nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: rustfmt
-      - uses: actions-rs/cargo@v1
-        name: Formatting
-        with:
-          command: fmt
-          args: --all -- --check
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+      - name: Formatting
+        run: nix develop .#nightly -c cargo fmt --all -- --check
   clippy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install rustc stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          components: clippy
-      - uses: actions-rs/cargo@v1
-        name: Clippy
-        with:
-          command: clippy
-          args: --workspace --all-features --all-targets -- -D warnings
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+      - name: Clippy
+        run: nix develop .#stable -c cargo clippy --workspace --all-features --all-targets -- -D warnings
   doc:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install rustc nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          components: rust-docs
-      - uses: actions-rs/cargo@v1
-        name: Doc
-        with:
-          command: doc
-          args: --workspace --all-features
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+      - name: Doc
+        run: nix develop .#stable -c cargo doc --workspace --all-features
   typos:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: crate-ci/typos@master

@@ -44,9 +44,10 @@ extern crate commit_verify;
 extern crate serde_crate as serde;
 extern crate core;
 
-pub mod contract;
+mod contract;
 pub mod schema;
 pub mod validation;
+#[macro_use]
 pub mod vm;
 #[cfg(feature = "stl")]
 pub mod stl;
@@ -56,8 +57,10 @@ pub mod prelude {
     pub use contract::*;
     pub use schema::*;
 
+    #[cfg(feature = "stl")]
+    pub use super::stl;
     use super::*;
-    pub use super::{schema, vm};
+    pub use super::{schema, validation, vm};
 }
 
 pub use prelude::*;
@@ -95,6 +98,44 @@ mod _ffv {
             }
         }
     }
+}
+
+#[macro_export]
+macro_rules! impl_serde_baid64 {
+    ($ty:ty) => {
+        #[cfg(feature = "serde")]
+        mod _serde {
+            use amplify::ByteArray;
+            use serde_crate::de::Error;
+            use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
+
+            use super::*;
+
+            impl Serialize for $ty {
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where S: Serializer {
+                    if serializer.is_human_readable() {
+                        self.to_string().serialize(serializer)
+                    } else {
+                        self.to_byte_array().serialize(serializer)
+                    }
+                }
+            }
+
+            impl<'de> Deserialize<'de> for $ty {
+                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+                where D: Deserializer<'de> {
+                    if deserializer.is_human_readable() {
+                        let s = String::deserialize(deserializer)?;
+                        Self::from_str(&s).map_err(D::Error::custom)
+                    } else {
+                        let bytes = <[u8; 32]>::deserialize(deserializer)?;
+                        Ok(Self::from_byte_array(bytes))
+                    }
+                }
+            }
+        }
+    };
 }
 
 // TODO: Validate strict type data

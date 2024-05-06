@@ -27,8 +27,7 @@ use std::str::FromStr;
 use aluvm::library::LibId;
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{ByteArray, Bytes32};
-use armor::StrictArmor;
-use baid58::{Baid58ParseError, Chunking, FromBaid58, ToBaid58, CHUNKING_32};
+use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use commit_verify::{
     CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, ReservedBytes, Sha256,
 };
@@ -40,7 +39,7 @@ use strict_types::SemId;
 use super::{
     AssignmentType, ExtensionSchema, GenesisSchema, OwnedStateSchema, TransitionSchema, ValencyType,
 };
-use crate::{Ffv, GlobalStateSchema, Identity, Occurrences, LIB_NAME_RGB};
+use crate::{impl_serde_baid64, Ffv, GlobalStateSchema, Identity, Occurrences, LIB_NAME_RGB};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -115,11 +114,6 @@ impl TransitionType {
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
 pub struct SchemaId(
     #[from]
     #[from([u8; 32])]
@@ -134,34 +128,24 @@ impl CommitmentId for SchemaId {
     const TAG: &'static str = "urn:lnp-bp:rgb:schema#2024-02-03";
 }
 
-impl ToBaid58<32> for SchemaId {
-    const HRI: &'static str = "sc";
-    const CHUNKING: Option<Chunking> = CHUNKING_32;
-    fn to_baid58_payload(&self) -> [u8; 32] { self.to_byte_array() }
-    fn to_baid58_string(&self) -> String { self.to_string() }
+impl DisplayBaid64 for SchemaId {
+    const HRI: &'static str = "rgb:sch";
+    const CHUNKING: bool = false;
+    const PREFIX: bool = true;
+    const EMBED_CHECKSUM: bool = false;
+    const MNEMONIC: bool = true;
+    fn to_baid64_payload(&self) -> [u8; 32] { self.to_byte_array() }
 }
-impl FromBaid58<32> for SchemaId {}
-impl Display for SchemaId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if !f.alternate() {
-            f.write_str("urn:lnp-bp:sc:")?;
-        }
-        if f.sign_minus() {
-            write!(f, "{:.2}", self.to_baid58())
-        } else {
-            write!(f, "{:#.2}", self.to_baid58())
-        }
-    }
-}
+impl FromBaid64Str for SchemaId {}
 impl FromStr for SchemaId {
-    type Err = Baid58ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::from_baid58_maybe_chunked_str(s.trim_start_matches("urn:lnp-bp:"), ':', '#')
-    }
+    type Err = Baid64ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_baid64_str(s) }
 }
-impl SchemaId {
-    pub fn to_mnemonic(&self) -> String { self.to_baid58().mnemonic() }
+impl Display for SchemaId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { self.fmt_baid64(f) }
 }
+
+impl_serde_baid64!(SchemaId);
 
 #[derive(Clone, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -176,6 +160,9 @@ pub struct Schema {
     pub flags: ReservedBytes<1, 0>,
 
     pub name: TypeName,
+    pub timestamp: i64,
+    pub developer: Identity,
+
     pub meta_types: TinyOrdMap<MetaType, SemId>,
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
     pub owned_types: TinyOrdMap<AssignmentType, OwnedStateSchema>,
@@ -184,7 +171,7 @@ pub struct Schema {
     pub extensions: TinyOrdMap<ExtensionType, ExtensionSchema>,
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
 
-    pub developer: Identity,
+    pub reserved: ReservedBytes<8, 0>,
 }
 
 impl CommitEncode for Schema {
@@ -195,6 +182,9 @@ impl CommitEncode for Schema {
         e.commit_to_serialized(&self.flags);
 
         e.commit_to_serialized(&self.name);
+        e.commit_to_serialized(&self.timestamp);
+        e.commit_to_serialized(&self.developer);
+
         e.commit_to_map(&self.meta_types);
         e.commit_to_map(&self.global_types);
         e.commit_to_map(&self.owned_types);
@@ -203,7 +193,7 @@ impl CommitEncode for Schema {
         e.commit_to_map(&self.extensions);
         e.commit_to_map(&self.transitions);
 
-        e.commit_to_serialized(&self.developer);
+        e.commit_to_serialized(&self.reserved);
     }
 }
 
@@ -258,13 +248,6 @@ impl Schema {
     }
 }
 
-impl StrictArmor for Schema {
-    type Id = SchemaId;
-    const PLATE_TITLE: &'static str = "RGB SCHEMA";
-
-    fn armor_id(&self) -> Self::Id { self.schema_id() }
-}
-
 #[cfg(test)]
 mod test {
     use strict_encoding::StrictDumb;
@@ -276,24 +259,26 @@ mod test {
         let dumb = SchemaId::strict_dumb();
         assert_eq!(
             dumb.to_string(),
-            "urn:lnp-bp:sc:111111-11111111-11111111-11111111-11#comedy-vega-mary"
+            "rgb:sch:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA#distant-history-exotic"
         );
-        assert_eq!(&format!("{dumb:-}"), "urn:lnp-bp:sc:111111-11111111-11111111-11111111-11");
+        assert_eq!(
+            &format!("{dumb:-}"),
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA#distant-history-exotic"
+        );
 
         let less_dumb = SchemaId::from_byte_array(*b"EV4350-'4vwj'4;v-w94w'e'vFVVDhpq");
         assert_eq!(
             less_dumb.to_string(),
-            "urn:lnp-bp:sc:5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz#\
-             distant-thermos-arctic"
+            "rgb:sch:RVY0MzUwLSc0dndqJzQ7di13OTR3J2UndkZWVkRocHE#lemon-diamond-cartoon"
         );
         assert_eq!(
             &format!("{less_dumb:-}"),
-            "urn:lnp-bp:sc:5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz"
+            "RVY0MzUwLSc0dndqJzQ7di13OTR3J2UndkZWVkRocHE#lemon-diamond-cartoon"
         );
         assert_eq!(
             &format!("{less_dumb:#}"),
-            "5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz#distant-thermos-arctic"
+            "rgb:sch:RVY0MzUwLSc0dndqJzQ7di13OTR3J2UndkZWVkRocHE"
         );
-        assert_eq!(&format!("{less_dumb:-#}"), "5ffNUk-MTVSnWqu-PLT6xKb7-VmAxUbw8-CUNqCkUW-sZfkwz");
+        assert_eq!(&format!("{less_dumb:-#}"), "RVY0MzUwLSc0dndqJzQ7di13OTR3J2UndkZWVkRocHE");
     }
 }

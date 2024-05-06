@@ -125,27 +125,38 @@ pub enum ContractOp {
     /// this state does not exist, or either inputs or outputs does not have
     /// any data for the state, the verification fails.
     ///
-    /// If verification succeeds, doesn't changes `st0` value; otherwise sets it
+    /// If verification succeeds, doesn't change `st0` value; otherwise sets it
     /// to `false` and stops execution.
     #[display("pcvs    {0}")]
-    PcVs(AssignmentType),
+    Pcvs(AssignmentType),
 
     /// Verifies equivalence of a sum of pedersen commitments for the list of
-    /// outputs with a given owned state type against a value taken from a
-    /// global state.
+    /// assignment outputs to a value from `a64[0]` register.
     ///
     /// The first argument specifies owned state type for the sum operation. If
     /// this state does not exist, or either inputs or outputs does not have
     /// any data for the state, the verification fails.
     ///
-    /// The second argument specifies global state type. If the state does not
-    /// exist, there is more than one value, or it is not a u64 value, the
-    /// verification fails.
+    /// If `a64[0]` register does not contain value, the verification fails.
     ///
     /// If verification succeeds, doesn't change `st0` value; otherwise sets it
     /// to `false` and stops execution.
-    #[display("pccs    {0},{1}")]
-    PcCs(/** owned state type */ AssignmentType, /** global state type */ GlobalStateType),
+    #[display("pcas    {0}")]
+    Pcas(/** owned state type */ AssignmentType),
+
+    /// Verifies equivalence of a sum of pedersen commitments for the list of
+    /// inputs to a value from `a64[0]` register.
+    ///
+    /// The first argument specifies owned state type for the sum operation. If
+    /// this state does not exist, or either inputs or outputs does not have
+    /// any data for the state, the verification fails.
+    ///
+    /// If `a64[0]` register does not contain value, the verification fails.
+    ///
+    /// If verification succeeds, doesn't change `st0` value; otherwise sets it
+    /// to `false` and stops execution.
+    #[display("pcis    {0}")]
+    Pcps(/** owned state type */ AssignmentType),
 
     /// All other future unsupported operations, which must set `st0` to
     /// `false` and stop the execution.
@@ -171,7 +182,8 @@ impl InstructionSet for ContractOp {
             ContractOp::CnG(_, _) |
             ContractOp::CnC(_, _) |
             ContractOp::LdM(_, _) => bset![],
-            ContractOp::PcVs(_) | ContractOp::PcCs(_, _) => bset![],
+            ContractOp::Pcvs(_) => bset![],
+            ContractOp::Pcas(_) | ContractOp::Pcps(_) => bset![Reg::A(RegA::A64, Reg32::Reg0)],
             ContractOp::Fail(_) => bset![],
         }
     }
@@ -194,7 +206,7 @@ impl InstructionSet for ContractOp {
             ContractOp::LdM(_, reg) => {
                 bset![Reg::S(*reg)]
             }
-            ContractOp::PcVs(_) | ContractOp::PcCs(_, _) => {
+            ContractOp::Pcvs(_) | ContractOp::Pcas(_) | ContractOp::Pcps(_) => {
                 bset![]
             }
             ContractOp::Fail(_) => bset![],
@@ -213,7 +225,8 @@ impl InstructionSet for ContractOp {
             ContractOp::LdG(_, _, _) |
             ContractOp::LdC(_, _, _) => 8,
             ContractOp::LdM(_, _) => 6,
-            ContractOp::PcVs(_) | ContractOp::PcCs(_, _) => 1024,
+            ContractOp::Pcvs(_) => 1024,
+            ContractOp::Pcas(_) | ContractOp::Pcps(_) => 512,
             ContractOp::Fail(_) => u64::MAX,
         }
     }
@@ -352,7 +365,7 @@ impl InstructionSet for ContractOp {
                 regs.set_s(*reg, Some(meta.to_inner()));
             }
 
-            ContractOp::PcVs(state_type) => {
+            ContractOp::Pcvs(state_type) => {
                 let inputs = load_inputs!(state_type);
                 let outputs = load_outputs!(state_type);
                 if !secp256k1_zkp::verify_commitments_sum_to_equal(
@@ -364,19 +377,11 @@ impl InstructionSet for ContractOp {
                 }
             }
 
-            ContractOp::PcCs(owned_state, global_state) => {
-                let Some(sum) = context.global.get(global_state) else {
+            ContractOp::Pcas(owned_state) => {
+                let Some(sum) = *regs.get_n(RegA::A64, Reg32::Reg0) else {
                     fail!()
                 };
-                if sum.len() != 1 {
-                    fail!()
-                }
-                if sum[0].as_inner().len() != 8 {
-                    fail!()
-                }
-                let mut bytes = [0u8; 8];
-                bytes.copy_from_slice(sum[0].as_inner());
-                let sum = u64::from_le_bytes(bytes);
+                let sum = u64::from(sum);
 
                 let Some(tag) = context.asset_tags.get(owned_state) else {
                     fail!()
@@ -395,6 +400,28 @@ impl InstructionSet for ContractOp {
                 }
             }
 
+            ContractOp::Pcps(owned_state) => {
+                let Some(sum) = *regs.get_n(RegA::A64, Reg32::Reg0) else {
+                    fail!()
+                };
+                let sum = u64::from(sum);
+
+                let Some(tag) = context.asset_tags.get(owned_state) else {
+                    fail!()
+                };
+                let sum = RevealedValue::with_blinding(sum, BlindingFactor::EMPTY, *tag);
+
+                let inputs = [PedersenCommitment::commit(&sum).into_inner()];
+                let outputs = load_inputs!(owned_state);
+
+                if !secp256k1_zkp::verify_commitments_sum_to_equal(
+                    secp256k1_zkp::SECP256K1,
+                    &inputs,
+                    &outputs,
+                ) {
+                    fail!()
+                }
+            }
             // All other future unsupported operations, which must set `st0` to `false`.
             _ => fail!(),
         }
@@ -403,27 +430,6 @@ impl InstructionSet for ContractOp {
 }
 
 impl Bytecode for ContractOp {
-    fn byte_count(&self) -> u16 {
-        match self {
-            ContractOp::CnP(_, _) |
-            ContractOp::CnS(_, _) |
-            ContractOp::CnG(_, _) |
-            ContractOp::CnC(_, _) => 4,
-
-            ContractOp::LdS(_, _, _) |
-            ContractOp::LdP(_, _, _) |
-            ContractOp::LdF(_, _, _) |
-            ContractOp::LdC(_, _, _) |
-            ContractOp::LdG(_, _, _) |
-            ContractOp::LdM(_, _) => 4,
-
-            ContractOp::PcVs(_) => 3,
-            ContractOp::PcCs(_, _) => 5,
-
-            ContractOp::Fail(_) => 1,
-        }
-    }
-
     fn instr_range() -> RangeInclusive<u8> { INSTR_CONTRACT_FROM..=INSTR_CONTRACT_TO }
 
     fn instr_byte(&self) -> u8 {
@@ -440,8 +446,9 @@ impl Bytecode for ContractOp {
             ContractOp::LdC(_, _, _) => INSTR_LDC,
             ContractOp::LdM(_, _) => INSTR_LDM,
 
-            ContractOp::PcVs(_) => INSTR_PCVS,
-            ContractOp::PcCs(_, _) => INSTR_PCCS,
+            ContractOp::Pcvs(_) => INSTR_PCVS,
+            ContractOp::Pcas(_) => INSTR_PCAS,
+            ContractOp::Pcps(_) => INSTR_PCPS,
 
             ContractOp::Fail(other) => *other,
         }
@@ -501,11 +508,9 @@ impl Bytecode for ContractOp {
                 writer.write_u4(u4::ZERO)?;
             }
 
-            ContractOp::PcVs(state_type) => writer.write_u16(*state_type)?,
-            ContractOp::PcCs(owned_type, global_type) => {
-                writer.write_u16(*owned_type)?;
-                writer.write_u16(*global_type)?;
-            }
+            ContractOp::Pcvs(state_type) => writer.write_u16(*state_type)?,
+            ContractOp::Pcas(owned_type) => writer.write_u16(*owned_type)?,
+            ContractOp::Pcps(owned_type) => writer.write_u16(*owned_type)?,
 
             ContractOp::Fail(_) => {}
         }
@@ -570,8 +575,9 @@ impl Bytecode for ContractOp {
                 i
             }
 
-            INSTR_PCVS => Self::PcVs(reader.read_u16()?.into()),
-            INSTR_PCCS => Self::PcCs(reader.read_u16()?.into(), reader.read_u16()?.into()),
+            INSTR_PCVS => Self::Pcvs(reader.read_u16()?.into()),
+            INSTR_PCAS => Self::Pcas(reader.read_u16()?.into()),
+            INSTR_PCPS => Self::Pcps(reader.read_u16()?.into()),
 
             x => Self::Fail(x),
         })
@@ -591,14 +597,14 @@ mod test {
     #[test]
     fn encoding() {
         let code =
-            [Instr::ExtensionCodes(RgbIsa::Contract(ContractOp::PcVs(AssignmentType::from(4000))))];
+            [Instr::ExtensionCodes(RgbIsa::Contract(ContractOp::Pcvs(AssignmentType::from(4000))))];
         let alu_lib = Lib::assemble(&code).unwrap();
         eprintln!("{alu_lib}");
         let alu_id = alu_lib.id();
 
         assert_eq!(
             alu_id.to_string(),
-            "urn:ubideco:alu:EmVozGDJcSo417yx7R3CFfhBRDnY66w7sQ412VGFL6Zz#plaster-ferrari-dollar"
+            "alu:zI4PtPCR-Eut023@-Hqblf3X-N2J4GZb-TR2ZEsI-vQfhKOU#ruby-sherman-tonight"
         );
         assert_eq!(alu_lib.code.as_ref().to_hex(), "d0a00f");
         assert_eq!(
