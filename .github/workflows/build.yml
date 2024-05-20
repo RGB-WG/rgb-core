@@ -42,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Nix
-        uses: cachix/install-nix-action@v26
+        uses: cachix/install-nix-action@V27
       - name: Check feature ${{ matrix.feature }} only
         run: nix develop .#stable -c cargo check --no-default-features --features=${{ matrix.feature }}
       - name: Check feature ${{ matrix.feature }} with defaults
@@ -76,6 +76,6 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
       - name: Install Nix
-        uses: cachix/install-nix-action@v26
+        uses: cachix/install-nix-action@V27
       - name: Check rgb-core
         run: nix develop ".#${{ matrix.toolchain }}" -c cargo check --workspace --all-targets --all-features
