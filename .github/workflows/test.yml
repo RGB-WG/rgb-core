@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Nix
-        uses: cachix/install-nix-action@v26
+        uses: cachix/install-nix-action@V27
       - name: Build & test
         run: nix develop .#stable -c cargo test --workspace --all-features --no-fail-fast
   wasm-testing:
@@ -29,6 +29,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Nix
-        uses: cachix/install-nix-action@v26
+        uses: cachix/install-nix-action@V27
       - name: Test in headless Chrome
         run: nix develop .#wasm -c wasm-pack test --headless --chrome
