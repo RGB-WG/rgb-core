@@ -604,7 +604,7 @@ mod test {
 
         assert_eq!(
             alu_id.to_string(),
-            "alu:zI4PtPCR-Eut023@-Hqblf3X-N2J4GZb-TR2ZEsI-vQfhKOU#ruby-sherman-tonight"
+            "alu:zI4PtPCR-Eut023!-Hqblf3X-N2J4GZb-TR2ZEsI-vQfhKOU#ruby-sherman-tonight"
         );
         assert_eq!(alu_lib.code.as_ref().to_hex(), "d0a00f");
         assert_eq!(
