@@ -85,6 +85,22 @@ impl OwnedStateSchema {
             None
         }
     }
+
+    pub fn fungible_type(&self) -> Option<FungibleType> {
+        if let Self::Fungible(fungible_type) = self {
+            Some(*fungible_type)
+        } else {
+            None
+        }
+    }
+
+    pub fn media_type(&self) -> Option<MediaType> {
+        if let Self::Attachment(media_type) = self {
+            Some(*media_type)
+        } else {
+            None
+        }
+    }
 }
 
 /// Today we support only a single format of confidential data, because of the
