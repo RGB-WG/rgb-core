@@ -222,48 +222,6 @@ impl Schema {
             schema.inputs.insert(*id, Occurrences::NoneOrMore).ok();
             schema.assignments.insert(*id, Occurrences::NoneOrMore).ok();
         }
-
-        for global_type in self.global_types.keys() {
-            schema
-                .globals
-                .insert(*global_type, Occurrences::OnceOrMore)
-                .ok();
-        }
-
-        schema
-    }
-
-    pub fn blank_extension(&self) -> ExtensionSchema {
-        let mut schema = ExtensionSchema::default();
-
-        for global_type in self.global_types.keys() {
-            schema
-                .globals
-                .insert(*global_type, Occurrences::OnceOrMore)
-                .ok();
-        }
-
-        for id in self.owned_types.keys() {
-            schema.assignments.insert(*id, Occurrences::NoneOrMore).ok();
-        }
-
-        schema
-    }
-
-    pub fn blank_genesis(&self) -> GenesisSchema {
-        let mut schema = GenesisSchema::default();
-
-        for id in self.owned_types.keys() {
-            schema.assignments.insert(*id, Occurrences::NoneOrMore).ok();
-        }
-
-        for global_type in self.global_types.keys() {
-            schema
-                .globals
-                .insert(*global_type, Occurrences::OnceOrMore)
-                .ok();
-        }
-
         schema
     }
 
