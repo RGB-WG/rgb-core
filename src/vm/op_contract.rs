@@ -59,7 +59,7 @@ pub enum ContractOp {
     /// Counts number of global state items of the provided type in the contract
     /// state and puts the number to the destination `a16` register.
     #[display("cnc     {0},a16{1}")]
-    CnC(AssignmentType, Reg32),
+    CnC(GlobalStateType, Reg32),
 
     /// Loads input (previous) structured state with type id from the first
     /// argument and index from the second argument `a16` register into a
