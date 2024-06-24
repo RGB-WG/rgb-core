@@ -155,7 +155,7 @@ pub enum ContractOp {
     ///
     /// If verification succeeds, doesn't change `st0` value; otherwise sets it
     /// to `false` and stops execution.
-    #[display("pcis    {0}")]
+    #[display("pcps    {0}")]
     Pcps(/** owned state type */ AssignmentType),
 
     /// All other future unsupported operations, which must set `st0` to
