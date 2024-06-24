@@ -39,9 +39,9 @@ use strict_encoding::StrictDumb;
 use crate::{
     impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ConcealedAttach,
     ConcealedData, ConcealedState, ConfidentialState, DataState, ExposedSeal, ExposedState,
-    Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Operation,
-    PedersenCommitment, Redeemed, SchemaId, SecretSeal, Transition, TransitionBundle,
-    TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
+    Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, MetaType, MetaValue,
+    Metadata, Operation, PedersenCommitment, Redeemed, SchemaId, SecretSeal, Transition,
+    TransitionBundle, TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -435,6 +435,37 @@ impl MerkleLeaves for GlobalState {
                     ty: *ty,
                     state: val.clone(),
                 })
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct MetaCommitment {
+    pub ty: MetaType,
+    pub value: MetaValue,
+}
+
+impl CommitEncode for MetaCommitment {
+    type CommitmentId = MerkleHash;
+
+    fn commit_encode(&self, e: &mut CommitEngine) {
+        e.commit_to_serialized(&self.ty);
+        e.commit_to_serialized(&self.value);
+        e.set_finished();
+    }
+}
+
+impl MerkleLeaves for Metadata {
+    type Leaf = MetaCommitment;
+    type LeafIter<'tmp> = vec::IntoIter<MetaCommitment>;
+
+    fn merkle_leaves(&self) -> Self::LeafIter<'_> {
+        self.iter()
+            .map(|(ty, value)| MetaCommitment {
+                ty: *ty,
+                value: value.clone(),
             })
             .collect::<Vec<_>>()
             .into_iter()
