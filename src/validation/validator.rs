@@ -54,6 +54,15 @@ pub trait ResolveWitness {
     ) -> Result<XWitnessTx, WitnessResolverError>;
 }
 
+impl<T: ResolveWitness> ResolveWitness for &T {
+    fn resolve_pub_witness(
+        &self,
+        witness_id: XWitnessId,
+    ) -> Result<XWitnessTx, WitnessResolverError> {
+        ResolveWitness::resolve_pub_witness(*self, witness_id)
+    }
+}
+
 pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness> {
     consignment: CheckedConsignment<'consignment, C>,
 
