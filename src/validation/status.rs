@@ -29,7 +29,7 @@ use strict_types::SemId;
 use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::{
-    AssignmentType, BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId,
+    AssignmentType, BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, OpType,
     SecretSeal, StateType, Vin, XChain, XGraphSeal, XOutputSeal, XWitnessId,
 };
 
@@ -237,6 +237,12 @@ pub enum Failure {
     CyclicGraph(OpId),
     /// operation {0} is absent from the consignment.
     OperationAbsent(OpId),
+    /// {ty} data doesn't match operation id {expected} (actual id is {actual}).
+    OperationIdMismatch {
+        ty: OpType,
+        expected: OpId,
+        actual: OpId,
+    },
     /// transition bundle {0} referenced in consignment terminals is absent from
     /// the consignment.
     TerminalBundleAbsent(BundleId),
