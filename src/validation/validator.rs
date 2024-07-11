@@ -407,19 +407,14 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 // Reporting this incident and continuing further. Why this happens? No
                 // connection to Bitcoin Core, Electrum or other backend etc. So this is not a
                 // failure in a strict sense, however we can't be sure that the consignment is
-                // valid. That's why we keep the track of such information in a separate place
-                // (`unresolved_txids` field of the validation status object).
-                self.status
-                    .borrow_mut()
-                    .absent_pub_witnesses
-                    .push(witness_id);
+                // valid.
                 // This also can mean that there is no known transaction with the id provided by
                 // the anchor, i.e. consignment is invalid. We are proceeding with further
                 // validation in order to detect the rest of problems (and reporting the
                 // failure!)
                 self.status
                     .borrow_mut()
-                    .add_failure(Failure::SealNoWitnessTx(witness_id));
+                    .add_failure(Failure::SealNoPubWitness(witness_id));
                 None
             }
             Ok(pub_witness) => {

@@ -23,7 +23,6 @@
 use core::ops::AddAssign;
 use std::fmt::{self, Display, Formatter};
 
-use bp::Txid;
 use commit_verify::mpc::InvalidProof;
 use strict_types::SemId;
 
@@ -40,11 +39,8 @@ pub enum Validity {
     #[display("is valid")]
     Valid,
 
-    #[display("has non-mined terminal(s)")]
-    UnminedTerminals,
-
-    #[display("contains unknown witness transactions")]
-    UnresolvedTransactions,
+    #[display("valid, with warnings")]
+    Warnings,
 
     #[display("is NOT valid")]
     Invalid,
@@ -57,8 +53,6 @@ pub enum Validity {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct Status {
-    pub absent_pub_witnesses: Vec<XWitnessId>,
-    pub unmined_terminals: Vec<Txid>,
     pub failures: Vec<Failure>,
     pub warnings: Vec<Warning>,
     pub info: Vec<Info>,
@@ -68,20 +62,6 @@ impl Display for Status {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             writeln!(f, "Consignment {}", self.validity())?;
-        }
-
-        if !self.absent_pub_witnesses.is_empty() {
-            f.write_str("Unknown public witnesses:\n")?;
-            for txid in &self.absent_pub_witnesses {
-                writeln!(f, "- {txid}")?;
-            }
-        }
-
-        if !self.unmined_terminals.is_empty() {
-            f.write_str("Non-mined terminals:\n")?;
-            for txid in &self.unmined_terminals {
-                writeln!(f, "- {txid}")?;
-            }
         }
 
         if !self.failures.is_empty() {
@@ -111,8 +91,6 @@ impl Display for Status {
 
 impl AddAssign for Status {
     fn add_assign(&mut self, rhs: Self) {
-        self.absent_pub_witnesses.extend(rhs.absent_pub_witnesses);
-        self.unmined_terminals.extend(rhs.unmined_terminals);
         self.failures.extend(rhs.failures);
         self.warnings.extend(rhs.warnings);
         self.info.extend(rhs.info);
@@ -122,8 +100,6 @@ impl AddAssign for Status {
 impl Status {
     pub fn from_error(v: Failure) -> Self {
         Status {
-            absent_pub_witnesses: vec![],
-            unmined_terminals: vec![],
             failures: vec![v],
             warnings: vec![],
             info: vec![],
@@ -166,16 +142,12 @@ impl Status {
     }
 
     pub fn validity(&self) -> Validity {
-        if self.failures.is_empty() {
-            if self.unmined_terminals.is_empty() {
-                Validity::Valid
-            } else {
-                Validity::UnminedTerminals
-            }
-        } else if self.absent_pub_witnesses.is_empty() {
+        if !self.failures.is_empty() {
             Validity::Invalid
+        } else if self.warnings.is_empty() {
+            Validity::Warnings
         } else {
-            Validity::UnresolvedTransactions
+            Validity::Valid
         }
     }
 }
@@ -308,8 +280,8 @@ pub enum Failure {
     /// seal defined in the history as a part of operation output {0} is
     /// confidential and can't be validated.
     ConfidentialSeal(Opout),
-    /// witness {0} is not known to the transaction resolver.
-    SealNoWitnessTx(XWitnessId),
+    /// public witness {0} is not known to the resolver.
+    SealNoPubWitness(XWitnessId),
     /// witness layer 1 {anchor} doesn't match seal definition {seal}.
     SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
     /// seal {1} is defined on {0} which is not in the set of layers allowed
@@ -390,12 +362,12 @@ pub enum Failure {
 )]
 #[display(doc_comments)]
 pub enum Warning {
-    // TODO: Replace debug with display
     /// terminal seal {1:?} referencing operation {0} is not present in
     /// operation assignments.
     TerminalSealAbsent(OpId, XChain<SecretSeal>),
-    /// terminal witness transaction {0} is not yet mined.
-    TerminalWitnessNotMined(Txid),
+    /// operation {0} contains state in assignment {1} which is confidential and
+    /// thus was not validated.
+    UncheckableConfidentialState(OpId, schema::AssignmentType),
 
     /// Custom warning by external services on top of RGB Core.
     #[display(inner)]
@@ -410,10 +382,6 @@ pub enum Warning {
 )]
 #[display(doc_comments)]
 pub enum Info {
-    /// operation {0} contains state in assignment {1} which is confidential and
-    /// thus was not validated.
-    UncheckableConfidentialState(OpId, schema::AssignmentType),
-
     /// Custom info by external services on top of RGB Core.
     #[display(inner)]
     Custom(String),
