@@ -144,7 +144,7 @@ impl Status {
     pub fn validity(&self) -> Validity {
         if !self.failures.is_empty() {
             Validity::Invalid
-        } else if self.warnings.is_empty() {
+        } else if !self.warnings.is_empty() {
             Validity::Warnings
         } else {
             Validity::Valid
