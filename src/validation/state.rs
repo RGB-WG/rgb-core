@@ -52,12 +52,12 @@ impl OwnedStateSchema {
                         }
                     }
                     (OwnedStateSchema::Structured(_), ConcealedState::Structured(_)) => {
-                        status.add_info(validation::Info::UncheckableConfidentialState(
+                        status.add_warning(validation::Warning::UncheckableConfidentialState(
                             opid, state_type,
                         ));
                     }
                     (OwnedStateSchema::Attachment(_), ConcealedState::Attachment(_)) => {
-                        status.add_info(validation::Info::UncheckableConfidentialState(
+                        status.add_warning(validation::Warning::UncheckableConfidentialState(
                             opid, state_type,
                         ));
                     }

@@ -230,10 +230,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     fn validate_logic_on_route(&self, opid: OpId) {
         let schema = self.consignment.schema();
         let Some(OpRef::Transition(transition)) = self.consignment.operation(opid) else {
-            panic!("provided {opid} is absent");
+            self.status
+                .borrow_mut()
+                .add_failure(Failure::OperationAbsent(opid));
+            return;
         };
 
-        let mut queue: VecDeque<OpRef> = VecDeque::new();
+        let mut queue: VecDeque<(OpId, OpRef)> = VecDeque::new();
 
         // Instead of constructing complex graph structures or using a recursions we
         // utilize queue to keep the track of the upstream (ancestor) nodes and make
@@ -244,9 +247,18 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         // change to a given operation is valid against the schema + committed
         // into bitcoin transaction graph with proper anchor. That is what we are
         // checking in the code below:
-        queue.push_back(OpRef::Transition(transition));
-        while let Some(operation) = queue.pop_front() {
-            let opid = operation.id();
+        queue.push_back((opid, OpRef::Transition(transition)));
+        while let Some((opid, operation)) = queue.pop_front() {
+            let actual_opid = operation.id();
+            if opid != actual_opid {
+                self.status
+                    .borrow_mut()
+                    .add_failure(Failure::OperationIdMismatch {
+                        ty: operation.op_type(),
+                        expected: opid,
+                        actual: actual_opid,
+                    });
+            }
 
             if operation.contract_id() != self.contract_id {
                 self.status
@@ -274,12 +286,15 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 OpRef::Transition(transition) => {
                     // Now, we must collect all parent nodes and add them to the verification queue
                     let parent_nodes = transition.inputs.iter().filter_map(|input| {
-                        self.consignment.operation(input.prev_out.op).or_else(|| {
-                            self.status
-                                .borrow_mut()
-                                .add_failure(Failure::OperationAbsent(input.prev_out.op));
-                            None
-                        })
+                        self.consignment
+                            .operation(input.prev_out.op)
+                            .map(|op| (input.prev_out.op, op))
+                            .or_else(|| {
+                                self.status
+                                    .borrow_mut()
+                                    .add_failure(Failure::OperationAbsent(input.prev_out.op));
+                                None
+                            })
                     });
 
                     queue.extend(parent_nodes);
@@ -308,7 +323,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                             continue;
                         }
 
-                        queue.push_back(prev_op);
+                        queue.push_back((*prev_id, prev_op));
                     }
                 }
             }
@@ -407,19 +422,14 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 // Reporting this incident and continuing further. Why this happens? No
                 // connection to Bitcoin Core, Electrum or other backend etc. So this is not a
                 // failure in a strict sense, however we can't be sure that the consignment is
-                // valid. That's why we keep the track of such information in a separate place
-                // (`unresolved_txids` field of the validation status object).
-                self.status
-                    .borrow_mut()
-                    .absent_pub_witnesses
-                    .push(witness_id);
+                // valid.
                 // This also can mean that there is no known transaction with the id provided by
                 // the anchor, i.e. consignment is invalid. We are proceeding with further
                 // validation in order to detect the rest of problems (and reporting the
                 // failure!)
                 self.status
                     .borrow_mut()
-                    .add_failure(Failure::SealNoWitnessTx(witness_id));
+                    .add_failure(Failure::SealNoPubWitness(witness_id));
                 None
             }
             Ok(pub_witness) => {
