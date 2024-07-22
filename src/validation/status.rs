@@ -28,6 +28,7 @@ use strict_types::SemId;
 
 use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
+use crate::validation::WitnessResolverError;
 use crate::{
     AssignmentType, BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, OpType,
     SecretSeal, StateType, Vin, XChain, XGraphSeal, XOutputSeal, XWitnessId,
@@ -287,7 +288,7 @@ pub enum Failure {
     /// confidential and can't be validated.
     ConfidentialSeal(Opout),
     /// public witness {0} is not known to the resolver.
-    SealNoPubWitness(XWitnessId),
+    SealNoPubWitness(XWitnessId, WitnessResolverError),
     /// witness layer 1 {anchor} doesn't match seal definition {seal}.
     SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
     /// seal {1} is defined on {0} which is not in the set of layers allowed
