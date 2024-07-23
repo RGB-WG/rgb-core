@@ -45,7 +45,7 @@ use crate::{
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub enum WitnessResolverError {
-    /// actual witness id {actual} doesn't match extected if {expected}.
+    /// actual witness id {actual} doesn't match expected id {expected}.
     IdMismatch {
         actual: XWitnessId,
         expected: XWitnessId,
