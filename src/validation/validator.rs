@@ -37,9 +37,19 @@ use crate::{
     XWitnessId, XWitnessTx,
 };
 
-#[derive(Clone, Debug, Display, Error, From)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
 #[display(doc_comments)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 pub enum WitnessResolverError {
+    /// actual witness id {actual} doesn't match expected id {expected}.
+    IdMismatch {
+        actual: XWitnessId,
+        expected: XWitnessId,
+    },
     /// witness {0} does not exist.
     Unknown(XWitnessId),
     /// unable to retrieve witness {0}, {1}
@@ -63,6 +73,31 @@ impl<T: ResolveWitness> ResolveWitness for &T {
     }
 }
 
+struct CheckedWitnessResolver<R: ResolveWitness> {
+    inner: R,
+}
+
+impl<R: ResolveWitness> From<R> for CheckedWitnessResolver<R> {
+    fn from(inner: R) -> Self { Self { inner } }
+}
+
+impl<R: ResolveWitness> ResolveWitness for CheckedWitnessResolver<R> {
+    fn resolve_pub_witness(
+        &self,
+        witness_id: XWitnessId,
+    ) -> Result<XWitnessTx, WitnessResolverError> {
+        let witness = self.inner.resolve_pub_witness(witness_id)?;
+        let actual_id = witness.witness_id();
+        if actual_id != witness_id {
+            return Err(WitnessResolverError::IdMismatch {
+                actual: actual_id,
+                expected: witness_id,
+            });
+        }
+        Ok(witness)
+    }
+}
+
 pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness> {
     consignment: CheckedConsignment<'consignment, C>,
 
@@ -76,7 +111,7 @@ pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitne
     validated_op_seals: RefCell<BTreeSet<OpId>>,
     validated_op_state: RefCell<BTreeSet<OpId>>,
 
-    resolver: &'resolver R,
+    resolver: CheckedWitnessResolver<&'resolver R>,
 }
 
 impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
@@ -136,7 +171,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             layers1,
             validated_op_state,
             validated_op_seals,
-            resolver,
+            resolver: CheckedWitnessResolver::from(resolver),
         }
     }
 
@@ -417,7 +452,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         // Here the method can do SPV proof instead of querying the indexer. The SPV
         // proofs can be part of the consignments, but do not require .
         match self.resolver.resolve_pub_witness(witness_id) {
-            Err(_) => {
+            Err(err) => {
                 // We wre unable to retrieve corresponding transaction, so can't check.
                 // Reporting this incident and continuing further. Why this happens? No
                 // connection to Bitcoin Core, Electrum or other backend etc. So this is not a
@@ -429,7 +464,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 // failure!)
                 self.status
                     .borrow_mut()
-                    .add_failure(Failure::SealNoPubWitness(witness_id));
+                    .add_failure(Failure::SealNoPubWitness(witness_id, err));
                 None
             }
             Ok(pub_witness) => {
