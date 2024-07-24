@@ -148,9 +148,9 @@ impl Ord for WitnessAnchor {
 }
 
 impl WitnessAnchor {
-    pub fn from_mempool(witness_id: XWitnessId) -> Self {
+    pub fn from_mempool(witness_id: XWitnessId, priority: u32) -> Self {
         WitnessAnchor {
-            witness_ord: WitnessOrd::OffChain,
+            witness_ord: WitnessOrd::OffChain { priority },
             witness_id,
         }
     }

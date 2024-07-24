@@ -226,17 +226,17 @@ pub enum WitnessOrd {
     #[display(inner)]
     OnChain(WitnessPos),
 
-    #[display("offchain")]
+    #[display("offchain@{priority}")]
+    OffChain { priority: u32 },
+
+    #[display("archived")]
     #[strict_type(dumb)]
-    OffChain,
+    Archived,
 }
 
 impl WitnessOrd {
-    pub fn with_mempool_or_height(height: u32, timestamp: i64) -> Self {
-        WitnessPos::new(height, timestamp)
-            .map(WitnessOrd::OnChain)
-            .unwrap_or(WitnessOrd::OffChain)
-    }
+    #[inline]
+    pub fn offchain(priority: u32) -> Self { WitnessOrd::OffChain { priority } }
 }
 
 pub type XWitnessTx<X = Impossible> = XChain<Tx, X>;

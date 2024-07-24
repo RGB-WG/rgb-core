@@ -1,5 +1,5 @@
 {-
-  Id: stl:sqbS4Bea-l!IK7Dt-86Fkfgg-NOhi22w-S!kz5bC-l$99W!Y#bless-donald-poker
+  Id: stl:UL810YQe-Eux21B0-HyyLIsF-qPvkbnE-NeXaHtG-zn3sclI#poetic-tiger-scorpio
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -484,9 +484,10 @@ data VoidState         : ()
 @mnemonic(earth-havana-abraham)
 data WitnessAnchor     : witnessOrd WitnessOrd, witnessId XChainTxid
 
-@mnemonic(tennis-ballad-saturn)
+@mnemonic(proton-ford-arnold)
 data WitnessOrd        : onChain WitnessPos
-                       | offChain ()
+                       | offChain priority U32
+                       | archived ()
 
 @mnemonic(snow-local-tonight)
 data WitnessPos        : height U32, timestamp I64
