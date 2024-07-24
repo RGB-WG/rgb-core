@@ -30,7 +30,7 @@ use commit_verify::mpc::Commitment;
 use commit_verify::{mpc, ConvolveVerifyError, EmbedVerifyError};
 use strict_encoding::{StrictDeserialize, StrictDumb, StrictSerialize};
 
-use crate::{WitnessOrd, XWitnessId, LIB_NAME_RGB};
+use crate::{WitnessOrd, XWitnessId, LIB_NAME_RGB, LIB_NAME_RGB_STATE};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
 #[cfg_attr(
@@ -118,7 +118,7 @@ pub type EAnchor<P = mpc::MerkleProof> = dbc::Anchor<P, DbcProof>;
 /// Txid and height information ordered according to the RGB consensus rules.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_STATE)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

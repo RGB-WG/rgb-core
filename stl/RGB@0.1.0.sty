@@ -1,5 +1,5 @@
 {-
-  Id: stl:UL810YQe-Eux21B0-HyyLIsF-qPvkbnE-NeXaHtG-zn3sclI#poetic-tiger-scorpio
+  Id: stl:DtU4CU7y-uIGqQFH-xs4K7Lw-dG5WL9E-RNK5oB5-IYQS$V4#diploma-montana-elastic
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -21,7 +21,6 @@ import AluVM#congo-archive-folio
 
 import BPCore#garbo-radius-peru
   use TapretNodePartner#roger-member-educate
-  use ExplicitSealTxid#nova-roger-campus
   use TapretProof#marco-border-sample
   use TapretPathProof#kiwi-mirror-paris
   use Method#bali-boris-plasma
@@ -184,10 +183,6 @@ data AssignVoidStateBlindSealTxid : confidential (seal XChainSecretSeal
 @mnemonic(secret-penguin-limit)
 data AssignmentType    : U16
 
-@mnemonic(office-street-numeric)
-data AssignmentWitness : absent ()
-                       | present XChainTxid
-
 @mnemonic(target-valid-tiger)
 data AssignmentsBlindSealTxPtr : {AssignmentType -> ^ ..0xff TypedAssignsBlindSealTxPtr}
 
@@ -218,20 +213,8 @@ data ConcealedData     : [Byte ^ 32]
 @mnemonic(arizona-basic-moment)
 data ConcealedFungible : commitment PedersenCommitment, rangeProof PedersenCommitment
 
-@mnemonic(candid-silicon-america)
-data ContractHistory   : schemaId SchemaId
-                       , contractId ContractId
-                       , global {GlobalStateType -> ^ ..0xff {GlobalOrd -> ^ ..0xffffffff DataState}}
-                       , rights {OutputAssignmentVoidState ^ ..0xffffffff}
-                       , fungibles {OutputAssignmentRevealedValue ^ ..0xffffffff}
-                       , data {OutputAssignmentRevealedData ^ ..0xffffffff}
-                       , attach {OutputAssignmentRevealedAttach ^ ..0xffffffff}
-
 @mnemonic(uniform-welcome-papa)
 data ContractId        : [Byte ^ 32]
-
-@mnemonic(harris-toast-music)
-data ContractState     : schema Schema, history ContractHistory
 
 @mnemonic(short-noise-postal)
 data DataState         : [Byte]
@@ -295,9 +278,6 @@ data GenesisSchema     : metadata {MetaType ^ ..0xff}
                        , valencies {ValencyType ^ ..0xff}
                        , validator AluVM.LibSite?
 
-@mnemonic(miguel-lava-extend)
-data GlobalOrd         : witnessAnchor WitnessAnchor?, idx U16
-
 @mnemonic(initial-malta-sierra)
 data GlobalState       : {GlobalStateType -> ^ ..0xff GlobalValues}
 
@@ -359,30 +339,6 @@ data OpId              : [Byte ^ 32]
 data Opout             : op OpId
                        , ty AssignmentType
                        , no U16
-
-@mnemonic(beast-cotton-control)
-data OutputAssignmentRevealedAttach : opout Opout
-                       , seal XChainExplicitSealTxid
-                       , state RevealedAttach
-                       , witness AssignmentWitness
-
-@mnemonic(ramirez-laptop-sierra)
-data OutputAssignmentRevealedData : opout Opout
-                       , seal XChainExplicitSealTxid
-                       , state RevealedData
-                       , witness AssignmentWitness
-
-@mnemonic(second-pulse-network)
-data OutputAssignmentRevealedValue : opout Opout
-                       , seal XChainExplicitSealTxid
-                       , state RevealedFungible
-                       , witness AssignmentWitness
-
-@mnemonic(fame-norway-tribal)
-data OutputAssignmentVoidState : opout Opout
-                       , seal XChainExplicitSealTxid
-                       , state VoidState
-                       , witness AssignmentWitness
 
 @mnemonic(neutral-mixer-visual)
 data OwnedStateSchema  : declarative ()
@@ -481,17 +437,6 @@ data ValencyType       : U16
 @mnemonic(email-snow-safari)
 data VoidState         : ()
 
-@mnemonic(earth-havana-abraham)
-data WitnessAnchor     : witnessOrd WitnessOrd, witnessId XChainTxid
-
-@mnemonic(proton-ford-arnold)
-data WitnessOrd        : onChain WitnessPos
-                       | offChain priority U32
-                       | archived ()
-
-@mnemonic(snow-local-tonight)
-data WitnessPos        : height U32, timestamp I64
-
 @mnemonic(senator-limbo-raymond)
 data XChainBlindSealTxPtr : bitcoin BPCore.BlindSealTxPtr
                        | liquid BPCore.BlindSealTxPtr
@@ -499,10 +444,6 @@ data XChainBlindSealTxPtr : bitcoin BPCore.BlindSealTxPtr
 @mnemonic(dynamic-life-brown)
 data XChainBlindSealTxid : bitcoin BPCore.BlindSealTxid
                        | liquid BPCore.BlindSealTxid
-
-@mnemonic(acid-nepal-melon)
-data XChainExplicitSealTxid : bitcoin BPCore.ExplicitSealTxid
-                       | liquid BPCore.ExplicitSealTxid
 
 @mnemonic(alex-griffin-left)
 data XChainSecretSeal  : bitcoin BPCore.SecretSeal

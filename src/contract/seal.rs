@@ -36,7 +36,7 @@ use single_use_seals::SealWitness;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictType};
 
 use crate::contract::xchain::Impossible;
-use crate::{XChain, XOutpoint, LIB_NAME_RGB};
+use crate::{XChain, XOutpoint, LIB_NAME_RGB_STATE};
 
 pub type GenesisSeal = SingleBlindSeal<Method>;
 pub type GraphSeal = ChainBlindSeal<Method>;
@@ -180,7 +180,7 @@ impl<U: ExposedSeal> XChain<U> {
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_STATE)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -215,7 +215,7 @@ impl Ord for WitnessPos {
 /// transaction defining the ordering of the contract state data.
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = order)]
+#[strict_type(lib = LIB_NAME_RGB_STATE, tags = order)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

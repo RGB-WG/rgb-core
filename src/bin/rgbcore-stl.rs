@@ -52,6 +52,21 @@ fn main() {
     )
     .expect("unable to write to the file");
 
+    rgbcore::stl::rgb_state_stl()
+        .serialize(
+            format,
+            dir.as_ref(),
+            "0.1.0",
+            Some(
+                "
+  Description: Consensus contract state for RGB smart contracts
+  Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+  Copyright (C) 2023-2024 LNP/BP Standards Association. All rights reserved.
+  License: Apache-2.0",
+            ),
+        )
+        .expect("unable to write to the file");
+
     let std = std_stl();
     let tx = bp_tx_stl();
     let bp = bp_core_stl();

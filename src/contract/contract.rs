@@ -37,7 +37,7 @@ use crate::{
     Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, DataState, ExposedSeal,
     ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach,
     RevealedData, RevealedValue, Schema, SchemaId, Transition, TypedAssigns, VoidState,
-    WitnessAnchor, XChain, XOutputSeal, XWitnessId, LIB_NAME_RGB,
+    WitnessAnchor, XChain, XOutputSeal, XWitnessId, LIB_NAME_RGB, LIB_NAME_RGB_STATE,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -236,7 +236,7 @@ impl<State: KnownState> OutputAssignment<State> {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_STATE)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -289,7 +289,7 @@ impl GlobalOrd {
 /// To access the valid contract state use [`Contract`] APIs.
 #[derive(Getters, Clone, Eq, PartialEq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_STATE)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -471,8 +471,6 @@ impl ContractHistory {
 /// Contract state provides API to read consensus-valid data from the
 /// [`ContractHistory`].
 #[derive(Clone, Eq, PartialEq, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
