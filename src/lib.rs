@@ -66,7 +66,6 @@ pub mod prelude {
 pub use prelude::*;
 
 pub const LIB_NAME_RGB: &str = "RGB";
-pub const LIB_NAME_RGB_STATE: &str = "RGBState";
 
 /// Fast-forward version code
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display)]

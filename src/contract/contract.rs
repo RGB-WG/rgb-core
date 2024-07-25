@@ -26,18 +26,14 @@ use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::num::ParseIntError;
-use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 
-use amplify::confinement::{LargeOrdMap, LargeOrdSet, SmallVec, TinyOrdMap};
 use amplify::hex;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    Assign, AssignmentType, Assignments, AssignmentsRef, ContractId, DataState, ExposedSeal,
-    ExposedState, Extension, Genesis, GlobalStateType, OpId, Operation, RevealedAttach,
-    RevealedData, RevealedValue, Schema, SchemaId, Transition, TypedAssigns, VoidState,
-    WitnessAnchor, XChain, XOutputSeal, XWitnessId, LIB_NAME_RGB, LIB_NAME_RGB_STATE,
+    AssignmentType, DataState, ExposedSeal, ExposedState, OpId, WitnessAnchor, XChain, XOutputSeal,
+    XWitnessId, LIB_NAME_RGB,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -236,7 +232,7 @@ impl<State: KnownState> OutputAssignment<State> {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_STATE)]
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -278,232 +274,5 @@ impl GlobalOrd {
             witness_anchor: None,
             idx,
         }
-    }
-}
-
-/// Contract history accumulates raw data from the contract history, extracted
-/// from a series of consignments over the time. It does consensus ordering of
-/// the state data, but it doesn't interpret or validates the state against the
-/// schema.
-///
-/// To access the valid contract state use [`Contract`] APIs.
-#[derive(Getters, Clone, Eq, PartialEq, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_STATE)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct ContractHistory {
-    #[getter(as_copy)]
-    schema_id: SchemaId,
-    #[getter(as_copy)]
-    contract_id: ContractId,
-    #[getter(skip)]
-    global: TinyOrdMap<GlobalStateType, LargeOrdMap<GlobalOrd, DataState>>,
-    rights: LargeOrdSet<OutputAssignment<VoidState>>,
-    fungibles: LargeOrdSet<OutputAssignment<RevealedValue>>,
-    data: LargeOrdSet<OutputAssignment<RevealedData>>,
-    attach: LargeOrdSet<OutputAssignment<RevealedAttach>>,
-}
-
-impl ContractHistory {
-    /// # Panics
-    ///
-    /// If genesis violates RGB consensus rules and wasn't checked against the
-    /// schema before adding to the history.
-    pub fn with(schema_id: SchemaId, contract_id: ContractId, genesis: &Genesis) -> Self {
-        let mut state = ContractHistory {
-            schema_id,
-            contract_id,
-            global: empty!(),
-            rights: empty!(),
-            fungibles: empty!(),
-            data: empty!(),
-            attach: empty!(),
-        };
-        state.update_genesis(genesis);
-        state
-    }
-
-    /// # Panics
-    ///
-    /// If genesis violates RGB consensus rules and wasn't checked against the
-    /// schema before adding to the history.
-    pub fn update_genesis(&mut self, genesis: &Genesis) { self.add_operation(genesis, None); }
-
-    /// # Panics
-    ///
-    /// If state transition violates RGB consensus rules and wasn't checked
-    /// against the schema before adding to the history.
-    pub fn add_transition(&mut self, transition: &Transition, witness_anchor: WitnessAnchor) {
-        self.add_operation(transition, Some(witness_anchor));
-    }
-
-    /// # Panics
-    ///
-    /// If state extension violates RGB consensus rules and wasn't checked
-    /// against the schema before adding to the history.
-    pub fn add_extension(&mut self, extension: &Extension, witness_anchor: WitnessAnchor) {
-        self.add_operation(extension, Some(witness_anchor));
-    }
-
-    fn add_operation(&mut self, op: &impl Operation, witness_anchor: Option<WitnessAnchor>) {
-        let opid = op.id();
-
-        for (ty, state) in op.globals() {
-            let map = match self.global.get_mut(ty) {
-                Some(map) => map,
-                None => {
-                    // TODO: Do not panic here if we merge without checking against the schema
-                    self.global.insert(*ty, empty!()).expect(
-                        "consensus rules violation: do not add to the state consignments without \
-                         validation against the schema",
-                    );
-                    self.global.get_mut(ty).expect("just inserted")
-                }
-            };
-            for (idx, s) in state.iter().enumerate() {
-                let idx = idx as u16;
-                let glob_idx = GlobalOrd {
-                    witness_anchor,
-                    idx,
-                };
-                map.insert(glob_idx, s.clone())
-                    .expect("contract global state exceeded 2^32 items, which is unrealistic");
-            }
-        }
-
-        // We skip removing of invalidated state for the cases of re-orgs or unmined
-        // witness transactions committing to the new state.
-        // TODO: Expose an API to prune historic state by witness txid
-        /*
-        // Remove invalidated state
-        for input in &op.inputs() {
-            if let Some(o) = self.rights.iter().find(|r| r.opout == input.prev_out) {
-                let o = o.clone(); // need this b/c of borrow checker
-                self.rights
-                    .remove(&o)
-                    .expect("collection allows zero elements");
-            }
-            if let Some(o) = self.fungibles.iter().find(|r| r.opout == input.prev_out) {
-                let o = o.clone();
-                self.fungibles
-                    .remove(&o)
-                    .expect("collection allows zero elements");
-            }
-            if let Some(o) = self.data.iter().find(|r| r.opout == input.prev_out) {
-                let o = o.clone();
-                self.data
-                    .remove(&o)
-                    .expect("collection allows zero elements");
-            }
-            if let Some(o) = self.attach.iter().find(|r| r.opout == input.prev_out) {
-                let o = o.clone();
-                self.attach
-                    .remove(&o)
-                    .expect("collection allows zero elements");
-            }
-        }
-         */
-
-        let witness_id = witness_anchor.map(|wa| wa.witness_id);
-        match op.assignments() {
-            AssignmentsRef::Genesis(assignments) => {
-                self.add_assignments(witness_id, opid, assignments)
-            }
-            AssignmentsRef::Graph(assignments) => {
-                self.add_assignments(witness_id, opid, assignments)
-            }
-        }
-    }
-
-    fn add_assignments<Seal: ExposedSeal>(
-        &mut self,
-        witness_id: Option<XWitnessId>,
-        opid: OpId,
-        assignments: &Assignments<Seal>,
-    ) {
-        fn process<State: ExposedState, Seal: ExposedSeal>(
-            contract_state: &mut LargeOrdSet<OutputAssignment<State>>,
-            assignments: &[Assign<State, Seal>],
-            opid: OpId,
-            ty: AssignmentType,
-            witness_id: Option<XWitnessId>,
-        ) {
-            for (no, seal, state) in assignments
-                .iter()
-                .enumerate()
-                .filter_map(|(n, a)| a.to_revealed().map(|(seal, state)| (n, seal, state)))
-            {
-                let assigned_state = match witness_id {
-                    Some(witness_id) => {
-                        OutputAssignment::with_witness(seal, witness_id, state, opid, ty, no as u16)
-                    }
-                    None => OutputAssignment::with_no_witness(seal, state, opid, ty, no as u16),
-                };
-                contract_state
-                    .push(assigned_state)
-                    .expect("contract state exceeded 2^32 items, which is unrealistic");
-            }
-        }
-
-        for (ty, assignments) in assignments.iter() {
-            match assignments {
-                TypedAssigns::Declarative(assignments) => {
-                    process(&mut self.rights, assignments, opid, *ty, witness_id)
-                }
-                TypedAssigns::Fungible(assignments) => {
-                    process(&mut self.fungibles, assignments, opid, *ty, witness_id)
-                }
-                TypedAssigns::Structured(assignments) => {
-                    process(&mut self.data, assignments, opid, *ty, witness_id)
-                }
-                TypedAssigns::Attachment(assignments) => {
-                    process(&mut self.attach, assignments, opid, *ty, witness_id)
-                }
-            }
-        }
-    }
-}
-
-/// Contract state provides API to read consensus-valid data from the
-/// [`ContractHistory`].
-#[derive(Clone, Eq, PartialEq, Debug)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct ContractState {
-    pub schema: Schema,
-    pub history: ContractHistory,
-}
-
-impl Deref for ContractState {
-    type Target = ContractHistory;
-    fn deref(&self) -> &Self::Target { &self.history }
-}
-
-impl DerefMut for ContractState {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.history }
-}
-
-impl ContractState {
-    /// # Safety
-    ///
-    /// If the specified state type is not part of the schema.
-    pub unsafe fn global_unchecked(&self, state_type: GlobalStateType) -> SmallVec<&DataState> {
-        let schema = self
-            .schema
-            .global_types
-            .get(&state_type)
-            .expect("global type is not in the schema");
-        let Some(state) = self.global.get(&state_type) else {
-            return SmallVec::new();
-        };
-        let iter = state.values().take(schema.max_items as usize);
-        SmallVec::try_from_iter(iter).expect("same size as previous confined collection")
     }
 }

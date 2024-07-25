@@ -1,5 +1,5 @@
 {-
-  Id: stl:DtU4CU7y-uIGqQFH-xs4K7Lw-dG5WL9E-RNK5oB5-IYQS$V4#diploma-montana-elastic
+  Id: stl:dU!OV0Il-utBzMra-3saO5RM-H!25$ds-o8hYnve-jiASTe4#carmen-kimono-final
   Name: RGB
   Version: 0.1.0
   Description: Consensus layer for RGB smart contracts
@@ -278,6 +278,9 @@ data GenesisSchema     : metadata {MetaType ^ ..0xff}
                        , valencies {ValencyType ^ ..0xff}
                        , validator AluVM.LibSite?
 
+@mnemonic(miguel-lava-extend)
+data GlobalOrd         : witnessAnchor WitnessAnchor?, idx U16
+
 @mnemonic(initial-malta-sierra)
 data GlobalState       : {GlobalStateType -> ^ ..0xff GlobalValues}
 
@@ -436,6 +439,17 @@ data ValencyType       : U16
 
 @mnemonic(email-snow-safari)
 data VoidState         : ()
+
+@mnemonic(earth-havana-abraham)
+data WitnessAnchor     : witnessOrd WitnessOrd, witnessId XChainTxid
+
+@mnemonic(proton-ford-arnold)
+data WitnessOrd        : onChain WitnessPos
+                       | offChain priority U32
+                       | archived ()
+
+@mnemonic(snow-local-tonight)
+data WitnessPos        : height U32, timestamp I64
 
 @mnemonic(senator-limbo-raymond)
 data XChainBlindSealTxPtr : bitcoin BPCore.BlindSealTxPtr

@@ -48,8 +48,7 @@ pub use commit::{
     DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
 };
 pub use contract::{
-    AssignmentWitness, ContractHistory, ContractState, GlobalOrd, KnownState, Opout,
-    OpoutParseError, OutputAssignment,
+    AssignmentWitness, GlobalOrd, KnownState, Opout, OpoutParseError, OutputAssignment,
 };
 pub use data::{ConcealedData, DataState, RevealedData, VoidState};
 pub use fungible::{
