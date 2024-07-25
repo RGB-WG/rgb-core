@@ -26,17 +26,13 @@ mod data;
 mod fungible;
 mod attachment;
 mod state;
-mod anchor;
 pub mod seal;
 pub mod assignments;
 mod operations;
 mod bundle;
-#[allow(clippy::module_inception)]
-mod contract;
 mod xchain;
 mod commit;
 
-pub use anchor::{DbcError, DbcProof, EAnchor, Layer1, WitnessAnchor};
 pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
     TypedAssigns,
@@ -47,9 +43,6 @@ pub use commit::{
     AssignmentCommitment, AssignmentIndex, BaseCommitment, BundleDisclosure, ContractId,
     DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
 };
-pub use contract::{
-    AssignmentWitness, GlobalOrd, KnownState, Opout, OpoutParseError, OutputAssignment,
-};
 pub use data::{ConcealedData, DataState, RevealedData, VoidState};
 pub use fungible::{
     AssetTag, BlindingFactor, BlindingParseError, ConcealedValue, FungibleState,
@@ -58,8 +51,8 @@ pub use fungible::{
 pub use global::{GlobalState, GlobalValues};
 pub use meta::{MetaValue, Metadata, MetadataError};
 pub use operations::{
-    AssetTags, Extension, Genesis, Identity, Input, Inputs, OpRef, Operation, Redeemed, Transition,
-    Valencies,
+    AssetTags, Extension, Genesis, Identity, Input, Inputs, OpRef, Operation, Opout,
+    OpoutParseError, Redeemed, Transition, Valencies,
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessOrd, WitnessPos,
@@ -67,6 +60,6 @@ pub use seal::{
 };
 pub use state::{ConcealedState, ConfidentialState, ExposedState, RevealedState, StateType};
 pub use xchain::{
-    AltLayer1, AltLayer1Set, Impossible, XChain, XChainParseError, XOutpoint,
+    AltLayer1, AltLayer1Set, Impossible, Layer1, XChain, XChainParseError, XOutpoint,
     XCHAIN_BITCOIN_PREFIX, XCHAIN_LIQUID_PREFIX,
 };

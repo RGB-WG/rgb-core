@@ -26,7 +26,7 @@ use amplify::confinement::{SmallBlob, TinyOrdMap};
 use amplify::{confinement, Wrapper};
 use commit_verify::StrictHash;
 
-use crate::{schema, LIB_NAME_RGB};
+use crate::{schema, LIB_NAME_RGB_COMMIT};
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display, Error, From)]
 #[display(doc_comments)]
@@ -46,7 +46,7 @@ pub enum MetadataError {
 #[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 pub struct MetaValue(SmallBlob);
 
 #[cfg(feature = "serde")]
@@ -77,7 +77,7 @@ mod _serde {
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = StrictHash)]
 #[cfg_attr(

@@ -1,15 +1,15 @@
 {-
-  Id: stl:dU!OV0Il-utBzMra-3saO5RM-H!25$ds-o8hYnve-jiASTe4#carmen-kimono-final
-  Name: RGB
+  Id: stl:DjmgI8Aw-L0XQMsu-q9HS$Za-!D8BzVj-bvaq$yq-p56MdqY#jester-philips-prelude
+  Name: RGBCommit
   Version: 0.1.0
-  Description: Consensus layer for RGB smart contracts
+  Description: Consensus commitment layer for RGB smart contracts
   Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
   Copyright (C) 2023-2024 LNP/BP Standards Association. All rights reserved.
   License: Apache-2.0
 -}
 
 @context
-typelib RGB
+typelib RGBCommit
 
 import StrictTypes#century-comrade-chess
   use TypeName#edgar-carol-mystery
@@ -20,13 +20,8 @@ import AluVM#congo-archive-folio
   use LibId#germany-culture-olivia
 
 import BPCore#garbo-radius-peru
-  use TapretNodePartner#roger-member-educate
-  use TapretProof#marco-border-sample
-  use TapretPathProof#kiwi-mirror-paris
   use Method#bali-boris-plasma
-  use TapretRightBranch#miracle-patriot-touch
   use BlindSealTxPtr#fortune-iron-salmon
-  use OpretProof#good-village-flex
   use SecretSeal#dollar-iris-wizard
   use BlindSealTxid#media-judge-anita
   use TxPtr#italian-july-eddie
@@ -46,13 +41,7 @@ import CommitVerify#tennis-peace-olympic
 
 import Bitcoin#signal-color-cipher
   use Vout#brush-gloria-heroic
-  use ScriptBytes#equator-cockpit-gong
-  use TapNodeHash#paprika-amanda-hunter
-  use LeafScript#bison-doctor-oscar
   use Txid#shallow-light-reverse
-  use InternalPk#habitat-paprika-oliver
-  use LeafVer#benefit-carbon-africa
-  use XOnlyPk#clever-swim-carpet
 
 
 @mnemonic(edison-survive-nitro)
@@ -219,10 +208,6 @@ data ContractId        : [Byte ^ 32]
 @mnemonic(short-noise-postal)
 data DataState         : [Byte]
 
-@mnemonic(needle-change-forest)
-data DbcProof          : tapret#1 BPCore.TapretProof
-                       | opret BPCore.OpretProof
-
 @mnemonic(marco-taboo-trade)
 data Extension         : ffv Ffv
                        , contractId ContractId
@@ -277,9 +262,6 @@ data GenesisSchema     : metadata {MetaType ^ ..0xff}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
                        , valencies {ValencyType ^ ..0xff}
                        , validator AluVM.LibSite?
-
-@mnemonic(miguel-lava-extend)
-data GlobalOrd         : witnessAnchor WitnessAnchor?, idx U16
 
 @mnemonic(initial-malta-sierra)
 data GlobalState       : {GlobalStateType -> ^ ..0xff GlobalValues}
@@ -439,17 +421,6 @@ data ValencyType       : U16
 
 @mnemonic(email-snow-safari)
 data VoidState         : ()
-
-@mnemonic(earth-havana-abraham)
-data WitnessAnchor     : witnessOrd WitnessOrd, witnessId XChainTxid
-
-@mnemonic(proton-ford-arnold)
-data WitnessOrd        : onChain WitnessPos
-                       | offChain priority U32
-                       | archived ()
-
-@mnemonic(snow-local-tonight)
-data WitnessPos        : height U32, timestamp I64
 
 @mnemonic(senator-limbo-raymond)
 data XChainBlindSealTxPtr : bitcoin BPCore.BlindSealTxPtr

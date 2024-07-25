@@ -33,7 +33,7 @@ use super::ExposedState;
 use crate::contract::seal::GenesisSeal;
 use crate::{
     AssignmentType, ExposedSeal, GraphSeal, RevealedAttach, RevealedData, RevealedValue,
-    SecretSeal, StateType, VoidState, XChain, LIB_NAME_RGB,
+    SecretSeal, StateType, VoidState, XChain, LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
@@ -52,7 +52,7 @@ pub type AssignAttach<Seal> = Assign<RevealedAttach, Seal>;
 #[derive(Clone, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(
-    lib = LIB_NAME_RGB,
+    lib = LIB_NAME_RGB_COMMIT,
     tags = custom,
     dumb = { Self::Confidential { seal: strict_dumb!(), state: strict_dumb!(), lock: default!() } }
 )]
@@ -285,7 +285,7 @@ impl<State: ExposedState> Assign<State, GenesisSeal> {
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Declarative(strict_dumb!()))]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom, dumb = Self::Declarative(strict_dumb!()))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -577,7 +577,7 @@ impl TypedAssigns<GenesisSeal> {
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

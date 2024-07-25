@@ -29,7 +29,7 @@ use bp::Vout;
 use commit_verify::{mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
 use strict_encoding::{StrictDumb, StrictEncode};
 
-use crate::{OpId, Transition, LIB_NAME_RGB};
+use crate::{OpId, Transition, LIB_NAME_RGB_COMMIT};
 
 pub type Vin = Vout;
 
@@ -38,7 +38,7 @@ pub type Vin = Vout;
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Display, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -70,7 +70,7 @@ impl From<mpc::Message> for BundleId {
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -102,7 +102,7 @@ impl<'a> IntoIterator for &'a InputMap {
 
 #[derive(Clone, PartialEq, Eq, Debug, From)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

@@ -56,12 +56,14 @@ use strict_encoding::{
 };
 
 use super::{ConfidentialState, ExposedState};
-use crate::{schema, AssignmentType, ConcealedState, RevealedState, StateType, LIB_NAME_RGB};
+use crate::{
+    schema, AssignmentType, ConcealedState, RevealedState, StateType, LIB_NAME_RGB_COMMIT,
+};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -103,7 +105,7 @@ impl AssetTag {
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[display(inner)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -176,7 +178,7 @@ pub enum BlindingParseError {
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(Self::to_hex)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -281,7 +283,7 @@ impl TryFrom<Bytes32> for BlindingFactor {
 /// Consists of the 64-bit value and
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, rename = "RevealedFungible")]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, rename = "RevealedFungible")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct RevealedValue {
     /// Original value in smallest indivisible units
@@ -354,7 +356,7 @@ impl Ord for RevealedValue {
 #[derive(Wrapper, Copy, Clone, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, FromStr, Display, LowerHex)]
 #[derive(StrictType)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -407,7 +409,7 @@ impl CommitVerify<RevealedValue, UntaggedProtocol> for PedersenCommitment {
 /// A dumb placeholder for a future bulletproofs.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -429,7 +431,7 @@ impl Default for NoiseDumb {
 /// the value do not overflow on arithmetic operations with the commitments.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(StrictType)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -469,7 +471,7 @@ impl CommitmentProtocol for PedersenProtocol {}
 /// See also revealed version [`RevealedValue`].
 #[derive(Clone, Copy, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedFungible")]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, rename = "ConcealedFungible")]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

@@ -26,7 +26,9 @@ mod state;
 mod validator;
 mod consignment;
 mod status;
+mod anchor;
 
+pub use anchor::{DbcError, DbcProof, EAnchor};
 pub use consignment::{CheckedConsignment, ConsignmentApi, Scripts, CONSIGNMENT_MAX_LIBS};
 pub(crate) use logic::OpInfo;
 pub use status::{Failure, Info, Status, Validity, Warning};

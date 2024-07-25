@@ -27,13 +27,13 @@ use amplify::confinement::{Confined, TinyOrdMap, U16};
 use amplify::{confinement, Wrapper};
 use strict_encoding::StrictDumb;
 
-use crate::{schema, DataState, LIB_NAME_RGB};
+use crate::{schema, DataState, LIB_NAME_RGB_COMMIT};
 
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -60,7 +60,7 @@ impl IntoIterator for GlobalValues {
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

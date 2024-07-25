@@ -30,9 +30,10 @@ use aluvm::library::{Lib, LibId};
 use amplify::confinement::Confined;
 use strict_types::TypeSystem;
 
+use super::EAnchor;
 use crate::{
-    BundleId, EAnchor, Genesis, OpId, OpRef, Operation, Schema, SecretSeal, TransitionBundle,
-    XChain, XWitnessId,
+    BundleId, Genesis, OpId, OpRef, Operation, Schema, SecretSeal, TransitionBundle, XChain,
+    XWitnessId,
 };
 
 pub const CONSIGNMENT_MAX_LIBS: usize = 1024;

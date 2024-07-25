@@ -41,14 +41,14 @@ use crate::{
     ConcealedData, ConcealedState, ConfidentialState, DataState, ExposedSeal, ExposedState,
     Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Operation,
     PedersenCommitment, Redeemed, SchemaId, SecretSeal, Transition, TransitionBundle,
-    TransitionType, TypedAssigns, XChain, LIB_NAME_RGB,
+    TransitionType, TypedAssigns, XChain, LIB_NAME_RGB_COMMIT,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 pub struct ContractId(
     #[from]
     #[from([u8; 32])]
@@ -101,7 +101,7 @@ impl_serde_baid64!(ContractId);
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[display(Self::to_hex)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -138,7 +138,7 @@ impl OpId {
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[display(Self::to_hex)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -171,7 +171,7 @@ impl DiscloseHash {
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 pub struct AssignmentIndex {
     pub ty: AssignmentType,
     pub pos: u16,
@@ -183,7 +183,7 @@ impl AssignmentIndex {
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = DiscloseHash)]
 pub struct OpDisclose {
@@ -196,7 +196,7 @@ pub struct OpDisclose {
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = DiscloseHash)]
 pub struct BundleDisclosure {
@@ -230,7 +230,7 @@ impl TransitionBundle {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 pub struct BaseCommitment {
     pub flags: ReservedBytes<1, 0>,
     pub schema_id: SchemaId,
@@ -243,7 +243,7 @@ pub struct BaseCommitment {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Transition(strict_dumb!(), strict_dumb!()))]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom, dumb = Self::Transition(strict_dumb!(), strict_dumb!()))]
 pub enum TypeCommitment {
     #[strict_type(tag = 0)]
     Genesis(BaseCommitment),
@@ -257,7 +257,7 @@ pub enum TypeCommitment {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = OpId)]
 pub struct OpCommitment {

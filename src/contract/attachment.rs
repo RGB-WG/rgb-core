@@ -31,13 +31,15 @@ use commit_verify::{CommitId, CommitmentId, Conceal, DigestExt, Sha256};
 use strict_encoding::StrictEncode;
 
 use super::{ConfidentialState, ExposedState};
-use crate::{impl_serde_baid64, ConcealedState, MediaType, RevealedState, StateType, LIB_NAME_RGB};
+use crate::{
+    impl_serde_baid64, ConcealedState, MediaType, RevealedState, StateType, LIB_NAME_RGB_COMMIT,
+};
 
 /// Unique data attachment identifier
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 pub struct AttachId(
     #[from]
     #[from([u8; 32])]
@@ -65,7 +67,7 @@ impl_serde_baid64!(AttachId);
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = ConcealedAttach)]
 #[cfg_attr(
@@ -126,7 +128,7 @@ impl Conceal for RevealedAttach {
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

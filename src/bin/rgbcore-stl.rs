@@ -36,21 +36,38 @@ use strict_types::SystemBuilder;
 fn main() {
     let (format, dir) = parse_args();
 
-    let rgb = rgbcore::stl::rgb_core_stl();
+    let rgb_commit = rgbcore::stl::rgb_commit_stl();
+    let rgb_logic = rgbcore::stl::rgb_logic_stl();
 
-    rgb.serialize(
-        format,
-        dir.as_ref(),
-        "0.1.0",
-        Some(
-            "
-  Description: Consensus layer for RGB smart contracts
+    rgb_commit
+        .serialize(
+            format,
+            dir.as_ref(),
+            "0.1.0",
+            Some(
+                "
+  Description: Consensus commitment layer for RGB smart contracts
   Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
   Copyright (C) 2023-2024 LNP/BP Standards Association. All rights reserved.
   License: Apache-2.0",
-        ),
-    )
-    .expect("unable to write to the file");
+            ),
+        )
+        .expect("unable to write to the file");
+
+    rgb_logic
+        .serialize(
+            format,
+            dir.as_ref(),
+            "0.1.0",
+            Some(
+                "
+  Description: Consensus logic layer for RGB smart contracts
+  Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+  Copyright (C) 2023-2024 LNP/BP Standards Association. All rights reserved.
+  License: Apache-2.0",
+            ),
+        )
+        .expect("unable to write to the file");
 
     let std = std_stl();
     let tx = bp_tx_stl();
@@ -60,7 +77,9 @@ fn main() {
     let vm = aluvm_stl();
 
     let sys = SystemBuilder::new()
-        .import(rgb)
+        .import(rgb_logic)
+        .unwrap()
+        .import(rgb_commit)
         .unwrap()
         .import(vm)
         .unwrap()
@@ -95,7 +114,7 @@ Schema vesper lexicon=types+commitments
     .unwrap();
     let layout = Schema::commitment_layout();
     writeln!(file, "{layout}").unwrap();
-    let tt = sys.type_tree("RGB.Schema").unwrap();
+    let tt = sys.type_tree("RGBCommit.Schema").unwrap();
     writeln!(file, "{tt}").unwrap();
 
     let mut file = fs::File::create(format!("{dir}/Transition.vesper")).unwrap();
@@ -114,9 +133,9 @@ Transition vesper lexicon=types+commitments
     .unwrap();
     let layout = Transition::commitment_layout();
     writeln!(file, "{layout}").unwrap();
-    let tt = sys.type_tree("RGB.OpCommitment").unwrap();
+    let tt = sys.type_tree("RGBCommit.OpCommitment").unwrap();
     writeln!(file, "{tt}").unwrap();
-    let tt = sys.type_tree("RGB.Transition").unwrap();
+    let tt = sys.type_tree("RGBCommit.Transition").unwrap();
     writeln!(file, "{tt}").unwrap();
 
     let mut file = fs::File::create(format!("{dir}/AnchoredBundle.vesper")).unwrap();
@@ -135,8 +154,8 @@ Bundles vesper lexicon=types+commitments
     .unwrap();
     let layout = TransitionBundle::commitment_layout();
     writeln!(file, "{layout}").unwrap();
-    let tt = sys.type_tree("RGB.DbcProof").unwrap();
+    let tt = sys.type_tree("RGBLogic.DbcProof").unwrap();
     writeln!(file, "{tt}").unwrap();
-    let tt = sys.type_tree("RGB.TransitionBundle").unwrap();
+    let tt = sys.type_tree("RGBCommit.TransitionBundle").unwrap();
     writeln!(file, "{tt}").unwrap();
 }

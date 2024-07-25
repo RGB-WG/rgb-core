@@ -39,13 +39,15 @@ use strict_types::SemId;
 use super::{
     AssignmentType, ExtensionSchema, GenesisSchema, OwnedStateSchema, TransitionSchema, ValencyType,
 };
-use crate::{impl_serde_baid64, Ffv, GlobalStateSchema, Identity, Occurrences, LIB_NAME_RGB};
+use crate::{
+    impl_serde_baid64, Ffv, GlobalStateSchema, Identity, Occurrences, LIB_NAME_RGB_COMMIT,
+};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
 #[display("0x{0:04X}")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -60,7 +62,7 @@ impl MetaType {
 #[wrapper(FromStr, LowerHex, UpperHex)]
 #[display("0x{0:04X}")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -75,7 +77,7 @@ impl GlobalStateType {
 #[wrapper(FromStr, LowerHex, UpperHex)]
 #[display("0x{0:04X}")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -90,7 +92,7 @@ impl ExtensionType {
 #[wrapper(FromStr, LowerHex, UpperHex)]
 #[display("0x{0:04X}")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -113,7 +115,7 @@ impl TransitionType {
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 pub struct SchemaId(
     #[from]
     #[from([u8; 32])]
@@ -149,7 +151,7 @@ impl_serde_baid64!(SchemaId);
 
 #[derive(Clone, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
