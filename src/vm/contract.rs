@@ -28,8 +28,8 @@ use amplify::confinement::LargeOrdMap;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    AssignmentType, DataState, FungibleState, GlobalStateType, RevealedAttach, WitnessOrd,
-    XOutpoint, XWitnessId, LIB_NAME_RGB_LOGIC,
+    AssignmentType, AttachState, DataState, FungibleState, GlobalStateType, WitnessOrd, XOutpoint,
+    XWitnessId, LIB_NAME_RGB_LOGIC,
 };
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display, From)]
@@ -170,5 +170,5 @@ pub trait ContractState {
         &self,
         outpoint: XOutpoint,
         ty: AssignmentType,
-    ) -> impl DoubleEndedIterator<Item = impl Borrow<RevealedAttach>>;
+    ) -> impl DoubleEndedIterator<Item = impl Borrow<AttachState>>;
 }

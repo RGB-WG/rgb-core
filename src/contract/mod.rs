@@ -37,7 +37,7 @@ pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
     TypedAssigns,
 };
-pub use attachment::{AttachId, ConcealedAttach, RevealedAttach};
+pub use attachment::{AttachId, AttachState, ConcealedAttach, RevealedAttach};
 pub use bundle::{BundleId, InputMap, TransitionBundle, Vin};
 pub use commit::{
     AssignmentCommitment, AssignmentIndex, BaseCommitment, BundleDisclosure, ContractId,

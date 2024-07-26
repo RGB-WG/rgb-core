@@ -78,12 +78,12 @@ impl OwnedStateSchema {
                     (
                         OwnedStateSchema::Attachment(media_type),
                         RevealedState::Attachment(attach),
-                    ) if !attach.media_type.conforms(media_type) => {
+                    ) if !attach.file.media_type.conforms(media_type) => {
                         status.add_failure(validation::Failure::MediaTypeMismatch {
                             opid,
                             state_type,
                             expected: *media_type,
-                            found: attach.media_type,
+                            found: attach.file.media_type,
                         });
                     }
                     (OwnedStateSchema::Fungible(schema), RevealedState::Fungible(v))

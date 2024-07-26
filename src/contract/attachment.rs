@@ -28,7 +28,7 @@ use amplify::{ByteArray, Bytes32};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use bp::secp256k1::rand::{random, Rng, RngCore};
 use commit_verify::{CommitId, CommitmentId, Conceal, DigestExt, Sha256};
-use strict_encoding::StrictEncode;
+use strict_encoding::{StrictEncode, StrictSerialize};
 
 use super::{ConfidentialState, ExposedState};
 use crate::{
@@ -65,6 +65,32 @@ impl Display for AttachId {
 
 impl_serde_baid64!(AttachId);
 
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[display("{id}:{media_type}")]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct AttachState {
+    pub id: AttachId,
+    /// We do not enforce a MIME standard since non-standard types can be also
+    /// used
+    pub media_type: MediaType,
+}
+impl StrictSerialize for AttachState {}
+
+impl From<RevealedAttach> for AttachState {
+    fn from(attach: RevealedAttach) -> Self {
+        AttachState {
+            id: attach.file.id,
+            media_type: attach.file.media_type,
+        }
+    }
+}
+
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
@@ -76,10 +102,7 @@ impl_serde_baid64!(AttachId);
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct RevealedAttach {
-    pub id: AttachId,
-    /// We do not enforce a MIME standard since non-standard types can be also
-    /// used
-    pub media_type: MediaType,
+    pub file: AttachState,
     pub salt: u64,
 }
 
@@ -103,8 +126,10 @@ impl RevealedAttach {
     /// Convenience constructor.
     pub fn with_salt(id: AttachId, media_type: impl Into<MediaType>, salt: u64) -> Self {
         Self {
-            id,
-            media_type: media_type.into(),
+            file: AttachState {
+                id,
+                media_type: media_type.into(),
+            },
             salt,
         }
     }
