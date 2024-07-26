@@ -148,30 +148,27 @@ impl GlobalOrd {
     }
 }
 
+// TODO: Support unspent
 pub trait ContractState {
-    fn global(&self, ty: GlobalStateType)
-    -> Option<LargeOrdMap<GlobalOrd, impl Borrow<DataState>>>;
+    fn global(&self, ty: GlobalStateType) -> &LargeOrdMap<GlobalOrd, impl Borrow<DataState>>;
 
-    fn rights(&self, outpoint: XOutpoint, ty: AssignmentType, unspent: bool) -> Option<u32>;
+    fn rights(&self, outpoint: XOutpoint, ty: AssignmentType) -> u32;
 
     fn fungible(
         &self,
         outpoint: XOutpoint,
         ty: AssignmentType,
-        unspent: bool,
-    ) -> Option<impl DoubleEndedIterator<Item = FungibleState>>;
+    ) -> impl DoubleEndedIterator<Item = FungibleState>;
 
     fn data(
         &self,
         outpoint: XOutpoint,
         ty: AssignmentType,
-        unspent: bool,
-    ) -> Option<impl DoubleEndedIterator<Item = impl Borrow<DataState>>>;
+    ) -> impl DoubleEndedIterator<Item = impl Borrow<DataState>>;
 
     fn attach(
         &self,
         outpoint: XOutpoint,
         ty: AssignmentType,
-        unspent: bool,
-    ) -> Option<impl DoubleEndedIterator<Item = impl Borrow<RevealedAttach>>>;
+    ) -> impl DoubleEndedIterator<Item = impl Borrow<RevealedAttach>>;
 }
