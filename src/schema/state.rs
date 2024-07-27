@@ -20,6 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use amplify::num::u24;
 use commit_verify::ReservedBytes;
 use strict_encoding::Primitive;
 use strict_types::SemId;
@@ -122,7 +123,7 @@ pub struct GlobalStateSchema {
     //       state having value 1.
     pub reserved: ReservedBytes<1>,
     pub sem_id: SemId,
-    pub max_items: u16,
+    pub max_items: u24,
 }
 
 impl GlobalStateSchema {
@@ -130,7 +131,7 @@ impl GlobalStateSchema {
         GlobalStateSchema {
             reserved: default!(),
             sem_id,
-            max_items: 1,
+            max_items: u24::ONE,
         }
     }
 
@@ -138,7 +139,7 @@ impl GlobalStateSchema {
         GlobalStateSchema {
             reserved: default!(),
             sem_id,
-            max_items: u16::MAX,
+            max_items: u24::MAX,
         }
     }
 }

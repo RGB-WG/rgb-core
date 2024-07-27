@@ -24,6 +24,7 @@ use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::fmt::Debug;
 
+use amplify::num::u24;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
@@ -148,15 +149,15 @@ impl GlobalOrd {
 }
 
 pub trait GlobalStateIter {
-    fn size(&self) -> u32;
+    fn size(&self) -> u24;
     fn prev(&mut self) -> Option<(GlobalOrd, impl Borrow<DataState>)>;
     fn last(&mut self) -> Option<(GlobalOrd, impl Borrow<DataState>)>;
-    fn reset(&mut self, depth: u32);
+    fn reset(&mut self, depth: u24);
 }
 
 impl<I: GlobalStateIter> GlobalStateIter for &mut I {
     #[inline]
-    fn size(&self) -> u32 { GlobalStateIter::size(*self) }
+    fn size(&self) -> u24 { GlobalStateIter::size(*self) }
 
     #[inline]
     fn prev(&mut self) -> Option<(GlobalOrd, impl Borrow<DataState>)> { (*self).prev() }
@@ -165,37 +166,37 @@ impl<I: GlobalStateIter> GlobalStateIter for &mut I {
     fn last(&mut self) -> Option<(GlobalOrd, impl Borrow<DataState>)> { (*self).last() }
 
     #[inline]
-    fn reset(&mut self, depth: u32) { (*self).reset(depth) }
+    fn reset(&mut self, depth: u24) { (*self).reset(depth) }
 }
 
 pub struct GlobalContractState<I: GlobalStateIter> {
-    checked_depth: u32,
+    checked_depth: u24,
     last_ord: GlobalOrd,
     iter: I,
 }
 
 impl<I: GlobalStateIter> GlobalContractState<I> {
     #[inline]
-    pub fn from(mut iter: I) -> Self {
+    pub fn new(mut iter: I) -> Self {
         let last_ord = iter.prev().map(|(ord, _)| ord).unwrap_or(GlobalOrd {
             witness_anchor: None,
             idx: 0,
         });
-        iter.reset(0);
+        iter.reset(u24::ZERO);
         Self {
             iter,
-            checked_depth: 1,
+            checked_depth: u24::ONE,
             last_ord,
         }
     }
 
     #[inline]
-    pub fn size(&self) -> u32 { self.iter.size() }
+    pub fn size(&self) -> u24 { self.iter.size() }
 
     /// Retrieves global state data located `depth` items back from the most
     /// recent global state value. Ensures that the global state ordering is
     /// consensus-based.
-    pub fn nth(&mut self, depth: u32) -> Option<impl Borrow<DataState> + '_> {
+    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<DataState> + '_> {
         if depth >= self.iter.size() {
             return None;
         }
@@ -204,7 +205,8 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
         } else {
             self.iter.reset(self.checked_depth);
             let size = self.iter.size();
-            for inc in 0..(depth - self.checked_depth) {
+            let to = (depth - self.checked_depth).to_u32();
+            for inc in 0..to {
                 let (ord, _) = self.iter.prev().unwrap_or_else(|| {
                     panic!(
                         "global contract state iterator has invalid implementation: it reports \
