@@ -35,7 +35,7 @@ mod contract;
 pub use aluvm::aluasm_isa;
 pub use contract::{
     AssignmentWitness, ContractState, GlobalContractState, GlobalOrd, GlobalStateIter,
-    WitnessAnchor,
+    UnknownGlobalStateType, WitnessAnchor,
 };
 pub use isa::RgbIsa;
 pub use op_contract::ContractOp;

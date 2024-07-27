@@ -134,36 +134,43 @@ impl Ord for GlobalOrd {
 }
 
 impl GlobalOrd {
+    #[inline]
     pub fn with_anchor(ord_txid: WitnessAnchor, idx: u16) -> Self {
         GlobalOrd {
             witness_anchor: Some(ord_txid),
             idx,
         }
     }
+    #[inline]
     pub fn genesis(idx: u16) -> Self {
         GlobalOrd {
             witness_anchor: None,
             idx,
         }
     }
+    #[inline]
+    pub fn witness_id(&self) -> Option<XWitnessId> { self.witness_anchor.map(|a| a.witness_id) }
 }
 
 pub trait GlobalStateIter {
-    fn size(&self) -> u24;
-    fn prev(&mut self) -> Option<(GlobalOrd, impl Borrow<DataState>)>;
-    fn last(&mut self) -> Option<(GlobalOrd, impl Borrow<DataState>)>;
+    type Data: Borrow<DataState>;
+    fn size(&mut self) -> u24;
+    fn prev(&mut self) -> Option<(GlobalOrd, Self::Data)>;
+    fn last(&mut self) -> Option<(GlobalOrd, Self::Data)>;
     fn reset(&mut self, depth: u24);
 }
 
 impl<I: GlobalStateIter> GlobalStateIter for &mut I {
-    #[inline]
-    fn size(&self) -> u24 { GlobalStateIter::size(*self) }
+    type Data = I::Data;
 
     #[inline]
-    fn prev(&mut self) -> Option<(GlobalOrd, impl Borrow<DataState>)> { (*self).prev() }
+    fn size(&mut self) -> u24 { GlobalStateIter::size(*self) }
 
     #[inline]
-    fn last(&mut self) -> Option<(GlobalOrd, impl Borrow<DataState>)> { (*self).last() }
+    fn prev(&mut self) -> Option<(GlobalOrd, Self::Data)> { (*self).prev() }
+
+    #[inline]
+    fn last(&mut self) -> Option<(GlobalOrd, Self::Data)> { (*self).last() }
 
     #[inline]
     fn reset(&mut self, depth: u24) { (*self).reset(depth) }
@@ -191,7 +198,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     }
 
     #[inline]
-    pub fn size(&self) -> u24 { self.iter.size() }
+    pub fn size(&mut self) -> u24 { self.iter.size() }
 
     /// Retrieves global state data located `depth` items back from the most
     /// recent global state value. Ensures that the global state ordering is
@@ -227,8 +234,35 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     }
 }
 
-pub trait ContractState {
-    fn global(&self, ty: GlobalStateType) -> GlobalContractState<impl GlobalStateIter>;
+impl<I: GlobalStateIter> Iterator for GlobalContractState<I> {
+    type Item = I::Data;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        let Some((ord, item)) = self.iter.prev() else {
+            return None;
+        };
+        if ord >= self.last_ord {
+            panic!(
+                "global contract state iterator has invalid implementation: it fails to order \
+                 global state according to the consensus ordering"
+            );
+        }
+        self.checked_depth += u24::ONE;
+        self.last_ord = ord;
+        Some(item)
+    }
+}
+
+#[derive(Copy, Clone, Debug, Display, Error)]
+#[display("unknown global state type {0} requested from the contract")]
+pub struct UnknownGlobalStateType(pub GlobalStateType);
+
+pub trait ContractState<'c> {
+    fn global(
+        &'c self,
+        ty: GlobalStateType,
+    ) -> Result<GlobalContractState<impl GlobalStateIter + 'c>, UnknownGlobalStateType>;
 
     fn rights(&self, outpoint: XOutpoint, ty: AssignmentType) -> u32;
 
