@@ -45,10 +45,18 @@ pub enum AssignmentWitness {
     #[strict_type(tag = 0, dumb)]
     Absent,
 
+    // TODO: Consider separating transition and extension witnesses
     #[from]
     #[display(inner)]
     #[strict_type(tag = 1)]
     Present(XWitnessId),
+}
+
+impl PartialEq<XWitnessId> for AssignmentWitness {
+    fn eq(&self, other: &XWitnessId) -> bool { self.witness_id() == Some(*other) }
+}
+impl PartialEq<AssignmentWitness> for XWitnessId {
+    fn eq(&self, other: &AssignmentWitness) -> bool { other.witness_id() == Some(*self) }
 }
 
 impl From<Option<XWitnessId>> for AssignmentWitness {
@@ -56,6 +64,15 @@ impl From<Option<XWitnessId>> for AssignmentWitness {
         match value {
             None => AssignmentWitness::Absent,
             Some(id) => AssignmentWitness::Present(id),
+        }
+    }
+}
+
+impl AssignmentWitness {
+    pub fn witness_id(&self) -> Option<XWitnessId> {
+        match self {
+            AssignmentWitness::Absent => None,
+            AssignmentWitness::Present(witness_id) => Some(*witness_id),
         }
     }
 }
@@ -93,6 +110,13 @@ impl Ord for WitnessAnchor {
 }
 
 impl WitnessAnchor {
+    pub fn with(witness_id: XWitnessId, witness_ord: WitnessOrd) -> Self {
+        WitnessAnchor {
+            witness_id,
+            witness_ord,
+        }
+    }
+
     pub fn from_mempool(witness_id: XWitnessId, priority: u32) -> Self {
         WitnessAnchor {
             witness_ord: WitnessOrd::OffChain { priority },
@@ -135,9 +159,9 @@ impl Ord for GlobalOrd {
 
 impl GlobalOrd {
     #[inline]
-    pub fn with_anchor(ord_txid: WitnessAnchor, idx: u16) -> Self {
+    pub fn with_witness(witness_id: XWitnessId, ord: WitnessOrd, idx: u16) -> Self {
         GlobalOrd {
-            witness_anchor: Some(ord_txid),
+            witness_anchor: Some(WitnessAnchor::with(witness_id, ord)),
             idx,
         }
     }
@@ -258,11 +282,11 @@ impl<I: GlobalStateIter> Iterator for GlobalContractState<I> {
 #[display("unknown global state type {0} requested from the contract")]
 pub struct UnknownGlobalStateType(pub GlobalStateType);
 
-pub trait ContractState<'c> {
+pub trait ContractState {
     fn global(
-        &'c self,
+        &self,
         ty: GlobalStateType,
-    ) -> Result<GlobalContractState<impl GlobalStateIter + 'c>, UnknownGlobalStateType>;
+    ) -> Result<GlobalContractState<impl GlobalStateIter>, UnknownGlobalStateType>;
 
     fn rights(&self, outpoint: XOutpoint, ty: AssignmentType) -> u32;
 
