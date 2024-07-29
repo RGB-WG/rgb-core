@@ -28,8 +28,7 @@ use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, IsaSeg, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg};
 
-use super::{ContractOp, ContractState, TimechainOp};
-use crate::validation::VmContext;
+use super::{ContractOp, ContractState, TimechainOp, VmContext};
 use crate::vm::opcodes::{INSTR_RGBISA_FROM, INSTR_RGBISA_TO};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]

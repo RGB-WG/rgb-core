@@ -37,6 +37,7 @@ pub use contract::{
     AssignmentWitness, ContractState, GlobalContractState, GlobalOrd, GlobalStateIter, OpOrd,
     UnknownGlobalStateType, WitnessAnchor,
 };
+pub(crate) use contract::{OpInfo, VmContext};
 pub use isa::RgbIsa;
 pub use op_contract::ContractOp;
 pub use op_timechain::TimechainOp;

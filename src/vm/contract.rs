@@ -21,16 +21,19 @@
 // limitations under the License.
 
 use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::fmt::Debug;
+use std::rc::Rc;
 
 use amplify::num::u24;
 use amplify::Bytes32;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    AssignmentType, AttachState, DataState, FungibleState, GlobalStateType, OpId, OpRef,
-    WitnessOrd, XOutpoint, XWitnessId, LIB_NAME_RGB_LOGIC,
+    AssetTags, AssignmentType, Assignments, AssignmentsRef, AttachState, ContractId, DataState,
+    FungibleState, GlobalState, GlobalStateType, GraphSeal, Metadata, OpFullType, OpId, OpRef,
+    Operation, Valencies, WitnessOrd, XOutpoint, XWitnessId, LIB_NAME_RGB_LOGIC,
 };
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display, From)]
@@ -333,4 +336,48 @@ pub trait ContractState: Debug + Default {
     ) -> impl DoubleEndedIterator<Item = impl Borrow<AttachState>>;
 
     fn evolve_state(&mut self, op: OpRef);
+}
+
+pub struct VmContext<'op, S: ContractState> {
+    pub op_info: OpInfo<'op>,
+    pub contract_state: Rc<RefCell<S>>,
+}
+
+pub struct OpInfo<'op> {
+    // TODO: Move to VmContext
+    pub contract_id: ContractId,
+    pub id: OpId,
+    pub ty: OpFullType,
+    // TODO: Move to VmContext
+    pub asset_tags: &'op AssetTags,
+    pub metadata: &'op Metadata,
+    pub prev_state: &'op Assignments<GraphSeal>,
+    pub owned_state: AssignmentsRef<'op>,
+    pub redeemed: &'op Valencies,
+    pub valencies: &'op Valencies,
+    pub global: &'op GlobalState,
+}
+
+impl<'op> OpInfo<'op> {
+    pub fn with(
+        contract_id: ContractId,
+        id: OpId,
+        op: &'op OpRef<'op>,
+        prev_state: &'op Assignments<GraphSeal>,
+        redeemed: &'op Valencies,
+        asset_tags: &'op AssetTags,
+    ) -> Self {
+        OpInfo {
+            id,
+            contract_id,
+            ty: op.full_type(),
+            asset_tags,
+            metadata: op.metadata(),
+            prev_state,
+            owned_state: op.assignments(),
+            redeemed,
+            valencies: op.valencies(),
+            global: op.globals(),
+        }
+    }
 }

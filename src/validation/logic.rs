@@ -34,13 +34,12 @@ use strict_types::TypeSystem;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
-use crate::vm::{ContractState, RgbIsa};
+use crate::vm::{ContractState, OpInfo, RgbIsa, VmContext};
 use crate::{
-    validation, AssetTags, Assign, AssignmentType, Assignments, AssignmentsRef, ConcealedState,
-    ConfidentialState, ContractId, ExposedSeal, ExposedState, Extension, GlobalState,
-    GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpFullType, OpId,
-    OpRef, Operation, Opout, OwnedStateSchema, RevealedState, Schema, StateType, Transition,
-    TypedAssigns, Valencies,
+    validation, Assign, AssignmentType, Assignments, AssignmentsRef, ConcealedState,
+    ConfidentialState, ExposedSeal, ExposedState, Extension, GlobalState, GlobalStateSchema,
+    GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId, OpRef, Operation, Opout,
+    OwnedStateSchema, RevealedState, Schema, StateType, Transition, TypedAssigns, Valencies,
 };
 
 impl Schema {
@@ -478,52 +477,6 @@ impl Schema {
             });
 
         status
-    }
-}
-
-// TODO: Move to VM module
-pub struct VmContext<'op, S: ContractState> {
-    pub op_info: OpInfo<'op>,
-    pub contract_state: Rc<RefCell<S>>,
-}
-
-// TODO: Move to VM module
-pub struct OpInfo<'op> {
-    // TODO: Move to VmContext
-    pub contract_id: ContractId,
-    pub id: OpId,
-    pub ty: OpFullType,
-    // TODO: Move to VmContext
-    pub asset_tags: &'op AssetTags,
-    pub metadata: &'op Metadata,
-    pub prev_state: &'op Assignments<GraphSeal>,
-    pub owned_state: AssignmentsRef<'op>,
-    pub redeemed: &'op Valencies,
-    pub valencies: &'op Valencies,
-    pub global: &'op GlobalState,
-}
-
-impl<'op> OpInfo<'op> {
-    pub fn with(
-        contract_id: ContractId,
-        id: OpId,
-        op: &'op OpRef<'op>,
-        prev_state: &'op Assignments<GraphSeal>,
-        redeemed: &'op Valencies,
-        asset_tags: &'op AssetTags,
-    ) -> Self {
-        OpInfo {
-            id,
-            contract_id,
-            ty: op.full_type(),
-            asset_tags,
-            metadata: op.metadata(),
-            prev_state,
-            owned_state: op.assignments(),
-            redeemed,
-            valencies: op.valencies(),
-            global: op.globals(),
-        }
     }
 }
 

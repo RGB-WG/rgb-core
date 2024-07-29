@@ -29,6 +29,5 @@ mod commitments;
 
 pub use commitments::{DbcError, DbcProof, EAnchor};
 pub use consignment::{CheckedConsignment, ConsignmentApi, Scripts, CONSIGNMENT_MAX_LIBS};
-pub(crate) use logic::VmContext;
 pub use status::{Failure, Info, Status, Validity, Warning};
 pub use validator::{ResolveWitness, Validator, WitnessResolverError};
