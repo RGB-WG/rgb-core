@@ -33,7 +33,7 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use crate::{
     AssetTags, AssignmentType, Assignments, AssignmentsRef, AttachState, ContractId, DataState,
     FungibleState, GlobalState, GlobalStateType, GraphSeal, Metadata, OpFullType, OpId, OpRef,
-    Operation, Valencies, WitnessOrd, XOutpoint, XWitnessId, LIB_NAME_RGB_LOGIC,
+    Operation, TxOrd, Valencies, XOutpoint, XWitnessId, LIB_NAME_RGB_LOGIC,
 };
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display, From)]
@@ -94,7 +94,7 @@ impl AssignmentWitness {
 #[display("{witness_id}/{witness_ord}")]
 // TODO: Rename into `WitnessOrd`
 pub struct WitnessAnchor {
-    pub witness_ord: WitnessOrd,
+    pub witness_ord: TxOrd,
     pub witness_id: XWitnessId,
 }
 
@@ -116,7 +116,7 @@ impl Ord for WitnessAnchor {
 }
 
 impl WitnessAnchor {
-    pub fn with(witness_id: XWitnessId, witness_ord: WitnessOrd) -> Self {
+    pub fn with(witness_id: XWitnessId, witness_ord: TxOrd) -> Self {
         WitnessAnchor {
             witness_id,
             witness_ord,
@@ -125,7 +125,7 @@ impl WitnessAnchor {
 
     pub fn from_mempool(witness_id: XWitnessId, priority: u32) -> Self {
         WitnessAnchor {
-            witness_ord: WitnessOrd::OffChain { priority },
+            witness_ord: TxOrd::OffChain { priority },
             witness_id,
         }
     }
@@ -183,7 +183,7 @@ impl Ord for GlobalOrd {
 
 impl GlobalOrd {
     #[inline]
-    pub fn with_witness(opid: OpId, witness_id: XWitnessId, ord: WitnessOrd, idx: u16) -> Self {
+    pub fn with_witness(opid: OpId, witness_id: XWitnessId, ord: TxOrd, idx: u16) -> Self {
         GlobalOrd {
             witness_anchor: Some(WitnessAnchor::with(witness_id, ord)),
             opid,

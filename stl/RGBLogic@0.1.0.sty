@@ -1,5 +1,5 @@
 {-
-  Id: stl:J61WrKfv-HBO6mFZ-9bZzqau-j!wrLMA-9IgEJGM-hcaprmA#podium-colombo-buenos
+  Id: stl:lfwSIiCB-NMEafxB-$XKtmil-Ve95dNq-9Ni$L$Z-wbkqO2c#alarm-amanda-source
   Name: RGBLogic
   Version: 0.1.0
   Description: Consensus logic layer for RGB smart contracts
@@ -11,17 +11,18 @@
 @context
 typelib RGBLogic
 
-import RGBCommit#jester-philips-prelude
-  use WitnessPos#snow-local-tonight
-  use XChainTxid#liquid-river-absorb
-  use WitnessOrd#chief-digital-vitamin
-
 import BPCore#garbo-radius-peru
   use TapretNodePartner#roger-member-educate
   use TapretProof#marco-border-sample
   use TapretPathProof#kiwi-mirror-paris
   use TapretRightBranch#miracle-patriot-touch
   use OpretProof#good-village-flex
+
+import RGBCommit#orbit-airport-voice
+  use TxPos#john-invest-weekend
+  use XChainTxid#liquid-river-absorb
+  use OpId#picnic-single-gloria
+  use TxOrd#brigade-sweet-script
 
 import Bitcoin#signal-color-cipher
   use ScriptBytes#equator-cockpit-gong
@@ -37,10 +38,12 @@ import Bitcoin#signal-color-cipher
 data DbcProof          : tapret#1 BPCore.TapretProof
                        | opret BPCore.OpretProof
 
-@mnemonic(miguel-lava-extend)
-data GlobalOrd         : witnessAnchor WitnessAnchor?, idx U16
+@mnemonic(nice-corona-order)
+data GlobalOrd         : witnessAnchor WitnessAnchor?
+                       , opid RGBCommit.OpId
+                       , idx U16
 
-@mnemonic(scoop-scoop-cadet)
-data WitnessAnchor     : witnessOrd RGBCommit.WitnessOrd, witnessId RGBCommit.XChainTxid
+@mnemonic(maze-grid-user)
+data WitnessAnchor     : witnessOrd RGBCommit.TxOrd, witnessId RGBCommit.XChainTxid
 
 

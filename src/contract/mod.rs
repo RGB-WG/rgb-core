@@ -55,7 +55,7 @@ pub use operations::{
     OpoutParseError, Redeemed, Transition, Valencies,
 };
 pub use seal::{
-    ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessOrd, WitnessPos,
+    ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxOrd, TxPos, TxoSeal,
     XGenesisSeal, XGraphSeal, XOutputSeal, XWitnessId, XWitnessTx,
 };
 pub use state::{ConcealedState, ConfidentialState, ExposedState, RevealedState, StateType};

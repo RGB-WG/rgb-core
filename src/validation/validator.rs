@@ -35,7 +35,7 @@ use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Valid
 use crate::vm::{ContractState, OpOrd, WitnessAnchor};
 use crate::{
     validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
-    Schema, SchemaId, TransitionBundle, WitnessOrd, XChain, XOutpoint, XOutputSeal, XWitnessId,
+    Schema, SchemaId, TransitionBundle, TxOrd, XChain, XOutpoint, XOutputSeal, XWitnessId,
     XWitnessTx,
 };
 
@@ -70,7 +70,7 @@ pub trait ResolveWitness {
     fn resolve_pub_witness_ord(
         &self,
         witness_id: XWitnessId,
-    ) -> Result<WitnessOrd, WitnessResolverError>;
+    ) -> Result<TxOrd, WitnessResolverError>;
 }
 
 impl<T: ResolveWitness> ResolveWitness for &T {
@@ -84,7 +84,7 @@ impl<T: ResolveWitness> ResolveWitness for &T {
     fn resolve_pub_witness_ord(
         &self,
         witness_id: XWitnessId,
-    ) -> Result<WitnessOrd, WitnessResolverError> {
+    ) -> Result<TxOrd, WitnessResolverError> {
         ResolveWitness::resolve_pub_witness_ord(*self, witness_id)
     }
 }
@@ -117,7 +117,7 @@ impl<R: ResolveWitness> ResolveWitness for CheckedWitnessResolver<R> {
     fn resolve_pub_witness_ord(
         &self,
         witness_id: XWitnessId,
-    ) -> Result<WitnessOrd, WitnessResolverError> {
+    ) -> Result<TxOrd, WitnessResolverError> {
         self.inner.resolve_pub_witness_ord(witness_id)
     }
 }

@@ -187,29 +187,28 @@ impl<U: ExposedSeal> XChain<U> {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[display("{height}@{timestamp}")]
-// TODO: Rename into `TxPos`
 // TODO: Move into validation::Logic or vm::Contract
-pub struct WitnessPos {
+pub struct TxPos {
     height: u32,
     timestamp: i64,
 }
 
-impl WitnessPos {
+impl TxPos {
     pub fn new(height: u32, timestamp: i64) -> Option<Self> {
         if height == 0 || timestamp < 1231006505 {
             return None;
         }
-        Some(WitnessPos { height, timestamp })
+        Some(TxPos { height, timestamp })
     }
 
     pub fn height(&self) -> NonZeroU32 { NonZeroU32::new(self.height).expect("invariant") }
 }
 
-impl PartialOrd for WitnessPos {
+impl PartialOrd for TxPos {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl Ord for WitnessPos {
+impl Ord for TxPos {
     fn cmp(&self, other: &Self) -> Ordering { self.timestamp.cmp(&other.timestamp) }
 }
 
@@ -223,12 +222,11 @@ impl Ord for WitnessPos {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
-// TODO: Rename into `TxOrd`
 // TODO: Move into validation::Logic or vm::Contract
-pub enum WitnessOrd {
+pub enum TxOrd {
     #[from]
     #[display(inner)]
-    OnChain(WitnessPos),
+    OnChain(TxPos),
 
     #[display("offchain@{priority}")]
     OffChain { priority: u32 },
@@ -238,9 +236,9 @@ pub enum WitnessOrd {
     Archived,
 }
 
-impl WitnessOrd {
+impl TxOrd {
     #[inline]
-    pub fn offchain(priority: u32) -> Self { WitnessOrd::OffChain { priority } }
+    pub fn offchain(priority: u32) -> Self { TxOrd::OffChain { priority } }
 }
 
 pub type XWitnessTx<X = Impossible> = XChain<Tx, X>;
