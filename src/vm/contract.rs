@@ -38,12 +38,7 @@ use crate::{
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[derive(
-    StrictType,
-    strict_encoding::StrictDumb,
-    strict_encoding::StrictEncode,
-    strict_encoding::StrictDecode
-)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC)]
 #[cfg_attr(
     feature = "serde",
@@ -78,12 +73,7 @@ impl Ord for TxPos {
 /// RGB consensus information about the current mined height of a witness
 /// transaction defining the ordering of the contract state data.
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, From)]
-#[derive(
-    StrictType,
-    strict_encoding::StrictDumb,
-    strict_encoding::StrictEncode,
-    strict_encoding::StrictDecode
-)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = order)]
 #[cfg_attr(
     feature = "serde",
@@ -226,7 +216,6 @@ pub struct OpOrd {
 )]
 pub struct GlobalOrd {
     // Absent for state defined in genesis
-    // TODO: Change into `AssignmentWitness`
     pub witness_ord: Option<WitnessOrd>,
     pub opid: OpId,
     pub idx: u16,
