@@ -1,5 +1,5 @@
 {-
-  Id: stl:DjmgI8Aw-L0XQMsu-q9HS$Za-!D8BzVj-bvaq$yq-p56MdqY#jester-philips-prelude
+  Id: stl:tjFc6jD7-fe78CxG-WdJlH!l-uXlFfW0-XwG1!qV-MNdtNGE#orbit-airport-voice
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -181,6 +181,9 @@ data AssignmentsBlindSealTxid : {AssignmentType -> ^ ..0xff TypedAssignsBlindSea
 @mnemonic(factor-hair-everest)
 data AttachId          : [Byte ^ 32]
 
+@mnemonic(harvard-burma-bicycle)
+data AttachState       : id AttachId, mediaType MediaType
+
 @mnemonic(amadeus-sunday-casino)
 data BaseCommitment    : flags CommitVerify.ReservedBytes1
                        , schemaId SchemaId
@@ -266,10 +269,10 @@ data GenesisSchema     : metadata {MetaType ^ ..0xff}
 @mnemonic(initial-malta-sierra)
 data GlobalState       : {GlobalStateType -> ^ ..0xff GlobalValues}
 
-@mnemonic(connect-ricardo-lava)
+@mnemonic(silk-college-august)
 data GlobalStateSchema : reserved CommitVerify.ReservedBytes1
                        , semId StrictTypes.SemId
-                       , maxItems U16
+                       , maxItems U24
 
 @mnemonic(yoga-quick-jasmine)
 data GlobalStateType   : U16
@@ -337,10 +340,8 @@ data PedersenCommitment : [Byte ^ 33]
 @mnemonic(anita-vega-pirate)
 data Redeemed          : {ValencyType -> ^ ..0xff OpId}
 
-@mnemonic(hammer-prism-twin)
-data RevealedAttach    : id AttachId
-                       , mediaType MediaType
-                       , salt U64
+@mnemonic(simple-bombay-salute)
+data RevealedAttach    : file AttachState, salt U64
 
 @mnemonic(sleep-source-figure)
 data RevealedData      : value DataState, salt U128

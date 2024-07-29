@@ -222,16 +222,16 @@ impl Ord for WitnessPos {
     serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
 pub enum WitnessOrd {
+    #[display("archived")]
+    #[strict_type(dumb)]
+    Archived,
+
     #[from]
     #[display(inner)]
     OnChain(WitnessPos),
 
     #[display("offchain@{priority}")]
     OffChain { priority: u32 },
-
-    #[display("archived")]
-    #[strict_type(dumb)]
-    Archived,
 }
 
 impl WitnessOrd {
