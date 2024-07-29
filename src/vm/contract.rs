@@ -410,7 +410,10 @@ impl Ord for GlobalOrd {
             return Ordering::Equal;
         }
         match (self.witness_ord, &other.witness_ord) {
-            (None, None) => self.idx.cmp(&other.idx),
+            (None, None) if self.opid.cmp(&other.opid) == Ordering::Equal => {
+                self.idx.cmp(&other.idx)
+            }
+            (None, None) => self.opid.cmp(&other.opid),
             (None, Some(_)) => Ordering::Less,
             (Some(_), None) => Ordering::Greater,
             (Some(ord1), Some(ord2)) if ord1 == *ord2 => self.idx.cmp(&other.idx),
