@@ -116,8 +116,7 @@ impl TxOrd {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
-// TODO: Rename into `OpWitnessId`
-pub enum AssignmentWitness {
+pub enum OpWitnessId {
     #[display("~")]
     #[strict_type(tag = 0, dumb)]
     Absent,
@@ -129,27 +128,27 @@ pub enum AssignmentWitness {
     Present(XWitnessId),
 }
 
-impl PartialEq<XWitnessId> for AssignmentWitness {
+impl PartialEq<XWitnessId> for OpWitnessId {
     fn eq(&self, other: &XWitnessId) -> bool { self.witness_id() == Some(*other) }
 }
-impl PartialEq<AssignmentWitness> for XWitnessId {
-    fn eq(&self, other: &AssignmentWitness) -> bool { other.witness_id() == Some(*self) }
+impl PartialEq<OpWitnessId> for XWitnessId {
+    fn eq(&self, other: &OpWitnessId) -> bool { other.witness_id() == Some(*self) }
 }
 
-impl From<Option<XWitnessId>> for AssignmentWitness {
+impl From<Option<XWitnessId>> for OpWitnessId {
     fn from(value: Option<XWitnessId>) -> Self {
         match value {
-            None => AssignmentWitness::Absent,
-            Some(id) => AssignmentWitness::Present(id),
+            None => OpWitnessId::Absent,
+            Some(id) => OpWitnessId::Present(id),
         }
     }
 }
 
-impl AssignmentWitness {
+impl OpWitnessId {
     pub fn witness_id(&self) -> Option<XWitnessId> {
         match self {
-            AssignmentWitness::Absent => None,
-            AssignmentWitness::Present(witness_id) => Some(*witness_id),
+            OpWitnessId::Absent => None,
+            OpWitnessId::Present(witness_id) => Some(*witness_id),
         }
     }
 }
