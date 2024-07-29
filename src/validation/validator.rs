@@ -31,8 +31,8 @@ use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::Failure;
-use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, TxOrd, Validity};
-use crate::vm::{ContractState, OpOrd, WitnessAnchor};
+use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Validity};
+use crate::vm::{ContractState, OpOrd, TxOrd, WitnessAnchor};
 use crate::{
     validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
     Schema, SchemaId, TransitionBundle, XChain, XOutpoint, XOutputSeal, XWitnessId, XWitnessTx,

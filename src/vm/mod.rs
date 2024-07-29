@@ -35,7 +35,7 @@ mod contract;
 pub use aluvm::aluasm_isa;
 pub use contract::{
     AssignmentWitness, ContractState, GlobalContractState, GlobalOrd, GlobalStateIter, OpOrd,
-    UnknownGlobalStateType, WitnessAnchor,
+    TxOrd, TxPos, UnknownGlobalStateType, WitnessAnchor,
 };
 pub(crate) use contract::{OpInfo, VmContext};
 pub use isa::RgbIsa;
