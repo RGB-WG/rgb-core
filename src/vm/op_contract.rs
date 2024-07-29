@@ -400,7 +400,7 @@ impl<S: ContractState> InstructionSet for ContractOp<S> {
                 };
                 let sum = u64::from(sum);
 
-                let Some(tag) = context.op_info.asset_tags.get(owned_state) else {
+                let Some(tag) = context.asset_tags.get(owned_state) else {
                     fail!()
                 };
                 let sum = RevealedValue::with_blinding(sum, BlindingFactor::EMPTY, *tag);
@@ -423,7 +423,7 @@ impl<S: ContractState> InstructionSet for ContractOp<S> {
                 };
                 let sum = u64::from(sum);
 
-                let Some(tag) = context.op_info.asset_tags.get(owned_state) else {
+                let Some(tag) = context.asset_tags.get(owned_state) else {
                     fail!()
                 };
                 let sum = RevealedValue::with_blinding(sum, BlindingFactor::EMPTY, *tag);

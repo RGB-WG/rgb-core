@@ -190,15 +190,10 @@ impl Schema {
         status += self.validate_valencies(opid, op.valencies(), valency_schema);
 
         let genesis = consignment.genesis();
-        let op_info = OpInfo::with(
-            genesis.contract_id(),
-            opid,
-            &op,
-            &prev_state,
-            &redeemed,
-            &genesis.asset_tags,
-        );
+        let op_info = OpInfo::with(opid, &op, &prev_state, &redeemed);
         let context = VmContext {
+            contract_id: genesis.contract_id(),
+            asset_tags: &genesis.asset_tags,
             op_info,
             contract_state,
         };

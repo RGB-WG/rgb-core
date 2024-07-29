@@ -409,17 +409,15 @@ pub trait ContractState: Debug + Default {
 }
 
 pub struct VmContext<'op, S: ContractState> {
+    pub contract_id: ContractId,
+    pub asset_tags: &'op AssetTags,
     pub op_info: OpInfo<'op>,
     pub contract_state: Rc<RefCell<S>>,
 }
 
 pub struct OpInfo<'op> {
-    // TODO: Move to VmContext
-    pub contract_id: ContractId,
     pub id: OpId,
     pub ty: OpFullType,
-    // TODO: Move to VmContext
-    pub asset_tags: &'op AssetTags,
     pub metadata: &'op Metadata,
     pub prev_state: &'op Assignments<GraphSeal>,
     pub owned_state: AssignmentsRef<'op>,
@@ -430,18 +428,14 @@ pub struct OpInfo<'op> {
 
 impl<'op> OpInfo<'op> {
     pub fn with(
-        contract_id: ContractId,
         id: OpId,
         op: &'op OpRef<'op>,
         prev_state: &'op Assignments<GraphSeal>,
         redeemed: &'op Valencies,
-        asset_tags: &'op AssetTags,
     ) -> Self {
         OpInfo {
             id,
-            contract_id,
             ty: op.full_type(),
-            asset_tags,
             metadata: op.metadata(),
             prev_state,
             owned_state: op.assignments(),
