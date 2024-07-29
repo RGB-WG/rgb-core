@@ -21,7 +21,9 @@
 // limitations under the License.
 
 use std::cell::RefCell;
+use std::cmp::Ordering;
 use std::collections::BTreeSet;
+use std::num::NonZeroU32;
 use std::rc::Rc;
 
 use aluvm::data::Number;
@@ -40,7 +42,71 @@ use crate::{
     ConfidentialState, ExposedSeal, ExposedState, Extension, GlobalState, GlobalStateSchema,
     GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId, OpRef, Operation, Opout,
     OwnedStateSchema, RevealedState, Schema, StateType, Transition, TypedAssigns, Valencies,
+    LIB_NAME_RGB_LOGIC,
 };
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_LOGIC)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[display("{height}@{timestamp}")]
+// TODO: Move into validation::Logic or vm::Contract
+pub struct TxPos {
+    height: u32,
+    timestamp: i64,
+}
+
+impl TxPos {
+    pub fn new(height: u32, timestamp: i64) -> Option<Self> {
+        if height == 0 || timestamp < 1231006505 {
+            return None;
+        }
+        Some(TxPos { height, timestamp })
+    }
+
+    pub fn height(&self) -> NonZeroU32 { NonZeroU32::new(self.height).expect("invariant") }
+}
+
+impl PartialOrd for TxPos {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
+impl Ord for TxPos {
+    fn cmp(&self, other: &Self) -> Ordering { self.timestamp.cmp(&other.timestamp) }
+}
+
+/// RGB consensus information about the current mined height of a witness
+/// transaction defining the ordering of the contract state data.
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, From)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = order)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase", untagged)
+)]
+// TODO: Move into validation::Logic or vm::Contract
+pub enum TxOrd {
+    #[from]
+    #[display(inner)]
+    OnChain(TxPos),
+
+    #[display("offchain@{priority}")]
+    OffChain { priority: u32 },
+
+    #[display("archived")]
+    #[strict_type(dumb)]
+    Archived,
+}
+
+impl TxOrd {
+    #[inline]
+    pub fn offchain(priority: u32) -> Self { TxOrd::OffChain { priority } }
+}
 
 impl Schema {
     // TODO: Instead of returning status fail immediately

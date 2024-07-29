@@ -30,10 +30,11 @@ use amplify::num::u24;
 use amplify::Bytes32;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
+use crate::validation::TxOrd;
 use crate::{
     AssetTags, AssignmentType, Assignments, AssignmentsRef, AttachState, ContractId, DataState,
     FungibleState, GlobalState, GlobalStateType, GraphSeal, Metadata, OpFullType, OpId, OpRef,
-    Operation, TxOrd, Valencies, XOutpoint, XWitnessId, LIB_NAME_RGB_LOGIC,
+    Operation, Valencies, XOutpoint, XWitnessId, LIB_NAME_RGB_LOGIC,
 };
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display, From)]

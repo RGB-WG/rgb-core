@@ -31,12 +31,11 @@ use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::Failure;
-use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Validity};
+use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, TxOrd, Validity};
 use crate::vm::{ContractState, OpOrd, WitnessAnchor};
 use crate::{
     validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
-    Schema, SchemaId, TransitionBundle, TxOrd, XChain, XOutpoint, XOutputSeal, XWitnessId,
-    XWitnessTx,
+    Schema, SchemaId, TransitionBundle, XChain, XOutpoint, XOutputSeal, XWitnessId, XWitnessTx,
 };
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
