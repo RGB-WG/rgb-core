@@ -187,6 +187,8 @@ impl<U: ExposedSeal> XChain<U> {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[display("{height}@{timestamp}")]
+// TODO: Rename into `TxPos`
+// TODO: Move into validation::Logic or vm::Contract
 pub struct WitnessPos {
     height: u32,
     timestamp: i64,
@@ -221,6 +223,8 @@ impl Ord for WitnessPos {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
+// TODO: Rename into `TxOrd`
+// TODO: Move into validation::Logic or vm::Contract
 pub enum WitnessOrd {
     #[from]
     #[display(inner)]

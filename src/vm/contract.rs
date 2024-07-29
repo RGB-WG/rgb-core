@@ -25,11 +25,12 @@ use std::cmp::Ordering;
 use std::fmt::Debug;
 
 use amplify::num::u24;
+use amplify::Bytes32;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    AssignmentType, AttachState, DataState, FungibleState, GlobalStateType, WitnessOrd, XOutpoint,
-    XWitnessId, LIB_NAME_RGB_LOGIC,
+    AssignmentType, AttachState, DataState, FungibleState, GlobalStateType, OpId, OpRef,
+    WitnessOrd, XOutpoint, XWitnessId, LIB_NAME_RGB_LOGIC,
 };
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display, From)]
@@ -40,6 +41,7 @@ use crate::{
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
+// TODO: Rename into `OpWitnessId`
 pub enum AssignmentWitness {
     #[display("~")]
     #[strict_type(tag = 0, dumb)]
@@ -87,6 +89,7 @@ impl AssignmentWitness {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[display("{witness_id}/{witness_ord}")]
+// TODO: Rename into `WitnessOrd`
 pub struct WitnessAnchor {
     pub witness_ord: WitnessOrd,
     pub witness_id: XWitnessId,
@@ -125,6 +128,21 @@ impl WitnessAnchor {
     }
 }
 
+/// Consensus ordering of operations within a contract.
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_LOGIC)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct OpOrd {
+    pub witness_ord: WitnessAnchor,
+    pub opid: OpId,
+}
+
+/// Consensus ordering of global state
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC)]
@@ -134,7 +152,10 @@ impl WitnessAnchor {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct GlobalOrd {
+    // Absent for state defined in genesis
+    // TODO: Change into `AssignmentWitness`
     pub witness_anchor: Option<WitnessAnchor>,
+    pub opid: OpId,
     pub idx: u16,
 }
 
@@ -159,16 +180,18 @@ impl Ord for GlobalOrd {
 
 impl GlobalOrd {
     #[inline]
-    pub fn with_witness(witness_id: XWitnessId, ord: WitnessOrd, idx: u16) -> Self {
+    pub fn with_witness(opid: OpId, witness_id: XWitnessId, ord: WitnessOrd, idx: u16) -> Self {
         GlobalOrd {
             witness_anchor: Some(WitnessAnchor::with(witness_id, ord)),
+            opid,
             idx,
         }
     }
     #[inline]
-    pub fn genesis(idx: u16) -> Self {
+    pub fn genesis(opid: OpId, idx: u16) -> Self {
         GlobalOrd {
             witness_anchor: None,
+            opid,
             idx,
         }
     }
@@ -210,7 +233,9 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     #[inline]
     pub fn new(mut iter: I) -> Self {
         let last_ord = iter.prev().map(|(ord, _)| ord).unwrap_or(GlobalOrd {
+            // This is dumb object which must always have the lowest ordering.
             witness_anchor: None,
+            opid: Bytes32::zero().into(),
             idx: 0,
         });
         iter.reset(u24::ZERO);
@@ -280,7 +305,8 @@ impl<I: GlobalStateIter> Iterator for GlobalContractState<I> {
 #[display("unknown global state type {0} requested from the contract")]
 pub struct UnknownGlobalStateType(pub GlobalStateType);
 
-pub trait ContractState {
+// TODO: Separate mutable and immutable parts of the trait
+pub trait ContractState: Debug + Default {
     fn global(
         &self,
         ty: GlobalStateType,
@@ -305,4 +331,6 @@ pub trait ContractState {
         outpoint: XOutpoint,
         ty: AssignmentType,
     ) -> impl DoubleEndedIterator<Item = impl Borrow<AttachState>>;
+
+    fn evolve_state(&mut self, op: OpRef);
 }

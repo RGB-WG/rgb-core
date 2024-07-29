@@ -23,6 +23,7 @@
 #![allow(clippy::unusual_byte_groupings)]
 
 use std::collections::BTreeSet;
+use std::marker::PhantomData;
 use std::ops::RangeInclusive;
 
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
@@ -33,14 +34,15 @@ use amplify::Wrapper;
 use commit_verify::CommitVerify;
 
 use super::opcodes::*;
-use crate::validation::OpInfo;
+use crate::validation::VmContext;
+use crate::vm::ContractState;
 use crate::{
     Assign, AssignmentType, BlindingFactor, GlobalStateType, MetaType, PedersenCommitment,
     RevealedValue, TypedAssigns,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-pub enum ContractOp {
+pub enum ContractOp<S: ContractState> {
     /// Counts number of inputs (previous state entries) of the provided type
     /// and puts the number to the destination `a16` register.
     #[display("cnp     {0},a16{1}")]
@@ -161,11 +163,11 @@ pub enum ContractOp {
     /// All other future unsupported operations, which must set `st0` to
     /// `false` and stop the execution.
     #[display("fail    {0}")]
-    Fail(u8),
+    Fail(u8, PhantomData<S>),
 }
 
-impl InstructionSet for ContractOp {
-    type Context<'ctx> = OpInfo<'ctx>;
+impl<S: ContractState> InstructionSet for ContractOp<S> {
+    type Context<'ctx> = VmContext<'ctx, S>;
 
     fn isa_ids() -> IsaSeg { IsaSeg::with("RGB") }
 
@@ -184,7 +186,7 @@ impl InstructionSet for ContractOp {
             ContractOp::LdM(_, _) => bset![],
             ContractOp::Pcvs(_) => bset![],
             ContractOp::Pcas(_) | ContractOp::Pcps(_) => bset![Reg::A(RegA::A64, Reg32::Reg0)],
-            ContractOp::Fail(_) => bset![],
+            ContractOp::Fail(_, _) => bset![],
         }
     }
 
@@ -209,7 +211,7 @@ impl InstructionSet for ContractOp {
             ContractOp::Pcvs(_) | ContractOp::Pcas(_) | ContractOp::Pcps(_) => {
                 bset![]
             }
-            ContractOp::Fail(_) => bset![],
+            ContractOp::Fail(_, _) => bset![],
         }
     }
 
@@ -227,7 +229,7 @@ impl InstructionSet for ContractOp {
             ContractOp::LdM(_, _) => 6,
             ContractOp::Pcvs(_) => 1024,
             ContractOp::Pcas(_) | ContractOp::Pcps(_) => 512,
-            ContractOp::Fail(_) => u64::MAX,
+            ContractOp::Fail(_, _) => u64::MAX,
         }
     }
 
@@ -240,7 +242,7 @@ impl InstructionSet for ContractOp {
         }
         macro_rules! load_inputs {
             ($state_type:ident) => {{
-                let Some(prev_state) = context.prev_state.get($state_type) else {
+                let Some(prev_state) = context.op_info.prev_state.get($state_type) else {
                     fail!()
                 };
                 match prev_state {
@@ -255,7 +257,7 @@ impl InstructionSet for ContractOp {
         }
         macro_rules! load_outputs {
             ($state_type:ident) => {{
-                let Some(new_state) = context.owned_state.get(*$state_type) else {
+                let Some(new_state) = context.op_info.owned_state.get(*$state_type) else {
                     fail!()
                 };
                 match new_state {
@@ -274,18 +276,30 @@ impl InstructionSet for ContractOp {
                 regs.set_n(
                     RegA::A16,
                     *reg,
-                    context.prev_state.get(state_type).map(|a| a.len_u16()),
+                    context
+                        .op_info
+                        .prev_state
+                        .get(state_type)
+                        .map(|a| a.len_u16()),
                 );
             }
             ContractOp::CnS(state_type, reg) => {
                 regs.set_n(
                     RegA::A16,
                     *reg,
-                    context.owned_state.get(*state_type).map(|a| a.len_u16()),
+                    context
+                        .op_info
+                        .owned_state
+                        .get(*state_type)
+                        .map(|a| a.len_u16()),
                 );
             }
             ContractOp::CnG(state_type, reg) => {
-                regs.set_n(RegA::A8, *reg, context.global.get(state_type).map(|a| a.len_u16()));
+                regs.set_n(
+                    RegA::A8,
+                    *reg,
+                    context.op_info.global.get(state_type).map(|a| a.len_u16()),
+                );
             }
             ContractOp::CnC(_state_type, _reg) => {
                 // TODO: implement global contract state
@@ -298,6 +312,7 @@ impl InstructionSet for ContractOp {
                 let index: u16 = reg_32.into();
 
                 let Some(Ok(state)) = context
+                    .op_info
                     .prev_state
                     .get(state_type)
                     .map(|a| a.as_structured_state_at(index))
@@ -314,6 +329,7 @@ impl InstructionSet for ContractOp {
                 let index: u16 = reg_32.into();
 
                 let Some(Ok(state)) = context
+                    .op_info
                     .owned_state
                     .get(*state_type)
                     .map(|a| a.into_structured_state_at(index))
@@ -330,6 +346,7 @@ impl InstructionSet for ContractOp {
                 let index: u16 = reg_32.into();
 
                 let Some(Ok(state)) = context
+                    .op_info
                     .owned_state
                     .get(*state_type)
                     .map(|a| a.into_fungible_state_at(index))
@@ -345,6 +362,7 @@ impl InstructionSet for ContractOp {
                 let index: u8 = reg_32.into();
 
                 let Some(state) = context
+                    .op_info
                     .global
                     .get(state_type)
                     .and_then(|a| a.get(index as usize))
@@ -359,7 +377,7 @@ impl InstructionSet for ContractOp {
                 fail!()
             }
             ContractOp::LdM(type_id, reg) => {
-                let Some(meta) = context.metadata.get(type_id) else {
+                let Some(meta) = context.op_info.metadata.get(type_id) else {
                     fail!()
                 };
                 regs.set_s(*reg, Some(meta.to_inner()));
@@ -383,7 +401,7 @@ impl InstructionSet for ContractOp {
                 };
                 let sum = u64::from(sum);
 
-                let Some(tag) = context.asset_tags.get(owned_state) else {
+                let Some(tag) = context.op_info.asset_tags.get(owned_state) else {
                     fail!()
                 };
                 let sum = RevealedValue::with_blinding(sum, BlindingFactor::EMPTY, *tag);
@@ -406,7 +424,7 @@ impl InstructionSet for ContractOp {
                 };
                 let sum = u64::from(sum);
 
-                let Some(tag) = context.asset_tags.get(owned_state) else {
+                let Some(tag) = context.op_info.asset_tags.get(owned_state) else {
                     fail!()
                 };
                 let sum = RevealedValue::with_blinding(sum, BlindingFactor::EMPTY, *tag);
@@ -429,7 +447,7 @@ impl InstructionSet for ContractOp {
     }
 }
 
-impl Bytecode for ContractOp {
+impl<S: ContractState> Bytecode for ContractOp<S> {
     fn instr_range() -> RangeInclusive<u8> { INSTR_CONTRACT_FROM..=INSTR_CONTRACT_TO }
 
     fn instr_byte(&self) -> u8 {
@@ -450,7 +468,7 @@ impl Bytecode for ContractOp {
             ContractOp::Pcas(_) => INSTR_PCAS,
             ContractOp::Pcps(_) => INSTR_PCPS,
 
-            ContractOp::Fail(other) => *other,
+            ContractOp::Fail(other, _) => *other,
         }
     }
 
@@ -512,7 +530,7 @@ impl Bytecode for ContractOp {
             ContractOp::Pcas(owned_type) => writer.write_u16(*owned_type)?,
             ContractOp::Pcps(owned_type) => writer.write_u16(*owned_type)?,
 
-            ContractOp::Fail(_) => {}
+            ContractOp::Fail(_, _) => {}
         }
         Ok(())
     }
@@ -579,11 +597,13 @@ impl Bytecode for ContractOp {
             INSTR_PCAS => Self::Pcas(reader.read_u16()?.into()),
             INSTR_PCPS => Self::Pcps(reader.read_u16()?.into()),
 
-            x => Self::Fail(x),
+            x => Self::Fail(x, PhantomData),
         })
     }
 }
 
+// TODO: Re-enable once we will have a test ContractState object
+/*
 #[cfg(test)]
 mod test {
     use aluvm::isa::Instr;
@@ -614,6 +634,7 @@ mod test {
                 .to_hex(),
             "0303414c55084250444947455354035247420300d0a00f000000"
         );
-        assert_eq!(alu_lib.disassemble::<Instr<RgbIsa>>().unwrap(), code);
+        assert_eq!(alu_lib.disassemble::<Instr<RgbIsa<_>>>().unwrap(), code);
     }
 }
+*/

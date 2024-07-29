@@ -20,7 +20,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cell::RefCell;
 use std::collections::BTreeSet;
+use std::rc::Rc;
 
 use aluvm::data::Number;
 use aluvm::isa::Instr;
@@ -32,7 +34,7 @@ use strict_types::TypeSystem;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
-use crate::vm::RgbIsa;
+use crate::vm::{ContractState, RgbIsa};
 use crate::{
     validation, AssetTags, Assignments, AssignmentsRef, ContractId, ExposedSeal, Extension,
     GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata,
@@ -41,10 +43,12 @@ use crate::{
 };
 
 impl Schema {
-    pub fn validate_state<'validator, C: ConsignmentApi>(
+    // TODO: Instead of returning status fail immediately
+    pub fn validate_state<'validator, C: ConsignmentApi, S: ContractState>(
         &'validator self,
         consignment: &'validator CheckedConsignment<'_, C>,
         op: OpRef,
+        contract_state: Rc<RefCell<S>>,
     ) -> validation::Status {
         let opid = op.id();
         let mut status = validation::Status::new();
@@ -194,17 +198,21 @@ impl Schema {
             &redeemed,
             &genesis.asset_tags,
         );
+        let context = VmContext {
+            op_info,
+            contract_state,
+        };
 
         // We need to run scripts as the very last step, since before that
         // we need to make sure that the operation data match the schema, so
         // scripts are not required to validate the structure of the state
         if let Some(validator) = validator {
             let scripts = consignment.scripts();
-            let mut vm = Vm::<Instr<RgbIsa>>::new();
+            let mut vm = Vm::<Instr<RgbIsa<S>>>::new();
             if let Some(ty) = ty {
                 vm.registers.set_n(RegA::A16, Reg32::Reg0, ty);
             }
-            if !vm.exec(validator, |id| scripts.get(&id), &op_info) {
+            if !vm.exec(validator, |id| scripts.get(&id), &context) {
                 let error_code: Option<Number> = vm.registers.get_n(RegA::A8, Reg32::Reg0).into();
                 status.add_failure(validation::Failure::ScriptFailure(
                     opid,
@@ -212,6 +220,8 @@ impl Schema {
                     None,
                 ));
             }
+            let contract_state = context.contract_state;
+            contract_state.borrow_mut().evolve_state(op);
         }
         status
     }
@@ -470,10 +480,19 @@ impl Schema {
     }
 }
 
+// TODO: Move to VM module
+pub struct VmContext<'op, S: ContractState> {
+    pub op_info: OpInfo<'op>,
+    pub contract_state: Rc<RefCell<S>>,
+}
+
+// TODO: Move to VM module
 pub struct OpInfo<'op> {
+    // TODO: Move to VmContext
     pub contract_id: ContractId,
     pub id: OpId,
     pub ty: OpFullType,
+    // TODO: Move to VmContext
     pub asset_tags: &'op AssetTags,
     pub metadata: &'op Metadata,
     pub prev_state: &'op Assignments<GraphSeal>,

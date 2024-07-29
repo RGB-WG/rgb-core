@@ -31,8 +31,8 @@ use crate::contract::Opout;
 use crate::schema::{self, SchemaId};
 use crate::validation::WitnessResolverError;
 use crate::{
-    AssignmentType, BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, OpType,
-    SecretSeal, StateType, Vin, XChain, XGraphSeal, XOutputSeal, XWitnessId,
+    BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, StateType, Vin,
+    XGraphSeal, XOutputSeal, XWitnessId,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -239,21 +239,16 @@ pub enum Failure {
     CyclicGraph(OpId),
     /// operation {0} is absent from the consignment.
     OperationAbsent(OpId),
-    /// {ty} data doesn't match operation id {expected} (actual id is {actual}).
-    OperationIdMismatch {
-        ty: OpType,
-        expected: OpId,
-        actual: OpId,
-    },
-    /// transition bundle {0} referenced in consignment terminals is absent from
-    /// the consignment.
-    TerminalBundleAbsent(BundleId),
     /// transition bundle {0} is absent in the consignment.
     BundleAbsent(BundleId),
     /// anchor for transitio bundle {0} is absent in the consignment.
     AnchorAbsent(BundleId),
     /// witness id for transition bundle {0} is absent in the consignment.
     WitnessIdAbsent(BundleId),
+    /// bundle {0} public witness {1} is not known to the resolver; validation
+    /// stopped since operations can't be consensus-ordered. The resolver
+    /// responded with error {2}
+    WitnessUnresolved(BundleId, XWitnessId, WitnessResolverError),
     /// operation {0} is under a different contract {1}.
     ContractMismatch(OpId, ContractId),
 
@@ -271,9 +266,9 @@ pub enum Failure {
     // Errors checking asset tags
     /// asset type provided in genesis references unknown fungible state of type
     /// {0}.
-    AssetTagNoState(AssignmentType),
+    AssetTagNoState(schema::AssignmentType),
     /// fungible state {0} has no asset tag defined.
-    FungibleStateNoTag(AssignmentType),
+    FungibleStateNoTag(schema::AssignmentType),
 
     // Errors checking seal closing
     /// transition {opid} references state type {state_type} absent in the
@@ -288,8 +283,9 @@ pub enum Failure {
     /// seal defined in the history as a part of operation output {0} is
     /// confidential and can't be validated.
     ConfidentialSeal(Opout),
-    /// public witness {0} is not known to the resolver.
-    SealNoPubWitness(XWitnessId, WitnessResolverError),
+    /// bundle {0} public witness {1} is not known to the resolver. Resolver
+    /// reported error {2}
+    SealNoPubWitness(BundleId, XWitnessId, WitnessResolverError),
     /// witness layer 1 {anchor} doesn't match seal definition {seal}.
     SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
     /// seal {1} is defined on {0} which is not in the set of layers allowed
@@ -370,9 +366,6 @@ pub enum Failure {
 )]
 #[display(doc_comments)]
 pub enum Warning {
-    /// terminal seal {1:?} referencing operation {0} is not present in
-    /// operation assignments.
-    TerminalSealAbsent(OpId, XChain<SecretSeal>),
     /// operation {0} contains state in assignment {1} which is confidential and
     /// thus was not validated.
     UncheckableConfidentialState(OpId, schema::AssignmentType),
