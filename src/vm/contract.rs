@@ -98,51 +98,6 @@ impl TxOrd {
     pub fn offchain(priority: u32) -> Self { TxOrd::OffChain { priority } }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display, From)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = custom)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase", untagged)
-)]
-pub enum OpWitnessId {
-    #[display("~")]
-    #[strict_type(tag = 0, dumb)]
-    Absent,
-
-    // TODO: Consider separating transition and extension witnesses
-    #[from]
-    #[display(inner)]
-    #[strict_type(tag = 1)]
-    Present(XWitnessId),
-}
-
-impl PartialEq<XWitnessId> for OpWitnessId {
-    fn eq(&self, other: &XWitnessId) -> bool { self.witness_id() == Some(*other) }
-}
-impl PartialEq<OpWitnessId> for XWitnessId {
-    fn eq(&self, other: &OpWitnessId) -> bool { other.witness_id() == Some(*self) }
-}
-
-impl From<Option<XWitnessId>> for OpWitnessId {
-    fn from(value: Option<XWitnessId>) -> Self {
-        match value {
-            None => OpWitnessId::Absent,
-            Some(id) => OpWitnessId::Present(id),
-        }
-    }
-}
-
-impl OpWitnessId {
-    pub fn witness_id(&self) -> Option<XWitnessId> {
-        match self {
-            OpWitnessId::Absent => None,
-            OpWitnessId::Present(witness_id) => Some(*witness_id),
-        }
-    }
-}
-
 /// Txid and height information ordered according to the RGB consensus rules.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
