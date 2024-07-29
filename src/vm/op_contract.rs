@@ -34,8 +34,7 @@ use amplify::Wrapper;
 use commit_verify::CommitVerify;
 
 use super::opcodes::*;
-use super::VmContext;
-use crate::vm::ContractState;
+use super::{ContractState, VmContext};
 use crate::{
     Assign, AssignmentType, BlindingFactor, GlobalStateType, MetaType, PedersenCommitment,
     RevealedValue, TypedAssigns,
