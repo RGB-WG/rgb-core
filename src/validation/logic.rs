@@ -36,9 +36,10 @@ use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
 use crate::vm::{ContractState, RgbIsa};
 use crate::{
-    validation, AssetTags, Assignments, AssignmentsRef, ContractId, ExposedSeal, Extension,
-    GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata,
-    OpFullType, OpId, OpRef, Operation, Opout, OwnedStateSchema, Schema, StateType, Transition,
+    validation, AssetTags, Assign, AssignmentType, Assignments, AssignmentsRef, ConcealedState,
+    ConfidentialState, ContractId, ExposedSeal, ExposedState, Extension, GlobalState,
+    GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpFullType, OpId,
+    OpRef, Operation, Opout, OwnedStateSchema, RevealedState, Schema, StateType, Transition,
     TypedAssigns, Valencies,
 };
 
@@ -608,4 +609,99 @@ fn extract_prev_state<C: ConsignmentApi>(
     Confined::try_from(assignments)
         .expect("collections is assembled from another collection with the same size requirements")
         .into()
+}
+
+impl OwnedStateSchema {
+    pub fn validate<State: ExposedState, Seal: ExposedSeal>(
+        &self,
+        opid: OpId,
+        state_type: AssignmentType,
+        data: &Assign<State, Seal>,
+        type_system: &TypeSystem,
+    ) -> validation::Status {
+        let mut status = validation::Status::new();
+        match data {
+            Assign::Confidential { state, .. } | Assign::ConfidentialState { state, .. } => {
+                match (self, state.state_commitment()) {
+                    (OwnedStateSchema::Declarative, ConcealedState::Void) => {}
+                    (OwnedStateSchema::Fungible(_), ConcealedState::Fungible(value)) => {
+                        // [SECURITY-CRITICAL]: Bulletproofs validation
+                        if let Err(err) = value.verify_range_proof() {
+                            status.add_failure(validation::Failure::BulletproofsInvalid(
+                                opid,
+                                state_type,
+                                err.to_string(),
+                            ));
+                        }
+                    }
+                    (OwnedStateSchema::Structured(_), ConcealedState::Structured(_)) => {
+                        status.add_warning(validation::Warning::UncheckableConfidentialState(
+                            opid, state_type,
+                        ));
+                    }
+                    (OwnedStateSchema::Attachment(_), ConcealedState::Attachment(_)) => {
+                        status.add_warning(validation::Warning::UncheckableConfidentialState(
+                            opid, state_type,
+                        ));
+                    }
+                    // all other options are mismatches
+                    (state_schema, found) => {
+                        status.add_failure(validation::Failure::StateTypeMismatch {
+                            opid,
+                            state_type,
+                            expected: state_schema.state_type(),
+                            found: found.state_type(),
+                        });
+                    }
+                }
+            }
+            Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
+                match (self, state.state_data()) {
+                    (OwnedStateSchema::Declarative, RevealedState::Void) => {}
+                    (
+                        OwnedStateSchema::Attachment(media_type),
+                        RevealedState::Attachment(attach),
+                    ) if !attach.file.media_type.conforms(media_type) => {
+                        status.add_failure(validation::Failure::MediaTypeMismatch {
+                            opid,
+                            state_type,
+                            expected: *media_type,
+                            found: attach.file.media_type,
+                        });
+                    }
+                    (OwnedStateSchema::Fungible(schema), RevealedState::Fungible(v))
+                        if v.value.fungible_type() != *schema =>
+                    {
+                        status.add_failure(validation::Failure::FungibleTypeMismatch {
+                            opid,
+                            state_type,
+                            expected: *schema,
+                            found: v.value.fungible_type(),
+                        });
+                    }
+                    (OwnedStateSchema::Fungible(_), RevealedState::Fungible(_)) => {}
+                    (OwnedStateSchema::Structured(sem_id), RevealedState::Structured(data)) => {
+                        if type_system
+                            .strict_deserialize_type(*sem_id, data.value.as_ref())
+                            .is_err()
+                        {
+                            status.add_failure(validation::Failure::SchemaInvalidOwnedValue(
+                                opid, state_type, *sem_id,
+                            ));
+                        };
+                    }
+                    // all other options are mismatches
+                    (state_schema, found) => {
+                        status.add_failure(validation::Failure::StateTypeMismatch {
+                            opid,
+                            state_type,
+                            expected: state_schema.state_type(),
+                            found: found.state_type(),
+                        });
+                    }
+                }
+            }
+        }
+        status
+    }
 }

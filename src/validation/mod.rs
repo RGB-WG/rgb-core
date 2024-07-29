@@ -22,7 +22,6 @@
 
 mod schema;
 mod logic;
-mod state;
 mod validator;
 mod consignment;
 mod status;
