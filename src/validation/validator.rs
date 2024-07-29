@@ -32,7 +32,7 @@ use single_use_seals::SealWitness;
 
 use super::status::Failure;
 use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Validity};
-use crate::vm::{ContractState, OpOrd, TxOrd, WitnessAnchor};
+use crate::vm::{ContractState, OpOrd, TxOrd, WitnessOrd};
 use crate::{
     validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
     Schema, SchemaId, TransitionBundle, XChain, XOutpoint, XOutputSeal, XWitnessId, XWitnessTx,
@@ -281,7 +281,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness, S: ContractS
             for (opid, op) in &bundle.known_transitions {
                 ops.insert(
                     OpOrd {
-                        witness_ord: WitnessAnchor {
+                        witness_ord: WitnessOrd {
                             witness_ord,
                             witness_id,
                         },

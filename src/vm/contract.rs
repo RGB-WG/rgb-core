@@ -163,17 +163,16 @@ impl OpWitnessId {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[display("{witness_id}/{witness_ord}")]
-// TODO: Rename into `WitnessOrd`
-pub struct WitnessAnchor {
+pub struct WitnessOrd {
     pub witness_ord: TxOrd,
     pub witness_id: XWitnessId,
 }
 
-impl PartialOrd for WitnessAnchor {
+impl PartialOrd for WitnessOrd {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl Ord for WitnessAnchor {
+impl Ord for WitnessOrd {
     fn cmp(&self, other: &Self) -> Ordering {
         if self == other {
             return Ordering::Equal;
@@ -186,16 +185,16 @@ impl Ord for WitnessAnchor {
     }
 }
 
-impl WitnessAnchor {
+impl WitnessOrd {
     pub fn with(witness_id: XWitnessId, witness_ord: TxOrd) -> Self {
-        WitnessAnchor {
+        WitnessOrd {
             witness_id,
             witness_ord,
         }
     }
 
     pub fn from_mempool(witness_id: XWitnessId, priority: u32) -> Self {
-        WitnessAnchor {
+        WitnessOrd {
             witness_ord: TxOrd::OffChain { priority },
             witness_id,
         }
@@ -212,7 +211,7 @@ impl WitnessAnchor {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct OpOrd {
-    pub witness_ord: WitnessAnchor,
+    pub witness_ord: WitnessOrd,
     pub opid: OpId,
 }
 
@@ -228,7 +227,7 @@ pub struct OpOrd {
 pub struct GlobalOrd {
     // Absent for state defined in genesis
     // TODO: Change into `AssignmentWitness`
-    pub witness_anchor: Option<WitnessAnchor>,
+    pub witness_anchor: Option<WitnessOrd>,
     pub opid: OpId,
     pub idx: u16,
 }
@@ -256,7 +255,7 @@ impl GlobalOrd {
     #[inline]
     pub fn with_witness(opid: OpId, witness_id: XWitnessId, ord: TxOrd, idx: u16) -> Self {
         GlobalOrd {
-            witness_anchor: Some(WitnessAnchor::with(witness_id, ord)),
+            witness_anchor: Some(WitnessOrd::with(witness_id, ord)),
             opid,
             idx,
         }
