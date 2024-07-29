@@ -33,7 +33,7 @@ use commit_verify::{mpc, Conceal};
 use single_use_seals::SealWitness;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
-use crate::contract::xchain::Impossible;
+use crate::operation::xchain::Impossible;
 use crate::{XChain, XOutpoint};
 
 pub type GenesisSeal = SingleBlindSeal<Method>;

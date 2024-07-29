@@ -44,7 +44,7 @@ extern crate commit_verify;
 extern crate serde_crate as serde;
 extern crate core;
 
-mod contract;
+mod operation;
 pub mod schema;
 pub mod validation;
 #[macro_use]
@@ -54,7 +54,7 @@ pub mod stl;
 
 pub mod prelude {
     pub use commit_verify::ReservedBytes;
-    pub use contract::*;
+    pub use operation::*;
     pub use schema::*;
 
     #[cfg(feature = "stl")]

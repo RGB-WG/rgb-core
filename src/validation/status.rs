@@ -27,7 +27,7 @@ use amplify::num::u24;
 use commit_verify::mpc::InvalidProof;
 use strict_types::SemId;
 
-use crate::contract::Opout;
+use crate::operation::Opout;
 use crate::schema::{self, SchemaId};
 use crate::validation::WitnessResolverError;
 use crate::{
