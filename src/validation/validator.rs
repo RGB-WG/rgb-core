@@ -134,13 +134,11 @@ pub struct Validator<
     status: RefCell<Status>,
 
     schema_id: SchemaId,
-    genesis_id: OpId,
     contract_id: ContractId,
     layers1: BTreeSet<Layer1>,
 
     contract_state: Rc<RefCell<S>>,
     validated_op_seals: RefCell<BTreeSet<OpId>>,
-    validated_op_state: RefCell<BTreeSet<OpId>>,
 
     resolver: CheckedWitnessResolver<&'resolver R>,
 }
@@ -161,14 +159,10 @@ impl<
 
         // Frequently used computation-heavy data
         let genesis = consignment.genesis();
-        let genesis_id = genesis.id();
         let contract_id = genesis.contract_id();
         let schema_id = genesis.schema_id;
 
-        // Validation index is used to check that all transitions presented in the
-        // consignment were validated. Also, we use it to avoid double schema
-        // validations for transitions.
-        let validated_op_state = RefCell::new(BTreeSet::<OpId>::new());
+        // Prevent repeated validation of single-use seals
         let validated_op_seals = RefCell::new(BTreeSet::<OpId>::new());
 
         let mut layers1 = bset! { Layer1::Bitcoin };
@@ -178,10 +172,8 @@ impl<
             consignment,
             status: RefCell::new(status),
             schema_id,
-            genesis_id,
             contract_id,
             layers1,
-            validated_op_state,
             validated_op_seals,
             resolver: CheckedWitnessResolver::from(resolver),
             contract_state: Rc::new(RefCell::new(S::init(context))),
@@ -264,7 +256,6 @@ impl<
             AnchoredOpRef::Genesis(self.consignment.genesis()),
             self.contract_state.clone(),
         );
-        self.validated_op_state.borrow_mut().insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over all consignment operations, ordering them according to the
         //               consensus ordering rules.
@@ -335,10 +326,8 @@ impl<
                 .add_failure(Failure::SealsUnvalidated(opid));
         }
         // [VALIDATION]: Verify operation against the schema and scripts
-        if self.validated_op_state.borrow_mut().insert(opid) {
-            *self.status.borrow_mut() +=
-                schema.validate_state(&self.consignment, operation, self.contract_state.clone());
-        }
+        *self.status.borrow_mut() +=
+            schema.validate_state(&self.consignment, operation, self.contract_state.clone());
 
         match operation {
             AnchoredOpRef::Genesis(_) => {
