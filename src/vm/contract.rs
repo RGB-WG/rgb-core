@@ -263,9 +263,7 @@ impl<I: GlobalStateIter> Iterator for GlobalContractState<I> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let Some((ord, item)) = self.iter.prev() else {
-            return None;
-        };
+        let (ord, item) = self.iter.prev()?;
         if ord >= self.last_ord {
             panic!(
                 "global contract state iterator has invalid implementation: it fails to order \

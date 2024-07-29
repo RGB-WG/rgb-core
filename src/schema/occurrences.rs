@@ -208,7 +208,7 @@ mod test {
     #[test]
     fn test_once_or_up_to_none_large() {
         let occurrence: Occurrences = Occurrences::OnceOrMore;
-        occurrence.check(core::u16::MAX).unwrap();
+        occurrence.check(u16::MAX).unwrap();
     }
     #[test]
     #[should_panic(expected = "OccurrencesMismatch { min: 1, max: 65535, found: 0 }")]
@@ -242,7 +242,7 @@ mod test {
     #[test]
     fn test_none_or_up_to_none_large() {
         let occurrence: Occurrences = Occurrences::NoneOrMore;
-        occurrence.check(core::u16::MAX).unwrap();
+        occurrence.check(u16::MAX).unwrap();
     }
     #[test]
     fn test_none_or_up_to_42_zero() {
