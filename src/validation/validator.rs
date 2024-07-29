@@ -32,7 +32,7 @@ use single_use_seals::SealWitness;
 
 use super::status::Failure;
 use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Validity};
-use crate::vm::{ContractState, OpOrd, TxOrd, WitnessOrd};
+use crate::vm::{ContractStateEvolve, OpOrd, TxOrd, WitnessOrd};
 use crate::{
     validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
     Schema, SchemaId, TransitionBundle, XChain, XOutpoint, XOutputSeal, XWitnessId, XWitnessTx,
@@ -126,7 +126,7 @@ pub struct Validator<
     'resolver,
     C: ConsignmentApi,
     R: ResolveWitness,
-    S: ContractState,
+    S: ContractStateEvolve,
 > {
     consignment: CheckedConsignment<'consignment, C>,
 
@@ -144,7 +144,7 @@ pub struct Validator<
     resolver: CheckedWitnessResolver<&'resolver R>,
 }
 
-impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness, S: ContractState>
+impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness, S: ContractStateEvolve>
     Validator<'consignment, 'resolver, C, R, S>
 {
     fn init(consignment: &'consignment C, resolver: &'resolver R) -> Self {

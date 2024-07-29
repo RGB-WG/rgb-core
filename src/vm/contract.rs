@@ -378,8 +378,7 @@ impl<I: GlobalStateIter> Iterator for GlobalContractState<I> {
 #[display("unknown global state type {0} requested from the contract")]
 pub struct UnknownGlobalStateType(pub GlobalStateType);
 
-// TODO: Separate mutable and immutable parts of the trait
-pub trait ContractState: Debug + Default {
+pub trait ContractState: Debug {
     fn global(
         &self,
         ty: GlobalStateType,
@@ -404,7 +403,9 @@ pub trait ContractState: Debug + Default {
         outpoint: XOutpoint,
         ty: AssignmentType,
     ) -> impl DoubleEndedIterator<Item = impl Borrow<AttachState>>;
+}
 
+pub trait ContractStateEvolve: ContractState + Default {
     fn evolve_state(&mut self, op: OpRef);
 }
 
