@@ -267,9 +267,9 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness, S: ContractS
                 .consignment
                 .anchor(bundle_id)
                 .expect("invalid checked consignment");
-            let witness_ord =
+            let pub_ord =
                 match self.resolver.resolve_pub_witness_ord(witness_id) {
-                    Ok(witness_ord) => witness_ord,
+                    Ok(ord) => ord,
                     Err(err) => {
                         self.status.borrow_mut().add_failure(
                             validation::Failure::WitnessUnresolved(bundle_id, witness_id, err),
@@ -282,7 +282,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness, S: ContractS
                 ops.insert(
                     OpOrd {
                         witness_ord: WitnessOrd {
-                            witness_ord,
+                            pub_ord,
                             witness_id,
                         },
                         opid: *opid,

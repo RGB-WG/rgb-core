@@ -162,9 +162,9 @@ impl OpWitnessId {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[display("{witness_id}/{witness_ord}")]
+#[display("{witness_id}/{pub_ord}")]
 pub struct WitnessOrd {
-    pub witness_ord: TxOrd,
+    pub pub_ord: TxOrd,
     pub witness_id: XWitnessId,
 }
 
@@ -177,7 +177,7 @@ impl Ord for WitnessOrd {
         if self == other {
             return Ordering::Equal;
         }
-        match self.witness_ord.cmp(&other.witness_ord) {
+        match self.pub_ord.cmp(&other.pub_ord) {
             Ordering::Less => Ordering::Less,
             Ordering::Greater => Ordering::Greater,
             Ordering::Equal => self.witness_id.cmp(&other.witness_id),
@@ -186,16 +186,16 @@ impl Ord for WitnessOrd {
 }
 
 impl WitnessOrd {
-    pub fn with(witness_id: XWitnessId, witness_ord: TxOrd) -> Self {
+    pub fn with(witness_id: XWitnessId, pub_ord: TxOrd) -> Self {
         WitnessOrd {
             witness_id,
-            witness_ord,
+            pub_ord,
         }
     }
 
     pub fn from_mempool(witness_id: XWitnessId, priority: u32) -> Self {
         WitnessOrd {
-            witness_ord: TxOrd::OffChain { priority },
+            pub_ord: TxOrd::OffChain { priority },
             witness_id,
         }
     }
@@ -227,7 +227,7 @@ pub struct OpOrd {
 pub struct GlobalOrd {
     // Absent for state defined in genesis
     // TODO: Change into `AssignmentWitness`
-    pub witness_anchor: Option<WitnessOrd>,
+    pub witness_ord: Option<WitnessOrd>,
     pub opid: OpId,
     pub idx: u16,
 }
@@ -241,7 +241,7 @@ impl Ord for GlobalOrd {
         if self == other {
             return Ordering::Equal;
         }
-        match (self.witness_anchor, &other.witness_anchor) {
+        match (self.witness_ord, &other.witness_ord) {
             (None, None) => self.idx.cmp(&other.idx),
             (None, Some(_)) => Ordering::Less,
             (Some(_), None) => Ordering::Greater,
@@ -255,7 +255,7 @@ impl GlobalOrd {
     #[inline]
     pub fn with_witness(opid: OpId, witness_id: XWitnessId, ord: TxOrd, idx: u16) -> Self {
         GlobalOrd {
-            witness_anchor: Some(WitnessOrd::with(witness_id, ord)),
+            witness_ord: Some(WitnessOrd::with(witness_id, ord)),
             opid,
             idx,
         }
@@ -263,13 +263,13 @@ impl GlobalOrd {
     #[inline]
     pub fn genesis(opid: OpId, idx: u16) -> Self {
         GlobalOrd {
-            witness_anchor: None,
+            witness_ord: None,
             opid,
             idx,
         }
     }
     #[inline]
-    pub fn witness_id(&self) -> Option<XWitnessId> { self.witness_anchor.map(|a| a.witness_id) }
+    pub fn witness_id(&self) -> Option<XWitnessId> { self.witness_ord.map(|a| a.witness_id) }
 }
 
 pub trait GlobalStateIter {
@@ -307,7 +307,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     pub fn new(mut iter: I) -> Self {
         let last_ord = iter.prev().map(|(ord, _)| ord).unwrap_or(GlobalOrd {
             // This is dumb object which must always have the lowest ordering.
-            witness_anchor: None,
+            witness_ord: None,
             opid: Bytes32::zero().into(),
             idx: 0,
         });
