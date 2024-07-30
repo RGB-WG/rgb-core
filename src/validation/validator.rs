@@ -32,7 +32,7 @@ use single_use_seals::SealWitness;
 
 use super::status::Failure;
 use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Validity};
-use crate::vm::{ContractStateEvolve, OpOrd, TxOrd, WitnessOrd};
+use crate::vm::{ContractStateAccess, ContractStateEvolve, OpOrd, TxOrd, WitnessOrd};
 use crate::{
     validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
     Schema, SchemaId, TransitionBundle, XChain, XOutpoint, XOutputSeal, XWitnessId, XWitnessTx,
@@ -64,8 +64,6 @@ pub trait ResolveWitness {
         witness_id: XWitnessId,
     ) -> Result<XWitnessTx, WitnessResolverError>;
 
-    // TODO: Remove ResolveWitnessHeight trait from RGB stdlib and use this method
-    //       instead
     fn resolve_pub_witness_ord(
         &self,
         witness_id: XWitnessId,
@@ -124,9 +122,9 @@ impl<R: ResolveWitness> ResolveWitness for CheckedWitnessResolver<R> {
 pub struct Validator<
     'consignment,
     'resolver,
+    S: ContractStateAccess + ContractStateEvolve,
     C: ConsignmentApi,
     R: ResolveWitness,
-    S: ContractStateEvolve,
 > {
     consignment: CheckedConsignment<'consignment, C>,
 
@@ -144,10 +142,15 @@ pub struct Validator<
     resolver: CheckedWitnessResolver<&'resolver R>,
 }
 
-impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness, S: ContractStateEvolve>
-    Validator<'consignment, 'resolver, C, R, S>
+impl<
+    'consignment,
+    'resolver,
+    S: ContractStateAccess + ContractStateEvolve,
+    C: ConsignmentApi,
+    R: ResolveWitness,
+> Validator<'consignment, 'resolver, S, C, R>
 {
-    fn init(consignment: &'consignment C, resolver: &'resolver R) -> Self {
+    fn init(consignment: &'consignment C, resolver: &'resolver R, context: S::Context<'_>) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
         let status = Status::default();
@@ -178,7 +181,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness, S: ContractS
             validated_op_state,
             validated_op_seals,
             resolver: CheckedWitnessResolver::from(resolver),
-            contract_state: Rc::new(RefCell::new(empty!())),
+            contract_state: Rc::new(RefCell::new(S::init(context))),
         }
     }
 
@@ -191,8 +194,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness, S: ContractS
     /// logged into the status object, but the validation continues for the
     /// rest of the consignment data. This can help to debug and detect all
     /// problems with the consignment.
-    pub fn validate(consignment: &'consignment C, resolver: &'resolver R, testnet: bool) -> Status {
-        let mut validator = Self::init(consignment, resolver);
+    pub fn validate(
+        consignment: &'consignment C,
+        resolver: &'resolver R,
+        testnet: bool,
+        context: S::Context<'_>,
+    ) -> Status {
+        let mut validator = Self::init(consignment, resolver, context);
         // If the network mismatches there is no point in validating the contract since
         // all witness transactions will be missed.
         if testnet != validator.consignment.genesis().testnet {

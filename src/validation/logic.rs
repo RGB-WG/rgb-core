@@ -34,7 +34,7 @@ use strict_types::TypeSystem;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
-use crate::vm::{ContractStateEvolve, OpInfo, RgbIsa, VmContext};
+use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, RgbIsa, VmContext};
 use crate::{
     validation, Assign, AssignmentType, Assignments, AssignmentsRef, ConcealedState,
     ConfidentialState, ExposedSeal, ExposedState, Extension, GlobalState, GlobalStateSchema,
@@ -44,7 +44,11 @@ use crate::{
 
 impl Schema {
     // TODO: Instead of returning status fail immediately
-    pub fn validate_state<'validator, C: ConsignmentApi, S: ContractStateEvolve>(
+    pub fn validate_state<
+        'validator,
+        C: ConsignmentApi,
+        S: ContractStateAccess + ContractStateEvolve,
+    >(
         &'validator self,
         consignment: &'validator CheckedConsignment<'_, C>,
         op: OpRef,

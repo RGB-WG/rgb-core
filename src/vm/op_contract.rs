@@ -34,14 +34,14 @@ use amplify::Wrapper;
 use commit_verify::CommitVerify;
 
 use super::opcodes::*;
-use super::{ContractState, VmContext};
+use super::{ContractStateAccess, VmContext};
 use crate::{
     Assign, AssignmentType, BlindingFactor, GlobalStateType, MetaType, PedersenCommitment,
     RevealedValue, TypedAssigns,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-pub enum ContractOp<S: ContractState> {
+pub enum ContractOp<S: ContractStateAccess> {
     /// Counts number of inputs (previous state entries) of the provided type
     /// and puts the number to the destination `a16` register.
     #[display("cnp     {0},a16{1}")]
@@ -165,7 +165,7 @@ pub enum ContractOp<S: ContractState> {
     Fail(u8, PhantomData<S>),
 }
 
-impl<S: ContractState> InstructionSet for ContractOp<S> {
+impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
     type Context<'ctx> = VmContext<'ctx, S>;
 
     fn isa_ids() -> IsaSeg { IsaSeg::with("RGB") }
@@ -446,7 +446,7 @@ impl<S: ContractState> InstructionSet for ContractOp<S> {
     }
 }
 
-impl<S: ContractState> Bytecode for ContractOp<S> {
+impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
     fn instr_range() -> RangeInclusive<u8> { INSTR_CONTRACT_FROM..=INSTR_CONTRACT_TO }
 
     fn instr_byte(&self) -> u8 {

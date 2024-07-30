@@ -328,7 +328,7 @@ impl<I: GlobalStateIter> Iterator for GlobalContractState<I> {
 #[display("unknown global state type {0} requested from the contract")]
 pub struct UnknownGlobalStateType(pub GlobalStateType);
 
-pub trait ContractState: Debug {
+pub trait ContractStateAccess: Debug {
     fn global(
         &self,
         ty: GlobalStateType,
@@ -355,11 +355,13 @@ pub trait ContractState: Debug {
     ) -> impl DoubleEndedIterator<Item = impl Borrow<AttachState>>;
 }
 
-pub trait ContractStateEvolve: ContractState + Default {
+pub trait ContractStateEvolve {
+    type Context<'ctx>;
+    fn init(context: Self::Context<'_>) -> Self;
     fn evolve_state(&mut self, op: OpRef);
 }
 
-pub struct VmContext<'op, S: ContractState> {
+pub struct VmContext<'op, S: ContractStateAccess> {
     pub contract_id: ContractId,
     pub asset_tags: &'op AssetTags,
     pub op_info: OpInfo<'op>,

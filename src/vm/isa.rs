@@ -29,12 +29,12 @@ use aluvm::library::{CodeEofError, IsaSeg, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg};
 
 use super::opcodes::{INSTR_RGBISA_FROM, INSTR_RGBISA_TO};
-use super::{ContractOp, ContractState, TimechainOp, VmContext};
+use super::{ContractOp, ContractStateAccess, TimechainOp, VmContext};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(inner)]
 #[non_exhaustive]
-pub enum RgbIsa<S: ContractState> {
+pub enum RgbIsa<S: ContractStateAccess> {
     Contract(ContractOp<S>),
 
     Timechain(TimechainOp),
@@ -44,7 +44,7 @@ pub enum RgbIsa<S: ContractState> {
     Fail(u8),
 }
 
-impl<S: ContractState> InstructionSet for RgbIsa<S> {
+impl<S: ContractStateAccess> InstructionSet for RgbIsa<S> {
     type Context<'ctx> = VmContext<'ctx, S>;
 
     fn isa_ids() -> IsaSeg { IsaSeg::with("RGB") }
@@ -85,7 +85,7 @@ impl<S: ContractState> InstructionSet for RgbIsa<S> {
     }
 }
 
-impl<S: ContractState> Bytecode for RgbIsa<S> {
+impl<S: ContractStateAccess> Bytecode for RgbIsa<S> {
     fn instr_range() -> RangeInclusive<u8> { INSTR_RGBISA_FROM..=INSTR_RGBISA_TO }
 
     fn instr_byte(&self) -> u8 {
