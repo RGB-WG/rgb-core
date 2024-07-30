@@ -29,9 +29,9 @@ use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
 
 use crate::validation::DbcProof;
-use crate::vm::GlobalOrd;
+use crate::vm::{GlobalOrd, XWitnessId};
 use crate::{
-    Extension, Genesis, OpCommitment, Schema, TransitionBundle, XWitnessId, LIB_NAME_RGB_COMMIT,
+    Extension, Genesis, OpCommitment, Schema, TransitionBundle, LIB_NAME_RGB_COMMIT,
     LIB_NAME_RGB_LOGIC,
 };
 

@@ -31,8 +31,8 @@ use amplify::confinement::Confined;
 use strict_types::TypeSystem;
 
 use super::EAnchor;
-use crate::vm::OpRef;
-use crate::{BundleId, Genesis, OpId, Operation, Schema, TransitionBundle, XWitnessId};
+use crate::vm::{OpRef, XWitnessId};
+use crate::{BundleId, Genesis, OpId, Operation, Schema, TransitionBundle};
 
 pub const CONSIGNMENT_MAX_LIBS: usize = 1024;
 

@@ -27,12 +27,12 @@ use amplify::num::u24;
 use commit_verify::mpc::InvalidProof;
 use strict_types::SemId;
 
-use crate::operation::Opout;
 use crate::schema::{self, SchemaId};
 use crate::validation::WitnessResolverError;
+use crate::vm::XWitnessId;
 use crate::{
-    BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, StateType, Vin,
-    XGraphSeal, XOutputSeal, XWitnessId,
+    BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, Opout, StateType, Vin,
+    XGraphSeal, XOutputSeal,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
