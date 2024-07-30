@@ -290,16 +290,24 @@ impl<
                     }
                 };
             for (opid, op) in &bundle.known_transitions {
-                ops.insert(
-                    OpOrd {
-                        witness_ord: WitnessOrd {
-                            pub_ord,
-                            witness_id,
-                        },
-                        opid: *opid,
-                    },
-                    OpRef::Transition(op, witness_id),
-                );
+                let witness_ord = WitnessOrd {
+                    pub_ord,
+                    witness_id,
+                };
+                let ord = OpOrd {
+                    witness_ord,
+                    opid: *opid,
+                };
+                ops.insert(ord, OpRef::Transition(op, witness_id));
+                for input in &op.inputs {
+                    // We will error in `validate_operations` below on the absent extension from the
+                    // consignment.
+                    if let Some(OpRef::Extension(extension, _)) =
+                        self.consignment.operation(input.prev_out.op)
+                    {
+                        ops.insert(ord, OpRef::Extension(extension, witness_id));
+                    }
+                }
             }
         }
         // TODO: Check that we include all terminal transitions

@@ -364,6 +364,7 @@ impl WitnessOrd {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct OpOrd {
+    // TODO: Add operation type and account for it in the ordering process
     pub witness_ord: WitnessOrd,
     pub opid: OpId,
 }
