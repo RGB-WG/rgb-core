@@ -33,9 +33,118 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
     AssetTags, AssignmentType, Assignments, AssignmentsRef, AttachState, ContractId, DataState,
-    FungibleState, GlobalState, GlobalStateType, GraphSeal, Metadata, OpFullType, OpId, OpRef,
-    Operation, Valencies, XOutpoint, XWitnessId, LIB_NAME_RGB_LOGIC,
+    Extension, ExtensionType, FungibleState, Genesis, GlobalState, GlobalStateType, GraphSeal,
+    Inputs, Metadata, OpFullType, OpId, OpType, Operation, Transition, TransitionType,
+    TypedAssigns, Valencies, XOutpoint, XWitnessId, LIB_NAME_RGB_LOGIC,
 };
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug, From)]
+pub enum OpRef<'op> {
+    #[from]
+    Genesis(&'op Genesis),
+    #[from]
+    Transition(&'op Transition),
+    #[from]
+    Extension(&'op Extension),
+}
+
+impl<'op> Operation for OpRef<'op> {
+    fn op_type(&self) -> OpType {
+        match self {
+            OpRef::Genesis(op) => op.op_type(),
+            OpRef::Transition(op) => op.op_type(),
+            OpRef::Extension(op) => op.op_type(),
+        }
+    }
+
+    fn full_type(&self) -> OpFullType {
+        match self {
+            OpRef::Genesis(op) => op.full_type(),
+            OpRef::Transition(op) => op.full_type(),
+            OpRef::Extension(op) => op.full_type(),
+        }
+    }
+
+    fn id(&self) -> OpId {
+        match self {
+            OpRef::Genesis(op) => op.id(),
+            OpRef::Transition(op) => op.id(),
+            OpRef::Extension(op) => op.id(),
+        }
+    }
+
+    fn contract_id(&self) -> ContractId {
+        match self {
+            OpRef::Genesis(op) => op.contract_id(),
+            OpRef::Transition(op) => op.contract_id(),
+            OpRef::Extension(op) => op.contract_id(),
+        }
+    }
+
+    fn transition_type(&self) -> Option<TransitionType> {
+        match self {
+            OpRef::Genesis(op) => op.transition_type(),
+            OpRef::Transition(op) => op.transition_type(),
+            OpRef::Extension(op) => op.transition_type(),
+        }
+    }
+
+    fn extension_type(&self) -> Option<ExtensionType> {
+        match self {
+            OpRef::Genesis(op) => op.extension_type(),
+            OpRef::Transition(op) => op.extension_type(),
+            OpRef::Extension(op) => op.extension_type(),
+        }
+    }
+
+    fn metadata(&self) -> &Metadata {
+        match self {
+            OpRef::Genesis(op) => op.metadata(),
+            OpRef::Transition(op) => op.metadata(),
+            OpRef::Extension(op) => op.metadata(),
+        }
+    }
+
+    fn globals(&self) -> &GlobalState {
+        match self {
+            OpRef::Genesis(op) => op.globals(),
+            OpRef::Transition(op) => op.globals(),
+            OpRef::Extension(op) => op.globals(),
+        }
+    }
+
+    fn valencies(&self) -> &Valencies {
+        match self {
+            OpRef::Genesis(op) => op.valencies(),
+            OpRef::Transition(op) => op.valencies(),
+            OpRef::Extension(op) => op.valencies(),
+        }
+    }
+
+    fn assignments(&self) -> AssignmentsRef<'op> {
+        match self {
+            OpRef::Genesis(op) => (&op.assignments).into(),
+            OpRef::Transition(op) => (&op.assignments).into(),
+            OpRef::Extension(op) => (&op.assignments).into(),
+        }
+    }
+
+    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
+        match self {
+            OpRef::Genesis(op) => op.assignments_by_type(t),
+            OpRef::Transition(op) => op.assignments_by_type(t),
+            OpRef::Extension(op) => op.assignments_by_type(t),
+        }
+    }
+
+    fn inputs(&self) -> Inputs {
+        match self {
+            OpRef::Genesis(op) => op.inputs(),
+            OpRef::Transition(op) => op.inputs(),
+            OpRef::Extension(op) => op.inputs(),
+        }
+    }
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]

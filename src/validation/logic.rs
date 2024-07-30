@@ -34,11 +34,11 @@ use strict_types::TypeSystem;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
-use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, RgbIsa, VmContext};
+use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OpRef, RgbIsa, VmContext};
 use crate::{
     validation, Assign, AssignmentType, Assignments, AssignmentsRef, ConcealedState,
     ConfidentialState, ExposedSeal, ExposedState, Extension, GlobalState, GlobalStateSchema,
-    GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId, OpRef, Operation, Opout,
+    GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId, Operation, Opout,
     OwnedStateSchema, RevealedState, Schema, StateType, Transition, TypedAssigns, Valencies,
 };
 

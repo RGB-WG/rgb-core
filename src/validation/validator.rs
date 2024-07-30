@@ -32,10 +32,10 @@ use single_use_seals::SealWitness;
 
 use super::status::Failure;
 use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Validity};
-use crate::vm::{ContractStateAccess, ContractStateEvolve, OpOrd, TxOrd, WitnessOrd};
+use crate::vm::{ContractStateAccess, ContractStateEvolve, OpOrd, OpRef, TxOrd, WitnessOrd};
 use crate::{
-    validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout,
-    Schema, SchemaId, TransitionBundle, XChain, XOutpoint, XOutputSeal, XWitnessId, XWitnessTx,
+    validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpType, Operation, Opout, Schema,
+    SchemaId, TransitionBundle, XChain, XOutpoint, XOutputSeal, XWitnessId, XWitnessTx,
 };
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]

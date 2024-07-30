@@ -41,6 +41,7 @@ pub type GraphSeal = ChainBlindSeal<Method>;
 
 pub type OutputSeal = ExplicitSeal<Txid, Method>;
 
+// TODO: Move to vm::Contract
 pub type XWitnessId = XChain<Txid>;
 
 pub type XGenesisSeal = XChain<GenesisSeal>;
@@ -176,6 +177,7 @@ impl<U: ExposedSeal> XChain<U> {
     }
 }
 
+// TODO: Move to vm::Contract
 pub type XWitnessTx<X = Impossible> = XChain<Tx, X>;
 
 impl XWitnessTx {
