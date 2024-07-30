@@ -51,6 +51,7 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 
     fn scripts(&self) -> &Scripts { self.0.scripts() }
 
+    // TODO: Return different type
     fn operation(&self, opid: OpId) -> Option<OpRef> {
         self.0.operation(opid).filter(|op| op.id() == opid)
     }

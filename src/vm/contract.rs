@@ -354,6 +354,21 @@ impl WitnessOrd {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = custom)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum OpTypeOrd {
+    #[strict_type(tag = 0x00)]
+    Extension(ExtensionType),
+    #[strict_type(tag = 0xFF, dumb)]
+    Transition,
+}
+
 /// Consensus ordering of operations within a contract.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -364,7 +379,7 @@ impl WitnessOrd {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct OpOrd {
-    // TODO: Add operation type and account for it in the ordering process
+    pub op_type: OpTypeOrd,
     pub witness_ord: WitnessOrd,
     pub opid: OpId,
 }

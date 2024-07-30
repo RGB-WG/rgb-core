@@ -33,8 +33,8 @@ use single_use_seals::SealWitness;
 use super::status::Failure;
 use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Validity};
 use crate::vm::{
-    ContractStateAccess, ContractStateEvolve, OpOrd, OpRef, TxOrd, WitnessOrd, XWitnessId,
-    XWitnessTx,
+    ContractStateAccess, ContractStateEvolve, OpOrd, OpRef, OpTypeOrd, TxOrd, WitnessOrd,
+    XWitnessId, XWitnessTx,
 };
 use crate::{
     validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpType, Operation, Opout, Schema,
@@ -294,7 +294,8 @@ impl<
                     pub_ord,
                     witness_id,
                 };
-                let ord = OpOrd {
+                let mut ord = OpOrd {
+                    op_type: OpTypeOrd::Transition,
                     witness_ord,
                     opid: *opid,
                 };
@@ -305,6 +306,7 @@ impl<
                     if let Some(OpRef::Extension(extension, _)) =
                         self.consignment.operation(input.prev_out.op)
                     {
+                        ord.op_type = OpTypeOrd::Extension(extension.extension_type);
                         ops.insert(ord, OpRef::Extension(extension, witness_id));
                     }
                 }
