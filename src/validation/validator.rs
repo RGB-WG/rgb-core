@@ -298,7 +298,7 @@ impl<
                         },
                         opid: *opid,
                     },
-                    OpRef::Transition(op),
+                    OpRef::Transition(op, witness_id),
                 );
             }
         }
@@ -335,7 +335,7 @@ impl<
             OpRef::Genesis(_) => {
                 unreachable!("genesis is not a part of the operation history")
             }
-            OpRef::Transition(transition) => {
+            OpRef::Transition(transition, _) => {
                 for input in &transition.inputs {
                     if self.consignment.operation(input.prev_out.op).is_none() {
                         self.status
@@ -344,7 +344,7 @@ impl<
                     }
                 }
             }
-            OpRef::Extension(extension) => {
+            OpRef::Extension(extension, _) => {
                 for (valency, prev_id) in &extension.redeemed {
                     let Some(prev_op) = self.consignment.operation(*prev_id) else {
                         self.status

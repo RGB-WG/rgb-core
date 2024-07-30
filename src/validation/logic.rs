@@ -95,9 +95,12 @@ impl Schema {
                     None::<u16>,
                 )
             }
-            OpRef::Transition(Transition {
-                transition_type, ..
-            }) => {
+            OpRef::Transition(
+                Transition {
+                    transition_type, ..
+                },
+                _,
+            ) => {
                 // Right now we do not have actions to implement; but later
                 // we may have embedded procedures which must be verified
                 // here
@@ -131,7 +134,7 @@ impl Schema {
                     Some(transition_type.into_inner()),
                 )
             }
-            OpRef::Extension(Extension { extension_type, .. }) => {
+            OpRef::Extension(Extension { extension_type, .. }, _) => {
                 // Right now we do not have actions to implement; but later
                 // we may have embedded procedures which must be verified
                 // here
@@ -168,7 +171,7 @@ impl Schema {
         status += self.validate_metadata(opid, op.metadata(), metadata_schema, consignment.types());
         status +=
             self.validate_global_state(opid, op.globals(), global_schema, consignment.types());
-        let prev_state = if let OpRef::Transition(transition) = op {
+        let prev_state = if let OpRef::Transition(transition, _) = op {
             let prev_state = extract_prev_state(consignment, opid, &transition.inputs, &mut status);
             status += self.validate_prev_state(opid, &prev_state, owned_schema);
             prev_state
@@ -176,7 +179,7 @@ impl Schema {
             Assignments::default()
         };
         let mut redeemed = Valencies::default();
-        if let OpRef::Extension(extension) = op {
+        if let OpRef::Extension(extension, _) = op {
             for valency in extension.redeemed.keys() {
                 redeemed.push(*valency).expect("same size");
             }
