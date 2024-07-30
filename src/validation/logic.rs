@@ -45,7 +45,6 @@ use crate::{
 };
 
 impl Schema {
-    // TODO: Instead of returning status fail immediately
     pub fn validate_state<
         'validator,
         C: ConsignmentApi,
@@ -223,6 +222,8 @@ impl Schema {
                     error_code.map(u8::from),
                     None,
                 ));
+                // We return here since all other validations will have no valid state to access
+                return status;
             }
             let contract_state = context.contract_state;
             contract_state.borrow_mut().evolve_state(op);

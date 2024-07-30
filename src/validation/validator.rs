@@ -312,7 +312,6 @@ impl<
                 }
             }
         }
-        // TODO: Check that we include all terminal transitions
         for op in ops.into_values() {
             self.validate_operation(op);
         }
