@@ -28,6 +28,6 @@ mod status;
 mod commitments;
 
 pub use commitments::{DbcError, DbcProof, EAnchor};
-pub use consignment::{CheckedConsignment, ConsignmentApi, Scripts, CONSIGNMENT_MAX_LIBS};
+pub use consignment::{CheckedConsignment, ConsignmentApi, OpRef, Scripts, CONSIGNMENT_MAX_LIBS};
 pub use status::{Failure, Info, Status, Validity, Warning};
 pub use validator::{ResolveWitness, Validator, WitnessResolverError};

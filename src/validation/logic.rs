@@ -34,7 +34,9 @@ use strict_types::TypeSystem;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
-use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OpRef, RgbIsa, VmContext};
+use crate::vm::{
+    AnchoredOpRef, ContractStateAccess, ContractStateEvolve, OpInfo, RgbIsa, VmContext,
+};
 use crate::{
     validation, Assign, AssignmentType, Assignments, AssignmentsRef, ConcealedState,
     ConfidentialState, ExposedSeal, ExposedState, Extension, GlobalState, GlobalStateSchema,
@@ -51,7 +53,7 @@ impl Schema {
     >(
         &'validator self,
         consignment: &'validator CheckedConsignment<'_, C>,
-        op: OpRef,
+        op: AnchoredOpRef,
         contract_state: Rc<RefCell<S>>,
     ) -> validation::Status {
         let opid = op.id();
@@ -70,7 +72,7 @@ impl Schema {
             validator,
             ty,
         ) = match op {
-            OpRef::Genesis(genesis) => {
+            AnchoredOpRef::Genesis(genesis) => {
                 for id in genesis.asset_tags.keys() {
                     if !matches!(self.owned_types.get(id), Some(OwnedStateSchema::Fungible(_))) {
                         status.add_failure(validation::Failure::AssetTagNoState(*id));
@@ -95,7 +97,7 @@ impl Schema {
                     None::<u16>,
                 )
             }
-            OpRef::Transition(
+            AnchoredOpRef::Transition(
                 Transition {
                     transition_type, ..
                 },
@@ -134,7 +136,7 @@ impl Schema {
                     Some(transition_type.into_inner()),
                 )
             }
-            OpRef::Extension(Extension { extension_type, .. }, _) => {
+            AnchoredOpRef::Extension(Extension { extension_type, .. }, _) => {
                 // Right now we do not have actions to implement; but later
                 // we may have embedded procedures which must be verified
                 // here
@@ -171,7 +173,7 @@ impl Schema {
         status += self.validate_metadata(opid, op.metadata(), metadata_schema, consignment.types());
         status +=
             self.validate_global_state(opid, op.globals(), global_schema, consignment.types());
-        let prev_state = if let OpRef::Transition(transition, _) = op {
+        let prev_state = if let AnchoredOpRef::Transition(transition, _) = op {
             let prev_state = extract_prev_state(consignment, opid, &transition.inputs, &mut status);
             status += self.validate_prev_state(opid, &prev_state, owned_schema);
             prev_state
@@ -179,7 +181,7 @@ impl Schema {
             Assignments::default()
         };
         let mut redeemed = Valencies::default();
-        if let OpRef::Extension(extension, _) = op {
+        if let AnchoredOpRef::Extension(extension, _) = op {
             for valency in extension.redeemed.keys() {
                 redeemed.push(*valency).expect("same size");
             }

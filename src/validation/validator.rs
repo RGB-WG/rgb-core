@@ -31,9 +31,9 @@ use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::Failure;
-use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Validity};
+use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, OpRef, Status, Validity};
 use crate::vm::{
-    ContractStateAccess, ContractStateEvolve, OpOrd, OpRef, OpTypeOrd, TxOrd, WitnessOrd,
+    AnchoredOpRef, ContractStateAccess, ContractStateEvolve, OpOrd, OpTypeOrd, TxOrd, WitnessOrd,
     XWitnessId, XWitnessTx,
 };
 use crate::{
@@ -261,14 +261,14 @@ impl<
         // [VALIDATION]: Validate genesis
         *self.status.borrow_mut() += schema.validate_state(
             &self.consignment,
-            OpRef::Genesis(self.consignment.genesis()),
+            AnchoredOpRef::Genesis(self.consignment.genesis()),
             self.contract_state.clone(),
         );
         self.validated_op_state.borrow_mut().insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over all consignment operations, ordering them according to the
         //               consensus ordering rules.
-        let mut ops = BTreeMap::<OpOrd, OpRef>::new();
+        let mut ops = BTreeMap::<OpOrd, AnchoredOpRef>::new();
         for bundle_id in self.consignment.bundle_ids() {
             let bundle = self
                 .consignment
@@ -299,15 +299,15 @@ impl<
                     witness_ord,
                     opid: *opid,
                 };
-                ops.insert(ord, OpRef::Transition(op, witness_id));
+                ops.insert(ord, AnchoredOpRef::Transition(op, witness_id));
                 for input in &op.inputs {
                     // We will error in `validate_operations` below on the absent extension from the
                     // consignment.
-                    if let Some(OpRef::Extension(extension, _)) =
+                    if let Some(OpRef::Extension(extension)) =
                         self.consignment.operation(input.prev_out.op)
                     {
                         ord.op_type = OpTypeOrd::Extension(extension.extension_type);
-                        ops.insert(ord, OpRef::Extension(extension, witness_id));
+                        ops.insert(ord, AnchoredOpRef::Extension(extension, witness_id));
                     }
                 }
             }
@@ -318,7 +318,7 @@ impl<
         }
     }
 
-    fn validate_operation(&self, operation: OpRef<'consignment>) {
+    fn validate_operation(&self, operation: AnchoredOpRef<'consignment>) {
         let schema = self.consignment.schema();
         let opid = operation.id();
 
@@ -342,10 +342,10 @@ impl<
         }
 
         match operation {
-            OpRef::Genesis(_) => {
+            AnchoredOpRef::Genesis(_) => {
                 unreachable!("genesis is not a part of the operation history")
             }
-            OpRef::Transition(transition, _) => {
+            AnchoredOpRef::Transition(transition, _) => {
                 for input in &transition.inputs {
                     if self.consignment.operation(input.prev_out.op).is_none() {
                         self.status
@@ -354,7 +354,7 @@ impl<
                     }
                 }
             }
-            OpRef::Extension(extension, _) => {
+            AnchoredOpRef::Extension(extension, _) => {
                 for (valency, prev_id) in &extension.redeemed {
                     let Some(prev_op) = self.consignment.operation(*prev_id) else {
                         self.status

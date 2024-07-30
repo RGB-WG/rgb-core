@@ -31,12 +31,124 @@ use amplify::confinement::Confined;
 use strict_types::TypeSystem;
 
 use super::EAnchor;
-use crate::vm::{OpRef, XWitnessId};
-use crate::{BundleId, Genesis, OpId, Operation, Schema, TransitionBundle};
+use crate::vm::XWitnessId;
+use crate::{
+    AssignmentType, AssignmentsRef, BundleId, ContractId, Extension, ExtensionType, Genesis,
+    GlobalState, GraphSeal, Inputs, Metadata, OpFullType, OpId, OpType, Operation, Schema,
+    Transition, TransitionBundle, TransitionType, TypedAssigns, Valencies,
+};
 
 pub const CONSIGNMENT_MAX_LIBS: usize = 1024;
 
 pub type Scripts = Confined<BTreeMap<LibId, Lib>, 0, CONSIGNMENT_MAX_LIBS>;
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug, From)]
+pub enum OpRef<'op> {
+    #[from]
+    Genesis(&'op Genesis),
+    #[from]
+    Transition(&'op Transition),
+    #[from]
+    Extension(&'op Extension),
+}
+
+impl<'op> Operation for OpRef<'op> {
+    fn op_type(&self) -> OpType {
+        match self {
+            Self::Genesis(op) => op.op_type(),
+            Self::Transition(op) => op.op_type(),
+            Self::Extension(op) => op.op_type(),
+        }
+    }
+
+    fn full_type(&self) -> OpFullType {
+        match self {
+            Self::Genesis(op) => op.full_type(),
+            Self::Transition(op) => op.full_type(),
+            Self::Extension(op) => op.full_type(),
+        }
+    }
+
+    fn id(&self) -> OpId {
+        match self {
+            Self::Genesis(op) => op.id(),
+            Self::Transition(op) => op.id(),
+            Self::Extension(op) => op.id(),
+        }
+    }
+
+    fn contract_id(&self) -> ContractId {
+        match self {
+            Self::Genesis(op) => op.contract_id(),
+            Self::Transition(op) => op.contract_id(),
+            Self::Extension(op) => op.contract_id(),
+        }
+    }
+
+    fn transition_type(&self) -> Option<TransitionType> {
+        match self {
+            Self::Genesis(op) => op.transition_type(),
+            Self::Transition(op) => op.transition_type(),
+            Self::Extension(op) => op.transition_type(),
+        }
+    }
+
+    fn extension_type(&self) -> Option<ExtensionType> {
+        match self {
+            Self::Genesis(op) => op.extension_type(),
+            Self::Transition(op) => op.extension_type(),
+            Self::Extension(op) => op.extension_type(),
+        }
+    }
+
+    fn metadata(&self) -> &Metadata {
+        match self {
+            Self::Genesis(op) => op.metadata(),
+            Self::Transition(op) => op.metadata(),
+            Self::Extension(op) => op.metadata(),
+        }
+    }
+
+    fn globals(&self) -> &GlobalState {
+        match self {
+            Self::Genesis(op) => op.globals(),
+            Self::Transition(op) => op.globals(),
+            Self::Extension(op) => op.globals(),
+        }
+    }
+
+    fn valencies(&self) -> &Valencies {
+        match self {
+            Self::Genesis(op) => op.valencies(),
+            Self::Transition(op) => op.valencies(),
+            Self::Extension(op) => op.valencies(),
+        }
+    }
+
+    fn assignments(&self) -> AssignmentsRef<'op> {
+        match self {
+            Self::Genesis(op) => (&op.assignments).into(),
+            Self::Transition(op) => (&op.assignments).into(),
+            Self::Extension(op) => (&op.assignments).into(),
+        }
+    }
+
+    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
+        match self {
+            Self::Genesis(op) => op.assignments_by_type(t),
+            Self::Transition(op) => op.assignments_by_type(t),
+            Self::Extension(op) => op.assignments_by_type(t),
+        }
+    }
+
+    fn inputs(&self) -> Inputs {
+        match self {
+            Self::Genesis(op) => op.inputs(),
+            Self::Transition(op) => op.inputs(),
+            Self::Extension(op) => op.inputs(),
+        }
+    }
+}
 
 pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
 
@@ -51,7 +163,6 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 
     fn scripts(&self) -> &Scripts { self.0.scripts() }
 
-    // TODO: Return different type
     fn operation(&self, opid: OpId) -> Option<OpRef> {
         self.0.operation(opid).filter(|op| op.id() == opid)
     }
