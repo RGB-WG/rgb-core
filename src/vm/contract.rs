@@ -81,16 +81,16 @@ impl Ord for TxPos {
     serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
 pub enum TxOrd {
+    #[display("archived")]
+    #[strict_type(dumb)]
+    Archived,
+
     #[from]
     #[display(inner)]
     OnChain(TxPos),
 
     #[display("offchain@{priority}")]
     OffChain { priority: u32 },
-
-    #[display("archived")]
-    #[strict_type(dumb)]
-    Archived,
 }
 
 impl TxOrd {
@@ -266,6 +266,26 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     #[inline]
     pub fn size(&mut self) -> u24 { self.iter.size() }
 
+    fn prev_checked(&mut self) -> Option<(GlobalOrd, I::Data)> {
+        let (ord, item) = self.iter.prev()?;
+        if ord >= self.last_ord {
+            panic!(
+                "global contract state iterator has invalid implementation: it fails to order \
+                 global state according to the consensus ordering"
+            );
+        }
+        if let Some(WitnessOrd {
+            pub_ord: TxOrd::Archived,
+            ..
+        }) = ord.witness_ord
+        {
+            panic!("invalid GlobalStateIter implementation returning WitnessAnchor::Archived")
+        }
+        self.checked_depth += u24::ONE;
+        self.last_ord = ord;
+        Some((ord, item))
+    }
+
     /// Retrieves global state data located `depth` items back from the most
     /// recent global state value. Ensures that the global state ordering is
     /// consensus-based.
@@ -280,20 +300,13 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
             let size = self.iter.size();
             let to = (depth - self.checked_depth).to_u32();
             for inc in 0..to {
-                let (ord, _) = self.iter.prev().unwrap_or_else(|| {
+                if self.prev_checked().is_none() {
                     panic!(
                         "global contract state iterator has invalid implementation: it reports \
                          more global state items {size} than the contract has ({})",
                         self.checked_depth + inc
                     );
-                });
-                if ord >= self.last_ord {
-                    panic!(
-                        "global contract state iterator has invalid implementation: it fails to \
-                         order global state according to the consensus ordering"
-                    );
                 }
-                self.last_ord = ord;
             }
         }
         self.iter.last().map(|(_, item)| item)
@@ -304,18 +317,7 @@ impl<I: GlobalStateIter> Iterator for GlobalContractState<I> {
     type Item = I::Data;
 
     #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        let (ord, item) = self.iter.prev()?;
-        if ord >= self.last_ord {
-            panic!(
-                "global contract state iterator has invalid implementation: it fails to order \
-                 global state according to the consensus ordering"
-            );
-        }
-        self.checked_depth += u24::ONE;
-        self.last_ord = ord;
-        Some(item)
-    }
+    fn next(&mut self) -> Option<Self::Item> { Some(self.prev_checked()?.1) }
 }
 
 #[derive(Copy, Clone, Debug, Display, Error)]
