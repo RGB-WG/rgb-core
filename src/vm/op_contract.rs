@@ -22,6 +22,8 @@
 
 #![allow(clippy::unusual_byte_groupings)]
 
+use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::marker::PhantomData;
 use std::ops::RangeInclusive;
@@ -29,7 +31,7 @@ use std::ops::RangeInclusive;
 use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, IsaSeg, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg, Reg16, Reg32, RegA, RegS};
-use amplify::num::{u3, u4};
+use amplify::num::{u24, u3, u4};
 use amplify::Wrapper;
 use commit_verify::CommitVerify;
 
@@ -44,22 +46,34 @@ use crate::{
 pub enum ContractOp<S: ContractStateAccess> {
     /// Counts number of inputs (previous state entries) of the provided type
     /// and puts the number to the destination `a16` register.
+    ///
+    /// If the operation doesn't contain inputs with a given assignment type,
+    /// sets destination index to zero. Does not change `st0` register.
     #[display("cnp     {0},a16{1}")]
     CnP(AssignmentType, Reg32),
 
     /// Counts number of outputs (owned state entries) of the provided type
     /// and puts the number to the destination `a16` register.
+    ///
+    /// If the operation doesn't contain inputs with a given assignment type,
+    /// sets destination index to zero. Does not change `st0` register.
     #[display("cns     {0},a16{1}")]
     CnS(AssignmentType, Reg32),
 
     /// Counts number of global state items of the provided type affected by the
     /// current operation and puts the number to the destination `a8` register.
+    ///
+    /// If the operation doesn't contain inputs with a given assignment type,
+    /// sets destination index to zero. Does not change `st0` register.
     #[display("cng     {0},a8{1}")]
     CnG(GlobalStateType, Reg32),
 
     /// Counts number of global state items of the provided type in the contract
-    /// state and puts the number to the destination `a16` register.
-    #[display("cnc     {0},a16{1}")]
+    /// state and puts the number to the destination `a32` register.
+    ///
+    /// If the operation doesn't contain inputs with a given assignment type,
+    /// sets destination index to zero. Does not change `st0` register.
+    #[display("cnc     {0},a32{1}")]
     CnC(GlobalStateType, Reg32),
 
     /// Loads input (previous) structured state with type id from the first
@@ -104,19 +118,22 @@ pub enum ContractOp<S: ContractStateAccess> {
     LdG(GlobalStateType, Reg16, RegS),
 
     /// Loads part of the contract global state with type id from the first
-    /// argument at the depth from the second argument `a24` register into a
+    /// argument at the depth from the second argument `a32` register into a
     /// register provided in the third argument.
     ///
-    /// If the state is absent or concealed sets destination to `None`.
-    /// Does not modify content of `st0` register.
-    #[display("ldc     {0},a24{1},{2}")]
+    /// If the contract doesn't have the provided global state type, or it
+    /// doesn't contain a value at the requested index, sets `st0`
+    /// to fail state and terminates the program. The value of the
+    /// destination register is not changed.
+    #[display("ldc     {0},a32{1},{2}")]
     LdC(GlobalStateType, Reg16, RegS),
 
     /// Loads operation metadata with a type id from the first argument into a
     /// register provided in the second argument.
     ///
-    /// If the operation doesn't have metadata fails and sets `st0` to fail
-    /// state.
+    /// If the operation doesn't have metadata, sets `st0` to fail state and
+    /// terminates the program. The value of the destination register is not
+    /// changed.
     #[display("ldm     {0},{1}")]
     LdM(MetaType, RegS),
 
@@ -300,9 +317,13 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                     context.op_info.global.get(state_type).map(|a| a.len_u16()),
                 );
             }
-            ContractOp::CnC(_state_type, _reg) => {
-                // TODO: implement global contract state
-                fail!()
+            ContractOp::CnC(state_type, reg) => {
+                if let Ok(mut global) = RefCell::borrow(&context.contract_state).global(*state_type)
+                {
+                    regs.set_n(RegA::A32, *reg, global.size().to_u32());
+                } else {
+                    regs.set_n(RegA::A32, *reg, None::<u32>);
+                }
             }
             ContractOp::LdP(state_type, reg_32, reg) => {
                 let Some(reg_32) = *regs.get_n(RegA::A16, *reg_32) else {
@@ -354,8 +375,8 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 };
                 regs.set_n(RegA::A64, *reg, state.map(|s| s.value.as_u64()));
             }
-            ContractOp::LdG(state_type, reg_32, reg_s) => {
-                let Some(reg_32) = *regs.get_n(RegA::A8, *reg_32) else {
+            ContractOp::LdG(state_type, reg_8, reg_s) => {
+                let Some(reg_32) = *regs.get_n(RegA::A8, *reg_8) else {
                     fail!()
                 };
                 let index: u8 = reg_32.into();
@@ -371,9 +392,22 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 regs.set_s(*reg_s, Some(state.as_inner()));
             }
 
-            ContractOp::LdC(_state_type, _reg_24, _reg_s) => {
-                // TODO: implement global contract state
-                fail!()
+            ContractOp::LdC(state_type, reg_32, reg_s) => {
+                let state = RefCell::borrow(&context.contract_state);
+                let Ok(mut global) = state.global(*state_type) else {
+                    fail!()
+                };
+                let Some(reg_32) = *regs.get_n(RegA::A32, *reg_32) else {
+                    fail!()
+                };
+                let index: u32 = reg_32.into();
+                let Ok(index) = u24::try_from(index) else {
+                    fail!()
+                };
+                let Some(state) = global.nth(index) else {
+                    fail!()
+                };
+                regs.set_s(*reg_s, Some(state.borrow().as_inner()));
             }
             ContractOp::LdM(type_id, reg) => {
                 let Some(meta) = context.op_info.metadata.get(type_id) else {
