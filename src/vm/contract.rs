@@ -67,7 +67,11 @@ impl PartialOrd for TxPos {
 }
 
 impl Ord for TxPos {
-    fn cmp(&self, other: &Self) -> Ordering { self.timestamp.cmp(&other.timestamp) }
+    fn cmp(&self, other: &Self) -> Ordering {
+        assert!(self.timestamp > 0);
+        assert!(other.timestamp > 0);
+        self.timestamp.cmp(&other.timestamp)
+    }
 }
 
 /// RGB consensus information about the current mined height of a witness
