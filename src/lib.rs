@@ -56,6 +56,7 @@ pub mod prelude {
     pub use commit_verify::ReservedBytes;
     pub use operation::*;
     pub use schema::*;
+    pub use vm::XWitnessId;
 
     #[cfg(feature = "stl")]
     pub use super::stl;
