@@ -273,6 +273,10 @@ impl PartialOrd for TxPos {
 }
 
 impl Ord for TxPos {
+    /// Since we support multiple layer 1, we have to order basing on the
+    /// timestamp information and not height. The timestamp data are consistent
+    /// accross multiple blockchains, while height evolves with a different
+    /// speed and can't be used in comparisons.
     fn cmp(&self, other: &Self) -> Ordering {
         assert!(self.timestamp > 0);
         assert!(other.timestamp > 0);
@@ -280,8 +284,11 @@ impl Ord for TxPos {
     }
 }
 
-/// RGB consensus information about the current mined height of a witness
-/// transaction defining the ordering of the contract state data.
+/// RGB consensus information about the status of a witness transaction. This
+/// information is used in ordering state transition and state extension
+/// processing in the AluVM during the validation, as well as consensus ordering
+/// of the contract global state data, as they are presented to all contract
+/// users.
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = order)]
@@ -291,16 +298,51 @@ impl Ord for TxPos {
     serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
 pub enum TxOrd {
+    /// Witness transaction must be excluded from the state processing.
+    ///
+    /// Cases for the exclusion:
+    /// - transaction was removed from blockchain after a re-org and its inputs
+    ///   were spent by other transaction;
+    /// - previous transaction(s) after RBF replacement, once it is excluded
+    ///   from the mempool and replaced by RBFed successors;
+    /// - past state channel transactions once a new channel state is signed
+    ///   (and until they may become valid once again due to an uncooperative
+    ///   channel closing).
     #[display("archived")]
     #[strict_type(dumb)]
     Archived,
 
+    /// Transaction is included into layer 1 blockchain at a specific height and
+    /// timestamp.
+    ///
+    /// NB: only timestamp is used in consensus ordering though, see
+    /// [`TxPos::ord`] for the details.
     #[from]
     #[display(inner)]
     OnChain(TxPos),
 
+    /// Valid witness transaction which commits the most recent RGB state, but
+    /// is not (yet) included into a layer 1 blockchain. Such transactions have
+    /// a higher priority over onchain transactions (i.e. they are processed by
+    /// the VM at the very end, and their global state becomes at the top of the
+    /// contract state).
+    ///
+    /// NB: not each and every signed offchain transaction should have this
+    /// status; all offchain cases which fall under [`Self::Archived`] must be
+    /// excluded. Valid cases for assigning [`Self::Offchain`] status are:
+    /// - transaction is present in the memepool;
+    /// - transaction is a part of transaction graph inside a state channel
+    ///   (only actual channel state is accounted for; all previous channel
+    ///   state must have corresponding transactions set to [`Self::Archived`]);
+    /// - transaction is an RBF replacement prepared to be broadcast (with the
+    ///   previous transaction set to [`Self::Archived`] at the same moment).
     #[display("offchain@{priority}")]
-    OffChain { priority: u32 },
+    OffChain {
+        /// Used for internal ordering inside the offchain transaction graph,
+        /// for instance to ensure that HTLC transactions in a lightning channel
+        /// have higher priority (i.e. computed after) than commitment.
+        priority: u32,
+    },
 }
 
 impl TxOrd {
@@ -308,7 +350,13 @@ impl TxOrd {
     pub fn offchain(priority: u32) -> Self { TxOrd::OffChain { priority } }
 }
 
-/// Txid and height information ordered according to the RGB consensus rules.
+/// Information about public witness used for ordering according to the RGB
+/// consensus rules.
+///
+/// First, we account for [`TxOrd`], such that those state which witness
+/// transactions were mined earlier come into the state computing earlier as
+/// well. However, if two witness transactions were mined in the same block, we
+/// order them lexicographically basing on the witness id.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC)]
