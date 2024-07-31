@@ -299,9 +299,16 @@ impl<
                             opid: *opid,
                         };
                         // Account only for the first time when extension seal was closed
-                        let prev = ops.iter().find(|(_, r)| matches!(r, AnchoredOpRef::Extension(ext, _) if ext.id() == extension.id()));
-                        if prev.is_none() || matches!(prev, Some((old, _)) if ord < *old) {
-                            ops.insert(ord, AnchoredOpRef::Extension(extension, witness_id));
+                        let prev = ops.iter().find(|(_, r)| matches!(r, AnchoredOpRef::Extension(ext, _) if ext.id() == extension.id())).map(|(a, _)| *a);
+                        let ext = AnchoredOpRef::Extension(extension, witness_id);
+                        if let Some(old) = prev {
+                            if old > ord {
+                                ops.remove(&old);
+                                ops.insert(ord, ext);
+                            }
+                        }
+                        if prev.is_none() {
+                            ops.insert(ord, ext);
                         }
                     }
                 }
