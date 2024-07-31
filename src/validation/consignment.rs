@@ -85,6 +85,14 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
+    fn nonce(&self) -> u8 {
+        match self {
+            Self::Genesis(op) => op.nonce(),
+            Self::Transition(op) => op.nonce(),
+            Self::Extension(op) => op.nonce(),
+        }
+    }
+
     fn transition_type(&self) -> Option<TransitionType> {
         match self {
             Self::Genesis(op) => op.transition_type(),

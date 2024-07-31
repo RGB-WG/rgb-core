@@ -143,6 +143,17 @@ pub enum AnchoredOpRef<'op> {
     Extension(&'op Extension, XWitnessId),
 }
 
+impl<'op> AnchoredOpRef<'op> {
+    pub fn witness_id(&self) -> Option<XWitnessId> {
+        match self {
+            AnchoredOpRef::Genesis(_) => None,
+            AnchoredOpRef::Transition(_, witness_id) | AnchoredOpRef::Extension(_, witness_id) => {
+                Some(*witness_id)
+            }
+        }
+    }
+}
+
 impl<'op> Operation for AnchoredOpRef<'op> {
     fn op_type(&self) -> OpType {
         match self {
@@ -173,6 +184,14 @@ impl<'op> Operation for AnchoredOpRef<'op> {
             AnchoredOpRef::Genesis(op) => op.contract_id(),
             AnchoredOpRef::Transition(op, _) => op.contract_id(),
             AnchoredOpRef::Extension(op, _) => op.contract_id(),
+        }
+    }
+
+    fn nonce(&self) -> u8 {
+        match self {
+            AnchoredOpRef::Genesis(op) => op.nonce(),
+            AnchoredOpRef::Transition(op, _) => op.nonce(),
+            AnchoredOpRef::Extension(op, _) => op.nonce(),
         }
     }
 
@@ -407,6 +426,35 @@ impl OpOrd {
 pub struct GlobalOrd {
     pub op_ord: OpOrd,
     pub idx: u16,
+}
+
+impl GlobalOrd {
+    pub fn genesis(idx: u16) -> Self {
+        Self {
+            op_ord: OpOrd::Genesis,
+            idx,
+        }
+    }
+    pub fn transition(opid: OpId, idx: u16, nonce: u8, witness: WitnessOrd) -> Self {
+        Self {
+            op_ord: OpOrd::Transition {
+                witness,
+                nonce,
+                opid,
+            },
+            idx,
+        }
+    }
+    pub fn extension(opid: OpId, idx: u16, nonce: u8, witness: WitnessOrd) -> Self {
+        Self {
+            op_ord: OpOrd::Extension {
+                witness,
+                nonce,
+                opid,
+            },
+            idx,
+        }
+    }
 }
 
 pub trait GlobalStateIter {
