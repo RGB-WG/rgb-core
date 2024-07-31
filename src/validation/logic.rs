@@ -226,7 +226,11 @@ impl Schema {
                 return status;
             }
             let contract_state = context.contract_state;
-            contract_state.borrow_mut().evolve_state(op);
+            if contract_state.borrow_mut().evolve_state(op).is_err() {
+                status.add_failure(validation::Failure::ContractStateFilled(opid));
+                // We return here since all other validations will have no valid state to access
+                return status;
+            }
         }
         status
     }

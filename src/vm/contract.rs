@@ -28,7 +28,7 @@ use std::num::NonZeroU32;
 use std::rc::Rc;
 
 use amplify::num::u24;
-use amplify::Bytes32;
+use amplify::{confinement, Bytes32};
 use bp::seals::txout::{CloseMethod, ExplicitSeal, VerifyError, Witness};
 use bp::{dbc, Tx, Txid};
 use commit_verify::mpc;
@@ -581,7 +581,8 @@ pub trait ContractStateAccess: Debug {
 pub trait ContractStateEvolve {
     type Context<'ctx>;
     fn init(context: Self::Context<'_>) -> Self;
-    fn evolve_state(&mut self, op: AnchoredOpRef);
+    // TODO: Use more specific error type
+    fn evolve_state(&mut self, op: AnchoredOpRef) -> Result<(), confinement::Error>;
 }
 
 pub struct VmContext<'op, S: ContractStateAccess> {
