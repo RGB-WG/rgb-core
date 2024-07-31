@@ -378,6 +378,7 @@ impl StrictDeserialize for Genesis {}
 pub struct Extension {
     pub ffv: Ffv,
     pub contract_id: ContractId,
+    pub nonce: u8,
     pub extension_type: ExtensionType,
     pub metadata: Metadata,
     pub globals: GlobalState,
@@ -410,6 +411,7 @@ impl PartialOrd for Extension {
 pub struct Transition {
     pub ffv: Ffv,
     pub contract_id: ContractId,
+    pub nonce: u8,
     pub transition_type: TransitionType,
     pub metadata: Metadata,
     pub globals: GlobalState,

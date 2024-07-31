@@ -317,7 +317,7 @@ pub enum TxOrd {
     /// [`TxPos::ord`] for the details.
     #[from]
     #[display(inner)]
-    OnChain(TxPos),
+    Mined(TxPos),
 
     /// Valid witness transaction which commits the most recent RGB state, but
     /// is not (yet) included into a layer 1 blockchain. Such transactions have
@@ -334,18 +334,8 @@ pub enum TxOrd {
     ///   state must have corresponding transactions set to [`Self::Archived`]);
     /// - transaction is an RBF replacement prepared to be broadcast (with the
     ///   previous transaction set to [`Self::Archived`] at the same moment).
-    #[display("offchain@{priority}")]
-    OffChain {
-        /// Used for internal ordering inside the offchain transaction graph,
-        /// for instance to ensure that HTLC transactions in a lightning channel
-        /// have higher priority (i.e. computed after) than commitment.
-        priority: u32,
-    },
-}
-
-impl TxOrd {
-    #[inline]
-    pub fn offchain(priority: u32) -> Self { TxOrd::OffChain { priority } }
+    #[display("tentative")]
+    Tentative,
 }
 
 /// Information about public witness used for ordering according to the RGB
@@ -386,25 +376,9 @@ impl Ord for WitnessOrd {
     }
 }
 
-impl WitnessOrd {
-    pub fn with(witness_id: XWitnessId, pub_ord: TxOrd) -> Self {
-        WitnessOrd {
-            witness_id,
-            pub_ord,
-        }
-    }
-
-    pub fn from_mempool(witness_id: XWitnessId, priority: u32) -> Self {
-        WitnessOrd {
-            pub_ord: TxOrd::OffChain { priority },
-            witness_id,
-        }
-    }
-}
-
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = custom)]
+#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = custom, dumb = { Self::Transition { nonce: 0 } })]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -412,9 +386,9 @@ impl WitnessOrd {
 )]
 pub enum OpTypeOrd {
     #[strict_type(tag = 0x00)]
-    Extension(ExtensionType),
-    #[strict_type(tag = 0xFF, dumb)]
-    Transition,
+    Extension { nonce: u8 },
+    #[strict_type(tag = 0xFF)]
+    Transition { nonce: u8 },
 }
 
 /// Consensus ordering of operations within a contract.
@@ -427,8 +401,8 @@ pub enum OpTypeOrd {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct OpOrd {
+    pub witness_ord: TxOrd,
     pub op_type: OpTypeOrd,
-    pub witness_ord: WitnessOrd,
     pub opid: OpId,
 }
 
@@ -443,7 +417,8 @@ pub struct OpOrd {
 )]
 pub struct GlobalOrd {
     // Absent for state defined in genesis
-    pub witness_ord: Option<WitnessOrd>,
+    pub witness_ord: Option<TxOrd>,
+    pub op_type: OpTypeOrd,
     pub opid: OpId,
     pub idx: u16,
 }
@@ -468,27 +443,6 @@ impl Ord for GlobalOrd {
             (Some(ord1), Some(ord2)) => ord1.cmp(ord2),
         }
     }
-}
-
-impl GlobalOrd {
-    #[inline]
-    pub fn with_witness(opid: OpId, witness_id: XWitnessId, ord: TxOrd, idx: u16) -> Self {
-        GlobalOrd {
-            witness_ord: Some(WitnessOrd::with(witness_id, ord)),
-            opid,
-            idx,
-        }
-    }
-    #[inline]
-    pub fn genesis(opid: OpId, idx: u16) -> Self {
-        GlobalOrd {
-            witness_ord: None,
-            opid,
-            idx,
-        }
-    }
-    #[inline]
-    pub fn witness_id(&self) -> Option<XWitnessId> { self.witness_ord.map(|a| a.witness_id) }
 }
 
 pub trait GlobalStateIter {
@@ -528,6 +482,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
             // This is dumb object which must always have the lowest ordering.
             witness_ord: None,
             opid: Bytes32::zero().into(),
+            op_type: OpTypeOrd::Transition { nonce: 0 },
             idx: 0,
         });
         iter.reset(u24::ZERO);
@@ -549,11 +504,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
                  global state according to the consensus ordering"
             );
         }
-        if let Some(WitnessOrd {
-            pub_ord: TxOrd::Archived,
-            ..
-        }) = ord.witness_ord
-        {
+        if ord.witness_ord == Some(TxOrd::Archived) {
             panic!("invalid GlobalStateIter implementation returning WitnessAnchor::Archived")
         }
         self.checked_depth += u24::ONE;
