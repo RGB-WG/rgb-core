@@ -35,7 +35,7 @@ mod contract;
 pub use aluvm::aluasm_isa;
 pub use contract::{
     AnchoredOpRef, ContractStateAccess, ContractStateEvolve, GlobalContractState, GlobalOrd,
-    GlobalStateIter, OpOrd, OpTypeOrd, TxOrd, TxPos, UnknownGlobalStateType, XWitnessId,
+    GlobalStateIter, OpOrd, OpTypeOrd, UnknownGlobalStateType, WitnessOrd, WitnessPos, XWitnessId,
     XWitnessTx,
 };
 pub(crate) use contract::{OpInfo, VmContext};

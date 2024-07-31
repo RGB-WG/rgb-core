@@ -250,27 +250,27 @@ impl<'op> Operation for AnchoredOpRef<'op> {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[display("{height}@{timestamp}")]
-pub struct TxPos {
+pub struct WitnessPos {
     height: u32,
     timestamp: i64,
 }
 
-impl TxPos {
+impl WitnessPos {
     pub fn new(height: u32, timestamp: i64) -> Option<Self> {
         if height == 0 || timestamp < 1231006505 {
             return None;
         }
-        Some(TxPos { height, timestamp })
+        Some(WitnessPos { height, timestamp })
     }
 
     pub fn height(&self) -> NonZeroU32 { NonZeroU32::new(self.height).expect("invariant") }
 }
 
-impl PartialOrd for TxPos {
+impl PartialOrd for WitnessPos {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl Ord for TxPos {
+impl Ord for WitnessPos {
     /// Since we support multiple layer 1, we have to order basing on the
     /// timestamp information and not height. The timestamp data are consistent
     /// accross multiple blockchains, while height evolves with a different
@@ -295,7 +295,7 @@ impl Ord for TxPos {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
-pub enum TxOrd {
+pub enum WitnessOrd {
     /// Witness transaction must be excluded from the state processing.
     ///
     /// Cases for the exclusion:
@@ -314,10 +314,10 @@ pub enum TxOrd {
     /// timestamp.
     ///
     /// NB: only timestamp is used in consensus ordering though, see
-    /// [`TxPos::ord`] for the details.
+    /// [`WitnessPos::ord`] for the details.
     #[from]
     #[display(inner)]
-    Mined(TxPos),
+    Mined(WitnessPos),
 
     /// Valid witness transaction which commits the most recent RGB state, but
     /// is not (yet) included into a layer 1 blockchain. Such transactions have
@@ -363,7 +363,7 @@ pub enum OpTypeOrd {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct OpOrd {
-    pub witness_ord: TxOrd,
+    pub witness_ord: WitnessOrd,
     pub op_type: OpTypeOrd,
     pub opid: OpId,
 }
@@ -379,7 +379,7 @@ pub struct OpOrd {
 )]
 pub struct GlobalOrd {
     // Absent for state defined in genesis
-    pub witness_ord: Option<TxOrd>,
+    pub witness_ord: Option<WitnessOrd>,
     pub op_type: OpTypeOrd,
     pub opid: OpId,
     pub idx: u16,
@@ -466,7 +466,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
                  global state according to the consensus ordering"
             );
         }
-        if ord.witness_ord == Some(TxOrd::Archived) {
+        if ord.witness_ord == Some(WitnessOrd::Archived) {
             panic!("invalid GlobalStateIter implementation returning WitnessAnchor::Archived")
         }
         self.checked_depth += u24::ONE;

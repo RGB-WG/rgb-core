@@ -33,8 +33,8 @@ use single_use_seals::SealWitness;
 use super::status::Failure;
 use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, OpRef, Status, Validity};
 use crate::vm::{
-    AnchoredOpRef, ContractStateAccess, ContractStateEvolve, OpOrd, OpTypeOrd, TxOrd, XWitnessId,
-    XWitnessTx,
+    AnchoredOpRef, ContractStateAccess, ContractStateEvolve, OpOrd, OpTypeOrd, WitnessOrd,
+    XWitnessId, XWitnessTx,
 };
 use crate::{
     validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpType, Operation, Opout, Schema,
@@ -70,7 +70,7 @@ pub trait ResolveWitness {
     fn resolve_pub_witness_ord(
         &self,
         witness_id: XWitnessId,
-    ) -> Result<TxOrd, WitnessResolverError>;
+    ) -> Result<WitnessOrd, WitnessResolverError>;
 }
 
 impl<T: ResolveWitness> ResolveWitness for &T {
@@ -84,7 +84,7 @@ impl<T: ResolveWitness> ResolveWitness for &T {
     fn resolve_pub_witness_ord(
         &self,
         witness_id: XWitnessId,
-    ) -> Result<TxOrd, WitnessResolverError> {
+    ) -> Result<WitnessOrd, WitnessResolverError> {
         ResolveWitness::resolve_pub_witness_ord(*self, witness_id)
     }
 }
@@ -117,7 +117,7 @@ impl<R: ResolveWitness> ResolveWitness for CheckedWitnessResolver<R> {
     fn resolve_pub_witness_ord(
         &self,
         witness_id: XWitnessId,
-    ) -> Result<TxOrd, WitnessResolverError> {
+    ) -> Result<WitnessOrd, WitnessResolverError> {
         self.inner.resolve_pub_witness_ord(witness_id)
     }
 }
