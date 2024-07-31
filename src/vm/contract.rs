@@ -338,44 +338,6 @@ pub enum TxOrd {
     Tentative,
 }
 
-/// Information about public witness used for ordering according to the RGB
-/// consensus rules.
-///
-/// First, we account for [`TxOrd`], such that those state which witness
-/// transactions were mined earlier come into the state computing earlier as
-/// well. However, if two witness transactions were mined in the same block, we
-/// order them lexicographically basing on the witness id.
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_LOGIC)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[display("{witness_id}/{pub_ord}")]
-pub struct WitnessOrd {
-    pub pub_ord: TxOrd,
-    pub witness_id: XWitnessId,
-}
-
-impl PartialOrd for WitnessOrd {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-impl Ord for WitnessOrd {
-    fn cmp(&self, other: &Self) -> Ordering {
-        if self == other {
-            return Ordering::Equal;
-        }
-        match self.pub_ord.cmp(&other.pub_ord) {
-            Ordering::Less => Ordering::Less,
-            Ordering::Greater => Ordering::Greater,
-            Ordering::Equal => self.witness_id.cmp(&other.witness_id),
-        }
-    }
-}
-
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = custom, dumb = { Self::Transition { nonce: 0 } })]
