@@ -293,6 +293,7 @@ impl<
                     if let Some(OpRef::Extension(extension)) =
                         self.consignment.operation(input.prev_out.op)
                     {
+                        // TODO: Account only for the latest extension
                         ord = OpOrd::Extension {
                             witness: witness_ord,
                             nonce: extension.nonce,

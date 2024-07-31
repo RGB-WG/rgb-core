@@ -273,7 +273,7 @@ impl PartialOrd for WitnessPos {
 impl Ord for WitnessPos {
     /// Since we support multiple layer 1, we have to order basing on the
     /// timestamp information and not height. The timestamp data are consistent
-    /// accross multiple blockchains, while height evolves with a different
+    /// across multiple blockchains, while height evolves with a different
     /// speed and can't be used in comparisons.
     fn cmp(&self, other: &Self) -> Ordering {
         assert!(self.timestamp > 0);
@@ -288,12 +288,13 @@ impl Ord for WitnessPos {
 /// of the contract global state data, as they are presented to all contract
 /// users.
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, From)]
+#[display(lowercase)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = order)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase", untagged)
+    serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub enum WitnessOrd {
     /// Witness transaction must be excluded from the state processing.
@@ -306,7 +307,6 @@ pub enum WitnessOrd {
     /// - past state channel transactions once a new channel state is signed
     ///   (and until they may become valid once again due to an uncooperative
     ///   channel closing).
-    #[display("archived")]
     #[strict_type(dumb)]
     Archived,
 
@@ -314,7 +314,7 @@ pub enum WitnessOrd {
     /// timestamp.
     ///
     /// NB: only timestamp is used in consensus ordering though, see
-    /// [`WitnessPos::ord`] for the details.
+    /// [`WitnessPos::cmp`] for the details.
     #[from]
     #[display(inner)]
     Mined(WitnessPos),
@@ -327,17 +327,31 @@ pub enum WitnessOrd {
     ///
     /// NB: not each and every signed offchain transaction should have this
     /// status; all offchain cases which fall under [`Self::Archived`] must be
-    /// excluded. Valid cases for assigning [`Self::Offchain`] status are:
+    /// excluded. Valid cases for assigning [`Self::Tentative`] status are:
     /// - transaction is present in the memepool;
     /// - transaction is a part of transaction graph inside a state channel
     ///   (only actual channel state is accounted for; all previous channel
     ///   state must have corresponding transactions set to [`Self::Archived`]);
     /// - transaction is an RBF replacement prepared to be broadcast (with the
     ///   previous transaction set to [`Self::Archived`] at the same moment).
-    #[display("tentative")]
     Tentative,
 }
 
+/// Operation ordering priority for contract state computation according to
+/// [RCP-240731A].
+///
+/// The ordering is the following:
+/// - Genesis is processed first.
+/// - Other operations are ordered according to their witness transactions (see
+///   [`WitnessOrd`] for the details).
+/// - Extensions share witness transaction with the state transition which first
+///   to close one of the seals defined in the extension, but are processed
+///   before that state transition.
+/// - If two or more operations share the same witness transaction ordering,
+///   they are first ordered basing on their `nonce` value, and if it is also
+///   the same, basing on their operation id value.
+///
+/// [RCP-240731A]: https://github.com/RGB-WG/RFC/issues/10
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = custom)]
