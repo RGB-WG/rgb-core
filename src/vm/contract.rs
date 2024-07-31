@@ -356,6 +356,11 @@ pub enum WitnessOrd {
     Tentative,
 }
 
+impl WitnessOrd {
+    #[inline]
+    pub fn is_valid(self) -> bool { self != Self::Archived }
+}
+
 /// Operation ordering priority for contract state computation according to
 /// [RCP-240731A].
 ///
