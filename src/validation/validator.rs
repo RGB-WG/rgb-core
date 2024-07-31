@@ -293,13 +293,16 @@ impl<
                     if let Some(OpRef::Extension(extension)) =
                         self.consignment.operation(input.prev_out.op)
                     {
-                        // TODO: Account only for the latest extension
                         ord = OpOrd::Extension {
                             witness: witness_ord,
                             nonce: extension.nonce,
                             opid: *opid,
                         };
-                        ops.insert(ord, AnchoredOpRef::Extension(extension, witness_id));
+                        // Account only for the first time when extension seal was closed
+                        let prev = ops.iter().find(|(_, r)| matches!(r, AnchoredOpRef::Extension(ext, _) if ext.id() == extension.id()));
+                        if prev.is_none() || matches!(prev, Some((old, _)) if ord < *old) {
+                            ops.insert(ord, AnchoredOpRef::Extension(extension, witness_id));
+                        }
                     }
                 }
             }
