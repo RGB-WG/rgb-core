@@ -27,8 +27,8 @@ use std::fmt::Debug;
 use std::num::NonZeroU32;
 use std::rc::Rc;
 
+use amplify::confinement;
 use amplify::num::u24;
-use amplify::{confinement, Bytes32};
 use bp::seals::txout::{CloseMethod, ExplicitSeal, VerifyError, Witness};
 use bp::{dbc, Tx, Txid};
 use commit_verify::mpc;
@@ -340,20 +340,48 @@ pub enum WitnessOrd {
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = custom, dumb = { Self::Transition { nonce: 0 } })]
+#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = custom)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum OpTypeOrd {
-    #[strict_type(tag = 0x00)]
-    Extension { nonce: u8 },
+pub enum OpOrd {
+    #[strict_type(tag = 0x00, dumb)]
+    Genesis,
+    #[strict_type(tag = 0x01)]
+    Extension {
+        witness: WitnessOrd,
+        // TODO: Consider using extension type here
+        nonce: u8,
+        opid: OpId,
+    },
     #[strict_type(tag = 0xFF)]
-    Transition { nonce: u8 },
+    Transition {
+        witness: WitnessOrd,
+        // TODO: Consider using transition type here
+        nonce: u8,
+        opid: OpId,
+    },
 }
 
-/// Consensus ordering of operations within a contract.
+impl OpOrd {
+    #[inline]
+    pub fn is_archived(&self) -> bool {
+        matches!(
+            self,
+            Self::Extension {
+                witness: WitnessOrd::Archived,
+                ..
+            } | Self::Transition {
+                witness: WitnessOrd::Archived,
+                ..
+            }
+        )
+    }
+}
+
+/// Consensus ordering of global state
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC)]
@@ -362,49 +390,9 @@ pub enum OpTypeOrd {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct OpOrd {
-    pub witness_ord: WitnessOrd,
-    pub op_type: OpTypeOrd,
-    pub opid: OpId,
-}
-
-/// Consensus ordering of global state
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_LOGIC)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
 pub struct GlobalOrd {
-    // Absent for state defined in genesis
-    pub witness_ord: Option<WitnessOrd>,
-    pub op_type: OpTypeOrd,
-    pub opid: OpId,
+    pub op_ord: OpOrd,
     pub idx: u16,
-}
-
-impl PartialOrd for GlobalOrd {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-impl Ord for GlobalOrd {
-    fn cmp(&self, other: &Self) -> Ordering {
-        if self == other {
-            return Ordering::Equal;
-        }
-        match (self.witness_ord, &other.witness_ord) {
-            (None, None) if self.opid.cmp(&other.opid) == Ordering::Equal => {
-                self.idx.cmp(&other.idx)
-            }
-            (None, None) => self.opid.cmp(&other.opid),
-            (None, Some(_)) => Ordering::Less,
-            (Some(_), None) => Ordering::Greater,
-            (Some(ord1), Some(ord2)) if ord1 == *ord2 => self.idx.cmp(&other.idx),
-            (Some(ord1), Some(ord2)) => ord1.cmp(ord2),
-        }
-    }
 }
 
 pub trait GlobalStateIter {
@@ -442,9 +430,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     pub fn new(mut iter: I) -> Self {
         let last_ord = iter.prev().map(|(ord, _)| ord).unwrap_or(GlobalOrd {
             // This is dumb object which must always have the lowest ordering.
-            witness_ord: None,
-            opid: Bytes32::zero().into(),
-            op_type: OpTypeOrd::Transition { nonce: 0 },
+            op_ord: OpOrd::Genesis,
             idx: 0,
         });
         iter.reset(u24::ZERO);
@@ -466,8 +452,8 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
                  global state according to the consensus ordering"
             );
         }
-        if ord.witness_ord == Some(WitnessOrd::Archived) {
-            panic!("invalid GlobalStateIter implementation returning WitnessAnchor::Archived")
+        if ord.op_ord.is_archived() {
+            panic!("invalid GlobalStateIter implementation returning WitnessOrd::Archived")
         }
         self.checked_depth += u24::ONE;
         self.last_ord = ord;
