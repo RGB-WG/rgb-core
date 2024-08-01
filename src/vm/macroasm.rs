@@ -27,7 +27,7 @@ macro_rules! rgbasm {
         use $crate::vm::{RgbIsa, ContractOp, TimechainOp};
         use $crate::vm::aluasm_isa;
         use $crate::isa_instr;
-        aluasm_isa! { RgbIsa => $( $tt )+ }
+        aluasm_isa! { RgbIsa<_> => $( $tt )+ }
     } }};
 }
 
