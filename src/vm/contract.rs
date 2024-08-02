@@ -488,23 +488,17 @@ impl<I: GlobalStateIter> GlobalStateIter for &mut I {
 
 pub struct GlobalContractState<I: GlobalStateIter> {
     checked_depth: u24,
-    last_ord: GlobalOrd,
+    last_ord: Option<GlobalOrd>,
     iter: I,
 }
 
 impl<I: GlobalStateIter> GlobalContractState<I> {
     #[inline]
-    pub fn new(mut iter: I) -> Self {
-        let last_ord = iter.prev().map(|(ord, _)| ord).unwrap_or(GlobalOrd {
-            // This is dumb object which must always have the lowest ordering.
-            op_ord: OpOrd::Genesis,
-            idx: 0,
-        });
-        iter.reset(u24::ZERO);
+    pub fn new(iter: I) -> Self {
         Self {
             iter,
             checked_depth: u24::ONE,
-            last_ord,
+            last_ord: None,
         }
     }
 
@@ -513,7 +507,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
 
     fn prev_checked(&mut self) -> Option<(GlobalOrd, I::Data)> {
         let (ord, item) = self.iter.prev()?;
-        if ord >= self.last_ord {
+        if self.last_ord.map(|last| ord <= last).unwrap_or_default() {
             panic!(
                 "global contract state iterator has invalid implementation: it fails to order \
                  global state according to the consensus ordering"
@@ -523,7 +517,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
             panic!("invalid GlobalStateIter implementation returning WitnessOrd::Archived")
         }
         self.checked_depth += u24::ONE;
-        self.last_ord = ord;
+        self.last_ord = Some(ord);
         Some((ord, item))
     }
 
