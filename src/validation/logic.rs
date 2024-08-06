@@ -98,7 +98,7 @@ impl Schema {
                 Transition {
                     transition_type, ..
                 },
-                _,
+                ..,
             ) => {
                 // Right now we do not have actions to implement; but later
                 // we may have embedded procedures which must be verified
@@ -133,7 +133,7 @@ impl Schema {
                     Some(transition_type.into_inner()),
                 )
             }
-            OrdOpRef::Extension(Extension { extension_type, .. }, _) => {
+            OrdOpRef::Extension(Extension { extension_type, .. }, ..) => {
                 // Right now we do not have actions to implement; but later
                 // we may have embedded procedures which must be verified
                 // here
@@ -170,7 +170,7 @@ impl Schema {
         status += self.validate_metadata(opid, op.metadata(), metadata_schema, consignment.types());
         status +=
             self.validate_global_state(opid, op.globals(), global_schema, consignment.types());
-        let prev_state = if let OrdOpRef::Transition(transition, _) = op {
+        let prev_state = if let OrdOpRef::Transition(transition, ..) = op {
             let prev_state = extract_prev_state(consignment, opid, &transition.inputs, &mut status);
             status += self.validate_prev_state(opid, &prev_state, owned_schema);
             prev_state
@@ -178,7 +178,7 @@ impl Schema {
             Assignments::default()
         };
         let mut redeemed = Valencies::default();
-        if let OrdOpRef::Extension(extension, _) = op {
+        if let OrdOpRef::Extension(extension, ..) = op {
             for valency in extension.redeemed.keys() {
                 redeemed.push(*valency).expect("same size");
             }

@@ -33,7 +33,7 @@ use single_use_seals::SealWitness;
 use super::status::Failure;
 use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, OpRef, Status, Validity};
 use crate::vm::{
-    ContractStateAccess, ContractStateEvolve, OpOrd, OrdOpRef, WitnessOrd, XWitnessId, XWitnessTx,
+    ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd, XWitnessId, XWitnessTx,
 };
 use crate::{
     validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpType, Operation, Opout, Schema,
@@ -258,7 +258,7 @@ impl<
 
         // [VALIDATION]: Iterating over all consignment operations, ordering them according to the
         //               consensus ordering rules.
-        let mut ops = BTreeMap::<OpOrd, OrdOpRef>::new();
+        let mut ops = BTreeSet::<OrdOpRef>::new();
         for bundle_id in self.consignment.bundle_ids() {
             let bundle = self
                 .consignment
@@ -279,41 +279,34 @@ impl<
                         return;
                     }
                 };
-            for (opid, op) in &bundle.known_transitions {
-                let mut ord = OpOrd::Transition {
-                    witness: witness_ord,
-                    nonce: op.nonce,
-                    opid: *opid,
-                };
-                ops.insert(ord, OrdOpRef::Transition(op, witness_id));
+            for op in bundle.known_transitions.values() {
+                ops.insert(OrdOpRef::Transition(op, witness_id, witness_ord, op.nonce));
                 for input in &op.inputs {
                     // We will error in `validate_operations` below on the absent extension from the
                     // consignment.
                     if let Some(OpRef::Extension(extension)) =
                         self.consignment.operation(input.prev_out.op)
                     {
-                        ord = OpOrd::Extension {
-                            witness: witness_ord,
-                            nonce: extension.nonce,
-                            opid: *opid,
-                        };
+                        let ext = OrdOpRef::Extension(extension, witness_id, witness_ord, op.nonce);
                         // Account only for the first time when extension seal was closed
-                        let prev = ops.iter().find(|(_, r)| matches!(r, OrdOpRef::Extension(ext, _) if ext.id() == extension.id())).map(|(a, _)| *a);
-                        let ext = OrdOpRef::Extension(extension, witness_id);
-                        if let Some(old) = prev {
-                            if old > ord {
+                        let prev = ops.iter().find(|r| matches!(r, OrdOpRef::Extension(ext, ..) if ext.id() == extension.id())).copied();
+                        match prev {
+                            Some(old) if old > ext => {
                                 ops.remove(&old);
-                                ops.insert(ord, ext);
+                                ops.insert(ext)
                             }
-                        }
-                        if prev.is_none() {
-                            ops.insert(ord, ext);
-                        }
+                            None => ops.insert(ext),
+                            _ => {
+                                /* the extension is already present in the queue and properly
+                                 * ordered, so we have nothing to add or change */
+                                true
+                            }
+                        };
                     }
                 }
             }
         }
-        for op in ops.into_values() {
+        for op in ops {
             self.validate_operation(op);
         }
     }
@@ -343,7 +336,7 @@ impl<
             OrdOpRef::Genesis(_) => {
                 unreachable!("genesis is not a part of the operation history")
             }
-            OrdOpRef::Transition(transition, _) => {
+            OrdOpRef::Transition(transition, ..) => {
                 for input in &transition.inputs {
                     if self.consignment.operation(input.prev_out.op).is_none() {
                         self.status
@@ -352,7 +345,7 @@ impl<
                     }
                 }
             }
-            OrdOpRef::Extension(extension, _) => {
+            OrdOpRef::Extension(extension, ..) => {
                 for (valency, prev_id) in &extension.redeemed {
                     let Some(prev_op) = self.consignment.operation(*prev_id) else {
                         self.status
