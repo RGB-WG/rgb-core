@@ -136,126 +136,126 @@ impl<U: ExposedSeal> XChain<U> {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, From)]
-pub enum AnchoredOpRef<'op> {
+pub enum OrdOpRef<'op> {
     #[from]
     Genesis(&'op Genesis),
     Transition(&'op Transition, XWitnessId),
     Extension(&'op Extension, XWitnessId),
 }
 
-impl<'op> AnchoredOpRef<'op> {
+impl<'op> OrdOpRef<'op> {
     pub fn witness_id(&self) -> Option<XWitnessId> {
         match self {
-            AnchoredOpRef::Genesis(_) => None,
-            AnchoredOpRef::Transition(_, witness_id) | AnchoredOpRef::Extension(_, witness_id) => {
+            OrdOpRef::Genesis(_) => None,
+            OrdOpRef::Transition(_, witness_id) | OrdOpRef::Extension(_, witness_id) => {
                 Some(*witness_id)
             }
         }
     }
 }
 
-impl<'op> Operation for AnchoredOpRef<'op> {
+impl<'op> Operation for OrdOpRef<'op> {
     fn op_type(&self) -> OpType {
         match self {
-            AnchoredOpRef::Genesis(op) => op.op_type(),
-            AnchoredOpRef::Transition(op, _) => op.op_type(),
-            AnchoredOpRef::Extension(op, _) => op.op_type(),
+            OrdOpRef::Genesis(op) => op.op_type(),
+            OrdOpRef::Transition(op, _) => op.op_type(),
+            OrdOpRef::Extension(op, _) => op.op_type(),
         }
     }
 
     fn full_type(&self) -> OpFullType {
         match self {
-            AnchoredOpRef::Genesis(op) => op.full_type(),
-            AnchoredOpRef::Transition(op, _) => op.full_type(),
-            AnchoredOpRef::Extension(op, _) => op.full_type(),
+            OrdOpRef::Genesis(op) => op.full_type(),
+            OrdOpRef::Transition(op, _) => op.full_type(),
+            OrdOpRef::Extension(op, _) => op.full_type(),
         }
     }
 
     fn id(&self) -> OpId {
         match self {
-            AnchoredOpRef::Genesis(op) => op.id(),
-            AnchoredOpRef::Transition(op, _) => op.id(),
-            AnchoredOpRef::Extension(op, _) => op.id(),
+            OrdOpRef::Genesis(op) => op.id(),
+            OrdOpRef::Transition(op, _) => op.id(),
+            OrdOpRef::Extension(op, _) => op.id(),
         }
     }
 
     fn contract_id(&self) -> ContractId {
         match self {
-            AnchoredOpRef::Genesis(op) => op.contract_id(),
-            AnchoredOpRef::Transition(op, _) => op.contract_id(),
-            AnchoredOpRef::Extension(op, _) => op.contract_id(),
+            OrdOpRef::Genesis(op) => op.contract_id(),
+            OrdOpRef::Transition(op, _) => op.contract_id(),
+            OrdOpRef::Extension(op, _) => op.contract_id(),
         }
     }
 
     fn nonce(&self) -> u8 {
         match self {
-            AnchoredOpRef::Genesis(op) => op.nonce(),
-            AnchoredOpRef::Transition(op, _) => op.nonce(),
-            AnchoredOpRef::Extension(op, _) => op.nonce(),
+            OrdOpRef::Genesis(op) => op.nonce(),
+            OrdOpRef::Transition(op, _) => op.nonce(),
+            OrdOpRef::Extension(op, _) => op.nonce(),
         }
     }
 
     fn transition_type(&self) -> Option<TransitionType> {
         match self {
-            AnchoredOpRef::Genesis(op) => op.transition_type(),
-            AnchoredOpRef::Transition(op, _) => op.transition_type(),
-            AnchoredOpRef::Extension(op, _) => op.transition_type(),
+            OrdOpRef::Genesis(op) => op.transition_type(),
+            OrdOpRef::Transition(op, _) => op.transition_type(),
+            OrdOpRef::Extension(op, _) => op.transition_type(),
         }
     }
 
     fn extension_type(&self) -> Option<ExtensionType> {
         match self {
-            AnchoredOpRef::Genesis(op) => op.extension_type(),
-            AnchoredOpRef::Transition(op, _) => op.extension_type(),
-            AnchoredOpRef::Extension(op, _) => op.extension_type(),
+            OrdOpRef::Genesis(op) => op.extension_type(),
+            OrdOpRef::Transition(op, _) => op.extension_type(),
+            OrdOpRef::Extension(op, _) => op.extension_type(),
         }
     }
 
     fn metadata(&self) -> &Metadata {
         match self {
-            AnchoredOpRef::Genesis(op) => op.metadata(),
-            AnchoredOpRef::Transition(op, _) => op.metadata(),
-            AnchoredOpRef::Extension(op, _) => op.metadata(),
+            OrdOpRef::Genesis(op) => op.metadata(),
+            OrdOpRef::Transition(op, _) => op.metadata(),
+            OrdOpRef::Extension(op, _) => op.metadata(),
         }
     }
 
     fn globals(&self) -> &GlobalState {
         match self {
-            AnchoredOpRef::Genesis(op) => op.globals(),
-            AnchoredOpRef::Transition(op, _) => op.globals(),
-            AnchoredOpRef::Extension(op, _) => op.globals(),
+            OrdOpRef::Genesis(op) => op.globals(),
+            OrdOpRef::Transition(op, _) => op.globals(),
+            OrdOpRef::Extension(op, _) => op.globals(),
         }
     }
 
     fn valencies(&self) -> &Valencies {
         match self {
-            AnchoredOpRef::Genesis(op) => op.valencies(),
-            AnchoredOpRef::Transition(op, _) => op.valencies(),
-            AnchoredOpRef::Extension(op, _) => op.valencies(),
+            OrdOpRef::Genesis(op) => op.valencies(),
+            OrdOpRef::Transition(op, _) => op.valencies(),
+            OrdOpRef::Extension(op, _) => op.valencies(),
         }
     }
 
     fn assignments(&self) -> AssignmentsRef<'op> {
         match self {
-            AnchoredOpRef::Genesis(op) => (&op.assignments).into(),
-            AnchoredOpRef::Transition(op, _) => (&op.assignments).into(),
-            AnchoredOpRef::Extension(op, _) => (&op.assignments).into(),
+            OrdOpRef::Genesis(op) => (&op.assignments).into(),
+            OrdOpRef::Transition(op, _) => (&op.assignments).into(),
+            OrdOpRef::Extension(op, _) => (&op.assignments).into(),
         }
     }
 
     fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         match self {
-            AnchoredOpRef::Genesis(op) => op.assignments_by_type(t),
-            AnchoredOpRef::Transition(op, _) => op.assignments_by_type(t),
-            AnchoredOpRef::Extension(op, _) => op.assignments_by_type(t),
+            OrdOpRef::Genesis(op) => op.assignments_by_type(t),
+            OrdOpRef::Transition(op, _) => op.assignments_by_type(t),
+            OrdOpRef::Extension(op, _) => op.assignments_by_type(t),
         }
     }
 
     fn inputs(&self) -> Inputs {
         match self {
-            AnchoredOpRef::Genesis(op) => op.inputs(),
-            AnchoredOpRef::Transition(op, _) => op.inputs(),
-            AnchoredOpRef::Extension(op, _) => op.inputs(),
+            OrdOpRef::Genesis(op) => op.inputs(),
+            OrdOpRef::Transition(op, _) => op.inputs(),
+            OrdOpRef::Extension(op, _) => op.inputs(),
         }
     }
 }
@@ -590,7 +590,7 @@ pub trait ContractStateEvolve {
     type Context<'ctx>;
     fn init(context: Self::Context<'_>) -> Self;
     // TODO: Use more specific error type
-    fn evolve_state(&mut self, op: AnchoredOpRef) -> Result<(), confinement::Error>;
+    fn evolve_state(&mut self, op: OrdOpRef) -> Result<(), confinement::Error>;
 }
 
 pub struct VmContext<'op, S: ContractStateAccess> {
@@ -614,7 +614,7 @@ pub struct OpInfo<'op> {
 impl<'op> OpInfo<'op> {
     pub fn with(
         id: OpId,
-        op: &'op AnchoredOpRef<'op>,
+        op: &'op OrdOpRef<'op>,
         prev_state: &'op Assignments<GraphSeal>,
         redeemed: &'op Valencies,
     ) -> Self {
