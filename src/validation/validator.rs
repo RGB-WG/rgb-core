@@ -307,6 +307,9 @@ impl<
             }
         }
         for op in ops {
+            // We do not skip validating archive operations since after a re-org they may
+            // become valid and thus must be added to the contract state and validated
+            // beforehand.
             self.validate_operation(op);
         }
     }
