@@ -280,14 +280,14 @@ impl<
                     }
                 };
             for op in bundle.known_transitions.values() {
-                ops.insert(OrdOpRef::Transition(op, witness_id, witness_ord, op.nonce));
+                ops.insert(OrdOpRef::Transition(op, witness_id, witness_ord));
                 for input in &op.inputs {
                     // We will error in `validate_operations` below on the absent extension from the
                     // consignment.
                     if let Some(OpRef::Extension(extension)) =
                         self.consignment.operation(input.prev_out.op)
                     {
-                        let ext = OrdOpRef::Extension(extension, witness_id, witness_ord, op.nonce);
+                        let ext = OrdOpRef::Extension(extension, witness_id, witness_ord);
                         // Account only for the first time when extension seal was closed
                         let prev = ops.iter().find(|r| matches!(r, OrdOpRef::Extension(ext, ..) if ext.id() == extension.id())).copied();
                         match prev {

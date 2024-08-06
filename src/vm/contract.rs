@@ -143,8 +143,8 @@ impl<U: ExposedSeal> XChain<U> {
 pub enum OrdOpRef<'op> {
     #[from]
     Genesis(&'op Genesis),
-    Transition(&'op Transition, XWitnessId, WitnessOrd, /** Nonce value, used in ordering */ u8),
-    Extension(&'op Extension, XWitnessId, WitnessOrd, /** Nonce value, used in ordering */ u8),
+    Transition(&'op Transition, XWitnessId, WitnessOrd),
+    Extension(&'op Extension, XWitnessId, WitnessOrd),
 }
 
 impl<'op> PartialOrd for OrdOpRef<'op> {
@@ -168,14 +168,14 @@ impl<'op> OrdOpRef<'op> {
     pub fn op_ord(&self) -> OpOrd {
         match self {
             OrdOpRef::Genesis(_) => OpOrd::Genesis,
-            OrdOpRef::Transition(op, _, witness_ord, nonce) => OpOrd::Transition {
+            OrdOpRef::Transition(op, _, witness_ord) => OpOrd::Transition {
                 witness: *witness_ord,
-                nonce: *nonce,
+                nonce: op.nonce,
                 opid: op.id(),
             },
-            OrdOpRef::Extension(op, _, witness_ord, nonce) => OpOrd::Extension {
+            OrdOpRef::Extension(op, _, witness_ord) => OpOrd::Extension {
                 witness: *witness_ord,
-                nonce: *nonce,
+                nonce: op.nonce,
                 opid: op.id(),
             },
         }
