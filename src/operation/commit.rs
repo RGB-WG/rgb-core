@@ -262,6 +262,7 @@ pub enum TypeCommitment {
 #[commit_encode(strategy = strict, id = OpId)]
 pub struct OpCommitment {
     pub ffv: Ffv,
+    pub nonce: u8,
     pub op_type: TypeCommitment,
     pub metadata: StrictHash,
     pub globals: MerkleHash,
@@ -286,6 +287,7 @@ impl Genesis {
         };
         OpCommitment {
             ffv: self.ffv,
+            nonce: u8::MAX,
             op_type: TypeCommitment::Genesis(base),
             metadata: self.metadata.commit_id(),
             globals: MerkleHash::merklize(&self.globals),
@@ -305,6 +307,7 @@ impl Transition {
     pub fn commit(&self) -> OpCommitment {
         OpCommitment {
             ffv: self.ffv,
+            nonce: self.nonce,
             op_type: TypeCommitment::Transition(self.contract_id, self.transition_type),
             metadata: self.metadata.commit_id(),
             globals: MerkleHash::merklize(&self.globals),
@@ -322,6 +325,7 @@ impl Extension {
     pub fn commit(&self) -> OpCommitment {
         OpCommitment {
             ffv: self.ffv,
+            nonce: self.nonce,
             op_type: TypeCommitment::Extension(self.contract_id, self.extension_type),
             metadata: self.metadata.commit_id(),
             globals: MerkleHash::merklize(&self.globals),

@@ -1,5 +1,5 @@
 {-
-  Id: stl:tjFc6jD7-fe78CxG-WdJlH!l-uXlFfW0-XwG1!qV-MNdtNGE#orbit-airport-voice
+  Id: stl:4WY0kCd1-qKjYuh5-4GgHKme-XIsmv98-W5Z9$8D-vMjFt!Y#miranda-blue-promise
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -211,9 +211,10 @@ data ContractId        : [Byte ^ 32]
 @mnemonic(short-noise-postal)
 data DataState         : [Byte]
 
-@mnemonic(marco-taboo-trade)
+@mnemonic(felix-random-mineral)
 data Extension         : ffv Ffv
                        , contractId ContractId
+                       , nonce U8
                        , extensionType ExtensionType
                        , metadata Metadata
                        , globals GlobalState
@@ -308,8 +309,9 @@ data Metadata          : {MetaType -> ^ ..0xff MetaValue}
 @mnemonic(source-olga-mirage)
 data Occurrences       : min U16, max U16
 
-@mnemonic(film-sting-tourist)
+@mnemonic(chamber-provide-veteran)
 data OpCommitment      : ffv Ffv
+                       , nonce U8
                        , opType TypeCommitment
                        , metadata CommitVerify.StrictHash
                        , globals CommitVerify.MerkleHash
@@ -369,9 +371,10 @@ data Schema            : ffv Ffv
 @mnemonic(ramirez-patron-simon)
 data SchemaId          : [Byte ^ 32]
 
-@mnemonic(rainbow-program-george)
+@mnemonic(abraham-think-brother)
 data Transition        : ffv Ffv
                        , contractId ContractId
+                       , nonce U8
                        , transitionType TransitionType
                        , metadata Metadata
                        , globals GlobalState

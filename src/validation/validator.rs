@@ -31,10 +31,9 @@ use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::Failure;
-use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Validity};
+use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, OpRef, Status, Validity};
 use crate::vm::{
-    ContractStateAccess, ContractStateEvolve, OpOrd, OpRef, TxOrd, WitnessOrd, XWitnessId,
-    XWitnessTx,
+    ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd, XWitnessId, XWitnessTx,
 };
 use crate::{
     validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpType, Operation, Opout, Schema,
@@ -70,7 +69,7 @@ pub trait ResolveWitness {
     fn resolve_pub_witness_ord(
         &self,
         witness_id: XWitnessId,
-    ) -> Result<TxOrd, WitnessResolverError>;
+    ) -> Result<WitnessOrd, WitnessResolverError>;
 }
 
 impl<T: ResolveWitness> ResolveWitness for &T {
@@ -84,7 +83,7 @@ impl<T: ResolveWitness> ResolveWitness for &T {
     fn resolve_pub_witness_ord(
         &self,
         witness_id: XWitnessId,
-    ) -> Result<TxOrd, WitnessResolverError> {
+    ) -> Result<WitnessOrd, WitnessResolverError> {
         ResolveWitness::resolve_pub_witness_ord(*self, witness_id)
     }
 }
@@ -117,7 +116,7 @@ impl<R: ResolveWitness> ResolveWitness for CheckedWitnessResolver<R> {
     fn resolve_pub_witness_ord(
         &self,
         witness_id: XWitnessId,
-    ) -> Result<TxOrd, WitnessResolverError> {
+    ) -> Result<WitnessOrd, WitnessResolverError> {
         self.inner.resolve_pub_witness_ord(witness_id)
     }
 }
@@ -134,13 +133,11 @@ pub struct Validator<
     status: RefCell<Status>,
 
     schema_id: SchemaId,
-    genesis_id: OpId,
     contract_id: ContractId,
     layers1: BTreeSet<Layer1>,
 
     contract_state: Rc<RefCell<S>>,
     validated_op_seals: RefCell<BTreeSet<OpId>>,
-    validated_op_state: RefCell<BTreeSet<OpId>>,
 
     resolver: CheckedWitnessResolver<&'resolver R>,
 }
@@ -161,14 +158,10 @@ impl<
 
         // Frequently used computation-heavy data
         let genesis = consignment.genesis();
-        let genesis_id = genesis.id();
         let contract_id = genesis.contract_id();
         let schema_id = genesis.schema_id;
 
-        // Validation index is used to check that all transitions presented in the
-        // consignment were validated. Also, we use it to avoid double schema
-        // validations for transitions.
-        let validated_op_state = RefCell::new(BTreeSet::<OpId>::new());
+        // Prevent repeated validation of single-use seals
         let validated_op_seals = RefCell::new(BTreeSet::<OpId>::new());
 
         let mut layers1 = bset! { Layer1::Bitcoin };
@@ -178,10 +171,8 @@ impl<
             consignment,
             status: RefCell::new(status),
             schema_id,
-            genesis_id,
             contract_id,
             layers1,
-            validated_op_state,
             validated_op_seals,
             resolver: CheckedWitnessResolver::from(resolver),
             contract_state: Rc::new(RefCell::new(S::init(context))),
@@ -261,14 +252,13 @@ impl<
         // [VALIDATION]: Validate genesis
         *self.status.borrow_mut() += schema.validate_state(
             &self.consignment,
-            OpRef::Genesis(self.consignment.genesis()),
+            OrdOpRef::Genesis(self.consignment.genesis()),
             self.contract_state.clone(),
         );
-        self.validated_op_state.borrow_mut().insert(self.genesis_id);
 
         // [VALIDATION]: Iterating over all consignment operations, ordering them according to the
         //               consensus ordering rules.
-        let mut ops = BTreeMap::<OpOrd, OpRef>::new();
+        let mut ops = BTreeSet::<OrdOpRef>::new();
         for bundle_id in self.consignment.bundle_ids() {
             let bundle = self
                 .consignment
@@ -278,7 +268,7 @@ impl<
                 .consignment
                 .anchor(bundle_id)
                 .expect("invalid checked consignment");
-            let pub_ord =
+            let witness_ord =
                 match self.resolver.resolve_pub_witness_ord(witness_id) {
                     Ok(ord) => ord,
                     Err(err) => {
@@ -289,26 +279,42 @@ impl<
                         return;
                     }
                 };
-            for (opid, op) in &bundle.known_transitions {
-                ops.insert(
-                    OpOrd {
-                        witness_ord: WitnessOrd {
-                            pub_ord,
-                            witness_id,
-                        },
-                        opid: *opid,
-                    },
-                    OpRef::Transition(op),
-                );
+            for op in bundle.known_transitions.values() {
+                ops.insert(OrdOpRef::Transition(op, witness_id, witness_ord));
+                for input in &op.inputs {
+                    // We will error in `validate_operations` below on the absent extension from the
+                    // consignment.
+                    if let Some(OpRef::Extension(extension)) =
+                        self.consignment.operation(input.prev_out.op)
+                    {
+                        let ext = OrdOpRef::Extension(extension, witness_id, witness_ord);
+                        // Account only for the first time when extension seal was closed
+                        let prev = ops.iter().find(|r| matches!(r, OrdOpRef::Extension(ext, ..) if ext.id() == extension.id())).copied();
+                        match prev {
+                            Some(old) if old > ext => {
+                                ops.remove(&old);
+                                ops.insert(ext)
+                            }
+                            None => ops.insert(ext),
+                            _ => {
+                                /* the extension is already present in the queue and properly
+                                 * ordered, so we have nothing to add or change */
+                                true
+                            }
+                        };
+                    }
+                }
             }
         }
-        // TODO: Check that we include all terminal transitions
-        for op in ops.into_values() {
+        for op in ops {
+            // We do not skip validating archive operations since after a re-org they may
+            // become valid and thus must be added to the contract state and validated
+            // beforehand.
             self.validate_operation(op);
         }
     }
 
-    fn validate_operation(&self, operation: OpRef<'consignment>) {
+    fn validate_operation(&self, operation: OrdOpRef<'consignment>) {
         let schema = self.consignment.schema();
         let opid = operation.id();
 
@@ -326,16 +332,14 @@ impl<
                 .add_failure(Failure::SealsUnvalidated(opid));
         }
         // [VALIDATION]: Verify operation against the schema and scripts
-        if self.validated_op_state.borrow_mut().insert(opid) {
-            *self.status.borrow_mut() +=
-                schema.validate_state(&self.consignment, operation, self.contract_state.clone());
-        }
+        *self.status.borrow_mut() +=
+            schema.validate_state(&self.consignment, operation, self.contract_state.clone());
 
         match operation {
-            OpRef::Genesis(_) => {
+            OrdOpRef::Genesis(_) => {
                 unreachable!("genesis is not a part of the operation history")
             }
-            OpRef::Transition(transition) => {
+            OrdOpRef::Transition(transition, ..) => {
                 for input in &transition.inputs {
                     if self.consignment.operation(input.prev_out.op).is_none() {
                         self.status
@@ -344,7 +348,7 @@ impl<
                     }
                 }
             }
-            OpRef::Extension(extension) => {
+            OrdOpRef::Extension(extension, ..) => {
                 for (valency, prev_id) in &extension.redeemed {
                     let Some(prev_op) = self.consignment.operation(*prev_id) else {
                         self.status

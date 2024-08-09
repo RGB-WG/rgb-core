@@ -1,5 +1,5 @@
 {-
-  Id: stl:pxDxFGo9-MbacU6J-Qug1G$1-6LsuROd-Um1H$hU-T6o2Lgk#lobster-dilemma-famous
+  Id: stl:Yd7koRpf-hs7nsKX-TOLAnZl-hIfJ9wQ-M8J58hj-n60RcaA#pioneer-gong-smoke
   Name: RGBLogic
   Version: 0.1.0
   Description: Consensus logic layer for RGB smart contracts
@@ -18,15 +18,13 @@ import BPCore#garbo-radius-peru
   use TapretRightBranch#miracle-patriot-touch
   use OpretProof#good-village-flex
 
-import RGBCommit#orbit-airport-voice
-  use XChainTxid#liquid-river-absorb
+import RGBCommit#miranda-blue-promise
   use OpId#picnic-single-gloria
 
 import Bitcoin#signal-color-cipher
   use ScriptBytes#equator-cockpit-gong
   use TapNodeHash#paprika-amanda-hunter
   use LeafScript#bison-doctor-oscar
-  use Txid#shallow-light-reverse
   use InternalPk#habitat-paprika-oliver
   use LeafVer#benefit-carbon-africa
   use XOnlyPk#clever-swim-carpet
@@ -36,20 +34,24 @@ import Bitcoin#signal-color-cipher
 data DbcProof          : tapret#1 BPCore.TapretProof
                        | opret BPCore.OpretProof
 
-@mnemonic(fiber-lucas-harmony)
-data GlobalOrd         : witnessOrd WitnessOrd?
-                       , opid RGBCommit.OpId
-                       , idx U16
+@mnemonic(east-sunset-extra)
+data GlobalOrd         : opOrd OpOrd, idx U16
 
-@mnemonic(degree-journal-mayor)
-data TxOrd             : archived ()
-                       | onChain TxPos
-                       | offChain priority U32
+@mnemonic(heroic-right-pepper)
+data OpOrd             : genesis ()
+                       | extension (witness WitnessOrd
+                       , nonce U8
+                       , opid RGBCommit.OpId)
+                       | transition#255 (witness WitnessOrd
+                       , nonce U8
+                       , opid RGBCommit.OpId)
 
-@mnemonic(john-invest-weekend)
-data TxPos             : height U32, timestamp I64
+@mnemonic(orange-john-cyclone)
+data WitnessOrd        : archived ()
+                       | mined WitnessPos
+                       | tentative ()
 
-@mnemonic(fish-yoyo-logic)
-data WitnessOrd        : pubOrd TxOrd, witnessId RGBCommit.XChainTxid
+@mnemonic(snow-local-tonight)
+data WitnessPos        : height U32, timestamp I64
 
 

@@ -27,8 +27,8 @@ use std::fmt::Debug;
 use std::num::NonZeroU32;
 use std::rc::Rc;
 
+use amplify::confinement;
 use amplify::num::u24;
-use amplify::Bytes32;
 use bp::seals::txout::{CloseMethod, ExplicitSeal, VerifyError, Witness};
 use bp::{dbc, Tx, Txid};
 use commit_verify::mpc;
@@ -135,110 +135,155 @@ impl<U: ExposedSeal> XChain<U> {
     }
 }
 
+/// The type is used during validation and computing a contract state. It
+/// combines both the operation with the information required for its ordering
+/// in the contract history (via construction of [`OpOrd`]) according to the
+/// consensus rules.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, From)]
-pub enum OpRef<'op> {
+pub enum OrdOpRef<'op> {
     #[from]
     Genesis(&'op Genesis),
-    #[from]
-    Transition(&'op Transition),
-    #[from]
-    Extension(&'op Extension),
+    Transition(&'op Transition, XWitnessId, WitnessOrd),
+    Extension(&'op Extension, XWitnessId, WitnessOrd),
 }
 
-impl<'op> Operation for OpRef<'op> {
+impl<'op> PartialOrd for OrdOpRef<'op> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
+impl<'op> Ord for OrdOpRef<'op> {
+    fn cmp(&self, other: &Self) -> Ordering { self.op_ord().cmp(&other.op_ord()) }
+}
+
+impl<'op> OrdOpRef<'op> {
+    pub fn witness_id(&self) -> Option<XWitnessId> {
+        match self {
+            OrdOpRef::Genesis(_) => None,
+            OrdOpRef::Transition(_, witness_id, ..) | OrdOpRef::Extension(_, witness_id, ..) => {
+                Some(*witness_id)
+            }
+        }
+    }
+
+    pub fn op_ord(&self) -> OpOrd {
+        match self {
+            OrdOpRef::Genesis(_) => OpOrd::Genesis,
+            OrdOpRef::Transition(op, _, witness_ord) => OpOrd::Transition {
+                witness: *witness_ord,
+                nonce: op.nonce,
+                opid: op.id(),
+            },
+            OrdOpRef::Extension(op, _, witness_ord) => OpOrd::Extension {
+                witness: *witness_ord,
+                nonce: op.nonce,
+                opid: op.id(),
+            },
+        }
+    }
+}
+
+impl<'op> Operation for OrdOpRef<'op> {
     fn op_type(&self) -> OpType {
         match self {
-            OpRef::Genesis(op) => op.op_type(),
-            OpRef::Transition(op) => op.op_type(),
-            OpRef::Extension(op) => op.op_type(),
+            OrdOpRef::Genesis(op) => op.op_type(),
+            OrdOpRef::Transition(op, ..) => op.op_type(),
+            OrdOpRef::Extension(op, ..) => op.op_type(),
         }
     }
 
     fn full_type(&self) -> OpFullType {
         match self {
-            OpRef::Genesis(op) => op.full_type(),
-            OpRef::Transition(op) => op.full_type(),
-            OpRef::Extension(op) => op.full_type(),
+            OrdOpRef::Genesis(op) => op.full_type(),
+            OrdOpRef::Transition(op, ..) => op.full_type(),
+            OrdOpRef::Extension(op, ..) => op.full_type(),
         }
     }
 
     fn id(&self) -> OpId {
         match self {
-            OpRef::Genesis(op) => op.id(),
-            OpRef::Transition(op) => op.id(),
-            OpRef::Extension(op) => op.id(),
+            OrdOpRef::Genesis(op) => op.id(),
+            OrdOpRef::Transition(op, ..) => op.id(),
+            OrdOpRef::Extension(op, ..) => op.id(),
         }
     }
 
     fn contract_id(&self) -> ContractId {
         match self {
-            OpRef::Genesis(op) => op.contract_id(),
-            OpRef::Transition(op) => op.contract_id(),
-            OpRef::Extension(op) => op.contract_id(),
+            OrdOpRef::Genesis(op) => op.contract_id(),
+            OrdOpRef::Transition(op, ..) => op.contract_id(),
+            OrdOpRef::Extension(op, ..) => op.contract_id(),
+        }
+    }
+
+    fn nonce(&self) -> u8 {
+        match self {
+            OrdOpRef::Genesis(op) => op.nonce(),
+            OrdOpRef::Transition(op, ..) => op.nonce(),
+            OrdOpRef::Extension(op, ..) => op.nonce(),
         }
     }
 
     fn transition_type(&self) -> Option<TransitionType> {
         match self {
-            OpRef::Genesis(op) => op.transition_type(),
-            OpRef::Transition(op) => op.transition_type(),
-            OpRef::Extension(op) => op.transition_type(),
+            OrdOpRef::Genesis(op) => op.transition_type(),
+            OrdOpRef::Transition(op, ..) => op.transition_type(),
+            OrdOpRef::Extension(op, ..) => op.transition_type(),
         }
     }
 
     fn extension_type(&self) -> Option<ExtensionType> {
         match self {
-            OpRef::Genesis(op) => op.extension_type(),
-            OpRef::Transition(op) => op.extension_type(),
-            OpRef::Extension(op) => op.extension_type(),
+            OrdOpRef::Genesis(op) => op.extension_type(),
+            OrdOpRef::Transition(op, ..) => op.extension_type(),
+            OrdOpRef::Extension(op, ..) => op.extension_type(),
         }
     }
 
     fn metadata(&self) -> &Metadata {
         match self {
-            OpRef::Genesis(op) => op.metadata(),
-            OpRef::Transition(op) => op.metadata(),
-            OpRef::Extension(op) => op.metadata(),
+            OrdOpRef::Genesis(op) => op.metadata(),
+            OrdOpRef::Transition(op, ..) => op.metadata(),
+            OrdOpRef::Extension(op, ..) => op.metadata(),
         }
     }
 
     fn globals(&self) -> &GlobalState {
         match self {
-            OpRef::Genesis(op) => op.globals(),
-            OpRef::Transition(op) => op.globals(),
-            OpRef::Extension(op) => op.globals(),
+            OrdOpRef::Genesis(op) => op.globals(),
+            OrdOpRef::Transition(op, ..) => op.globals(),
+            OrdOpRef::Extension(op, ..) => op.globals(),
         }
     }
 
     fn valencies(&self) -> &Valencies {
         match self {
-            OpRef::Genesis(op) => op.valencies(),
-            OpRef::Transition(op) => op.valencies(),
-            OpRef::Extension(op) => op.valencies(),
+            OrdOpRef::Genesis(op) => op.valencies(),
+            OrdOpRef::Transition(op, ..) => op.valencies(),
+            OrdOpRef::Extension(op, ..) => op.valencies(),
         }
     }
 
     fn assignments(&self) -> AssignmentsRef<'op> {
         match self {
-            OpRef::Genesis(op) => (&op.assignments).into(),
-            OpRef::Transition(op) => (&op.assignments).into(),
-            OpRef::Extension(op) => (&op.assignments).into(),
+            OrdOpRef::Genesis(op) => (&op.assignments).into(),
+            OrdOpRef::Transition(op, ..) => (&op.assignments).into(),
+            OrdOpRef::Extension(op, ..) => (&op.assignments).into(),
         }
     }
 
     fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         match self {
-            OpRef::Genesis(op) => op.assignments_by_type(t),
-            OpRef::Transition(op) => op.assignments_by_type(t),
-            OpRef::Extension(op) => op.assignments_by_type(t),
+            OrdOpRef::Genesis(op) => op.assignments_by_type(t),
+            OrdOpRef::Transition(op, ..) => op.assignments_by_type(t),
+            OrdOpRef::Extension(op, ..) => op.assignments_by_type(t),
         }
     }
 
     fn inputs(&self) -> Inputs {
         match self {
-            OpRef::Genesis(op) => op.inputs(),
-            OpRef::Transition(op) => op.inputs(),
-            OpRef::Extension(op) => op.inputs(),
+            OrdOpRef::Genesis(op) => op.inputs(),
+            OrdOpRef::Transition(op, ..) => op.inputs(),
+            OrdOpRef::Extension(op, ..) => op.inputs(),
         }
     }
 }
@@ -252,30 +297,30 @@ impl<'op> Operation for OpRef<'op> {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[display("{height}@{timestamp}")]
-pub struct TxPos {
+pub struct WitnessPos {
     height: u32,
     timestamp: i64,
 }
 
-impl TxPos {
+impl WitnessPos {
     pub fn new(height: u32, timestamp: i64) -> Option<Self> {
         if height == 0 || timestamp < 1231006505 {
             return None;
         }
-        Some(TxPos { height, timestamp })
+        Some(WitnessPos { height, timestamp })
     }
 
     pub fn height(&self) -> NonZeroU32 { NonZeroU32::new(self.height).expect("invariant") }
 }
 
-impl PartialOrd for TxPos {
+impl PartialOrd for WitnessPos {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl Ord for TxPos {
+impl Ord for WitnessPos {
     /// Since we support multiple layer 1, we have to order basing on the
     /// timestamp information and not height. The timestamp data are consistent
-    /// accross multiple blockchains, while height evolves with a different
+    /// across multiple blockchains, while height evolves with a different
     /// speed and can't be used in comparisons.
     fn cmp(&self, other: &Self) -> Ordering {
         assert!(self.timestamp > 0);
@@ -290,14 +335,15 @@ impl Ord for TxPos {
 /// of the contract global state data, as they are presented to all contract
 /// users.
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, From)]
+#[display(lowercase)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = order)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase", untagged)
+    serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum TxOrd {
+pub enum WitnessOrd {
     /// Witness transaction must be excluded from the state processing.
     ///
     /// Cases for the exclusion:
@@ -308,7 +354,6 @@ pub enum TxOrd {
     /// - past state channel transactions once a new channel state is signed
     ///   (and until they may become valid once again due to an uncooperative
     ///   channel closing).
-    #[display("archived")]
     #[strict_type(dumb)]
     Archived,
 
@@ -316,10 +361,10 @@ pub enum TxOrd {
     /// timestamp.
     ///
     /// NB: only timestamp is used in consensus ordering though, see
-    /// [`TxPos::ord`] for the details.
+    /// [`WitnessPos::cmp`] for the details.
     #[from]
     #[display(inner)]
-    OnChain(TxPos),
+    Mined(WitnessPos),
 
     /// Valid witness transaction which commits the most recent RGB state, but
     /// is not (yet) included into a layer 1 blockchain. Such transactions have
@@ -329,82 +374,80 @@ pub enum TxOrd {
     ///
     /// NB: not each and every signed offchain transaction should have this
     /// status; all offchain cases which fall under [`Self::Archived`] must be
-    /// excluded. Valid cases for assigning [`Self::Offchain`] status are:
+    /// excluded. Valid cases for assigning [`Self::Tentative`] status are:
     /// - transaction is present in the memepool;
     /// - transaction is a part of transaction graph inside a state channel
     ///   (only actual channel state is accounted for; all previous channel
     ///   state must have corresponding transactions set to [`Self::Archived`]);
     /// - transaction is an RBF replacement prepared to be broadcast (with the
     ///   previous transaction set to [`Self::Archived`] at the same moment).
-    #[display("offchain@{priority}")]
-    OffChain {
-        /// Used for internal ordering inside the offchain transaction graph,
-        /// for instance to ensure that HTLC transactions in a lightning channel
-        /// have higher priority (i.e. computed after) than commitment.
-        priority: u32,
-    },
+    Tentative,
 }
 
-impl TxOrd {
+impl WitnessOrd {
     #[inline]
-    pub fn offchain(priority: u32) -> Self { TxOrd::OffChain { priority } }
+    pub fn is_valid(self) -> bool { self != Self::Archived }
 }
 
-/// Information about public witness used for ordering according to the RGB
-/// consensus rules.
+/// Operation ordering priority for contract state computation according to
+/// [RCP-240731A].
 ///
-/// First, we account for [`TxOrd`], such that those state which witness
-/// transactions were mined earlier come into the state computing earlier as
-/// well. However, if two witness transactions were mined in the same block, we
-/// order them lexicographically basing on the witness id.
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
+/// The ordering is the following:
+/// - Genesis is processed first.
+/// - Other operations are ordered according to their witness transactions (see
+///   [`WitnessOrd`] for the details).
+/// - Extensions share witness transaction with the state transition which first
+///   to close one of the seals defined in the extension, but are processed
+///   before that state transition.
+/// - If two or more operations share the same witness transaction ordering,
+///   they are first ordered basing on their `nonce` value, and if it is also
+///   the same, basing on their operation id value.
+///
+/// [RCP-240731A]: https://github.com/RGB-WG/RFC/issues/10
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_LOGIC)]
+#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = custom)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[display("{witness_id}/{pub_ord}")]
-pub struct WitnessOrd {
-    pub pub_ord: TxOrd,
-    pub witness_id: XWitnessId,
+pub enum OpOrd {
+    #[strict_type(tag = 0x00, dumb)]
+    Genesis,
+    #[strict_type(tag = 0x01)]
+    Extension {
+        witness: WitnessOrd,
+        // TODO: Consider using extension type here
+        nonce: u8,
+        opid: OpId,
+    },
+    #[strict_type(tag = 0xFF)]
+    Transition {
+        witness: WitnessOrd,
+        // TODO: Consider using transition type here
+        nonce: u8,
+        opid: OpId,
+    },
 }
 
-impl PartialOrd for WitnessOrd {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-impl Ord for WitnessOrd {
-    fn cmp(&self, other: &Self) -> Ordering {
-        if self == other {
-            return Ordering::Equal;
-        }
-        match self.pub_ord.cmp(&other.pub_ord) {
-            Ordering::Less => Ordering::Less,
-            Ordering::Greater => Ordering::Greater,
-            Ordering::Equal => self.witness_id.cmp(&other.witness_id),
-        }
+impl OpOrd {
+    #[inline]
+    pub fn is_archived(&self) -> bool {
+        matches!(
+            self,
+            Self::Extension {
+                witness: WitnessOrd::Archived,
+                ..
+            } | Self::Transition {
+                witness: WitnessOrd::Archived,
+                ..
+            }
+        )
     }
 }
 
-impl WitnessOrd {
-    pub fn with(witness_id: XWitnessId, pub_ord: TxOrd) -> Self {
-        WitnessOrd {
-            witness_id,
-            pub_ord,
-        }
-    }
-
-    pub fn from_mempool(witness_id: XWitnessId, priority: u32) -> Self {
-        WitnessOrd {
-            pub_ord: TxOrd::OffChain { priority },
-            witness_id,
-        }
-    }
-}
-
-/// Consensus ordering of operations within a contract.
+/// Consensus ordering of global state
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC)]
@@ -413,65 +456,38 @@ impl WitnessOrd {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct OpOrd {
-    pub witness_ord: WitnessOrd,
-    pub opid: OpId,
-}
-
-/// Consensus ordering of global state
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_LOGIC)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
 pub struct GlobalOrd {
-    // Absent for state defined in genesis
-    pub witness_ord: Option<WitnessOrd>,
-    pub opid: OpId,
+    pub op_ord: OpOrd,
     pub idx: u16,
 }
 
-impl PartialOrd for GlobalOrd {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-impl Ord for GlobalOrd {
-    fn cmp(&self, other: &Self) -> Ordering {
-        if self == other {
-            return Ordering::Equal;
-        }
-        match (self.witness_ord, &other.witness_ord) {
-            (None, None) => self.idx.cmp(&other.idx),
-            (None, Some(_)) => Ordering::Less,
-            (Some(_), None) => Ordering::Greater,
-            (Some(ord1), Some(ord2)) if ord1 == *ord2 => self.idx.cmp(&other.idx),
-            (Some(ord1), Some(ord2)) => ord1.cmp(ord2),
-        }
-    }
-}
-
 impl GlobalOrd {
-    #[inline]
-    pub fn with_witness(opid: OpId, witness_id: XWitnessId, ord: TxOrd, idx: u16) -> Self {
-        GlobalOrd {
-            witness_ord: Some(WitnessOrd::with(witness_id, ord)),
-            opid,
+    pub fn genesis(idx: u16) -> Self {
+        Self {
+            op_ord: OpOrd::Genesis,
             idx,
         }
     }
-    #[inline]
-    pub fn genesis(opid: OpId, idx: u16) -> Self {
-        GlobalOrd {
-            witness_ord: None,
-            opid,
+    pub fn transition(opid: OpId, idx: u16, nonce: u8, witness: WitnessOrd) -> Self {
+        Self {
+            op_ord: OpOrd::Transition {
+                witness,
+                nonce,
+                opid,
+            },
             idx,
         }
     }
-    #[inline]
-    pub fn witness_id(&self) -> Option<XWitnessId> { self.witness_ord.map(|a| a.witness_id) }
+    pub fn extension(opid: OpId, idx: u16, nonce: u8, witness: WitnessOrd) -> Self {
+        Self {
+            op_ord: OpOrd::Extension {
+                witness,
+                nonce,
+                opid,
+            },
+            idx,
+        }
+    }
 }
 
 pub trait GlobalStateIter {
@@ -500,24 +516,17 @@ impl<I: GlobalStateIter> GlobalStateIter for &mut I {
 
 pub struct GlobalContractState<I: GlobalStateIter> {
     checked_depth: u24,
-    last_ord: GlobalOrd,
+    last_ord: Option<GlobalOrd>,
     iter: I,
 }
 
 impl<I: GlobalStateIter> GlobalContractState<I> {
     #[inline]
-    pub fn new(mut iter: I) -> Self {
-        let last_ord = iter.prev().map(|(ord, _)| ord).unwrap_or(GlobalOrd {
-            // This is dumb object which must always have the lowest ordering.
-            witness_ord: None,
-            opid: Bytes32::zero().into(),
-            idx: 0,
-        });
-        iter.reset(u24::ZERO);
+    pub fn new(iter: I) -> Self {
         Self {
             iter,
             checked_depth: u24::ONE,
-            last_ord,
+            last_ord: None,
         }
     }
 
@@ -526,21 +535,17 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
 
     fn prev_checked(&mut self) -> Option<(GlobalOrd, I::Data)> {
         let (ord, item) = self.iter.prev()?;
-        if ord >= self.last_ord {
+        if self.last_ord.map(|last| ord <= last).unwrap_or_default() {
             panic!(
                 "global contract state iterator has invalid implementation: it fails to order \
                  global state according to the consensus ordering"
             );
         }
-        if let Some(WitnessOrd {
-            pub_ord: TxOrd::Archived,
-            ..
-        }) = ord.witness_ord
-        {
-            panic!("invalid GlobalStateIter implementation returning WitnessAnchor::Archived")
+        if ord.op_ord.is_archived() {
+            panic!("invalid GlobalStateIter implementation returning WitnessOrd::Archived")
         }
         self.checked_depth += u24::ONE;
-        self.last_ord = ord;
+        self.last_ord = Some(ord);
         Some((ord, item))
     }
 
@@ -612,7 +617,9 @@ pub trait ContractStateAccess: Debug {
 pub trait ContractStateEvolve {
     type Context<'ctx>;
     fn init(context: Self::Context<'_>) -> Self;
-    fn evolve_state(&mut self, op: OpRef);
+    // TODO: distinguish contract validation failure errors from connectivity
+    //       errors. Allow custom error types here.
+    fn evolve_state(&mut self, op: OrdOpRef) -> Result<(), confinement::Error>;
 }
 
 pub struct VmContext<'op, S: ContractStateAccess> {
@@ -636,7 +643,7 @@ pub struct OpInfo<'op> {
 impl<'op> OpInfo<'op> {
     pub fn with(
         id: OpId,
-        op: &'op OpRef<'op>,
+        op: &'op OrdOpRef<'op>,
         prev_state: &'op Assignments<GraphSeal>,
         redeemed: &'op Valencies,
     ) -> Self {

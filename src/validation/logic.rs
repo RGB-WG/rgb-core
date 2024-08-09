@@ -34,7 +34,7 @@ use strict_types::TypeSystem;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
-use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OpRef, RgbIsa, VmContext};
+use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OrdOpRef, RgbIsa, VmContext};
 use crate::{
     validation, Assign, AssignmentType, Assignments, AssignmentsRef, ConcealedState,
     ConfidentialState, ExposedSeal, ExposedState, Extension, GlobalState, GlobalStateSchema,
@@ -43,7 +43,6 @@ use crate::{
 };
 
 impl Schema {
-    // TODO: Instead of returning status fail immediately
     pub fn validate_state<
         'validator,
         C: ConsignmentApi,
@@ -51,7 +50,7 @@ impl Schema {
     >(
         &'validator self,
         consignment: &'validator CheckedConsignment<'_, C>,
-        op: OpRef,
+        op: OrdOpRef,
         contract_state: Rc<RefCell<S>>,
     ) -> validation::Status {
         let opid = op.id();
@@ -70,7 +69,7 @@ impl Schema {
             validator,
             ty,
         ) = match op {
-            OpRef::Genesis(genesis) => {
+            OrdOpRef::Genesis(genesis) => {
                 for id in genesis.asset_tags.keys() {
                     if !matches!(self.owned_types.get(id), Some(OwnedStateSchema::Fungible(_))) {
                         status.add_failure(validation::Failure::AssetTagNoState(*id));
@@ -95,9 +94,12 @@ impl Schema {
                     None::<u16>,
                 )
             }
-            OpRef::Transition(Transition {
-                transition_type, ..
-            }) => {
+            OrdOpRef::Transition(
+                Transition {
+                    transition_type, ..
+                },
+                ..,
+            ) => {
                 // Right now we do not have actions to implement; but later
                 // we may have embedded procedures which must be verified
                 // here
@@ -131,7 +133,7 @@ impl Schema {
                     Some(transition_type.into_inner()),
                 )
             }
-            OpRef::Extension(Extension { extension_type, .. }) => {
+            OrdOpRef::Extension(Extension { extension_type, .. }, ..) => {
                 // Right now we do not have actions to implement; but later
                 // we may have embedded procedures which must be verified
                 // here
@@ -168,7 +170,7 @@ impl Schema {
         status += self.validate_metadata(opid, op.metadata(), metadata_schema, consignment.types());
         status +=
             self.validate_global_state(opid, op.globals(), global_schema, consignment.types());
-        let prev_state = if let OpRef::Transition(transition) = op {
+        let prev_state = if let OrdOpRef::Transition(transition, ..) = op {
             let prev_state = extract_prev_state(consignment, opid, &transition.inputs, &mut status);
             status += self.validate_prev_state(opid, &prev_state, owned_schema);
             prev_state
@@ -176,7 +178,7 @@ impl Schema {
             Assignments::default()
         };
         let mut redeemed = Valencies::default();
-        if let OpRef::Extension(extension) = op {
+        if let OrdOpRef::Extension(extension, ..) = op {
             for valency in extension.redeemed.keys() {
                 redeemed.push(*valency).expect("same size");
             }
@@ -218,9 +220,15 @@ impl Schema {
                     error_code.map(u8::from),
                     None,
                 ));
+                // We return here since all other validations will have no valid state to access
+                return status;
             }
             let contract_state = context.contract_state;
-            contract_state.borrow_mut().evolve_state(op);
+            if contract_state.borrow_mut().evolve_state(op).is_err() {
+                status.add_failure(validation::Failure::ContractStateFilled(opid));
+                // We return here since all other validations will have no valid state to access
+                return status;
+            }
         }
         status
     }
