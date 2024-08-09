@@ -28,17 +28,22 @@ use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
 
+use crate::validation::DbcProof;
+use crate::vm::GlobalOrd;
 use crate::{
-    ContractState, DbcProof, Extension, Genesis, OpCommitment, Schema, TransitionBundle,
-    XWitnessId, LIB_NAME_RGB,
+    Extension, Genesis, OpCommitment, Schema, TransitionBundle, XWitnessId, LIB_NAME_RGB_COMMIT,
+    LIB_NAME_RGB_LOGIC,
 };
 
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB: &str =
-    "stl:sqbS4Bea-l!IK7Dt-86Fkfgg-NOhi22w-S!kz5bC-l$99W!Y#bless-donald-poker";
+pub const LIB_ID_RGB_COMMIT: &str =
+    "stl:tjFc6jD7-fe78CxG-WdJlH!l-uXlFfW0-XwG1!qV-MNdtNGE#orbit-airport-voice";
+/// Strict types id for the library providing data types for RGB consensus.
+pub const LIB_ID_RGB_LOGIC: &str =
+    "stl:xhj2bmC8-029T1UM-AfYAzfu-wcywWGo-JPeJHq$-z3lCygQ#bonanza-boxer-equator";
 
-fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
-    LibBuilder::new(libname!(LIB_NAME_RGB), tiny_bset! {
+fn _rgb_commit_stl() -> Result<TypeLib, CompileError> {
+    LibBuilder::new(libname!(LIB_NAME_RGB_COMMIT), tiny_bset! {
         std_stl().to_dependency(),
         strict_types_stl().to_dependency(),
         commit_verify_stl().to_dependency(),
@@ -48,25 +53,53 @@ fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     })
     .transpile::<Schema>()
     .transpile::<Genesis>()
-    .transpile::<DbcProof>()
     .transpile::<XWitnessId>()
     .transpile::<TransitionBundle>()
     .transpile::<Extension>()
-    .transpile::<ContractState>()
     .transpile::<OpCommitment>()
     .compile()
 }
 
+fn _rgb_logic_stl() -> Result<TypeLib, CompileError> {
+    LibBuilder::new(libname!(LIB_NAME_RGB_LOGIC), tiny_bset! {
+        std_stl().to_dependency(),
+        strict_types_stl().to_dependency(),
+        commit_verify_stl().to_dependency(),
+        bp_tx_stl().to_dependency(),
+        bp_core_stl().to_dependency(),
+        aluvm_stl().to_dependency(),
+        rgb_commit_stl().to_dependency()
+    })
+        .transpile::<GlobalOrd>()
+        .transpile::<DbcProof>()
+        // TODO: Commit to the RGB ISA once AluVM will support strict types
+        // .transpile::<RgbIsa>()
+        .compile()
+}
+
 /// Generates strict type library providing data types for RGB consensus.
-pub fn rgb_core_stl() -> TypeLib { _rgb_core_stl().expect("invalid strict type RGB library") }
+pub fn rgb_commit_stl() -> TypeLib {
+    _rgb_commit_stl().expect("invalid strict type RGB consensus commitments library")
+}
+
+/// Generates strict type library providing data types for RGB consensus.
+pub fn rgb_logic_stl() -> TypeLib {
+    _rgb_logic_stl().expect("invalid strict type RGB consensus logic library")
+}
 
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
-    fn lib_id() {
-        let lib = rgb_core_stl();
-        assert_eq!(lib.id().to_string(), LIB_ID_RGB);
+    fn commit_lib_id() {
+        let lib = rgb_commit_stl();
+        assert_eq!(lib.id().to_string(), LIB_ID_RGB_COMMIT);
+    }
+
+    #[test]
+    fn logic_lib_id() {
+        let lib = rgb_logic_stl();
+        assert_eq!(lib.id().to_string(), LIB_ID_RGB_LOGIC);
     }
 }

@@ -28,7 +28,7 @@ use strict_encoding::{
     TypeName, TypedRead, TypedWrite, WriteStruct,
 };
 
-use crate::LIB_NAME_RGB;
+use crate::LIB_NAME_RGB_COMMIT;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
 #[cfg_attr(
@@ -125,7 +125,7 @@ impl TryFrom<RangeInclusive<u16>> for Occurrences {
 }
 
 impl StrictType for Occurrences {
-    const STRICT_LIB_NAME: &'static str = LIB_NAME_RGB;
+    const STRICT_LIB_NAME: &'static str = LIB_NAME_RGB_COMMIT;
     fn strict_name() -> Option<TypeName> { Some(tn!("Occurrences")) }
 }
 impl StrictProduct for Occurrences {}
@@ -208,7 +208,7 @@ mod test {
     #[test]
     fn test_once_or_up_to_none_large() {
         let occurrence: Occurrences = Occurrences::OnceOrMore;
-        occurrence.check(core::u16::MAX).unwrap();
+        occurrence.check(u16::MAX).unwrap();
     }
     #[test]
     #[should_panic(expected = "OccurrencesMismatch { min: 1, max: 65535, found: 0 }")]
@@ -242,7 +242,7 @@ mod test {
     #[test]
     fn test_none_or_up_to_none_large() {
         let occurrence: Occurrences = Occurrences::NoneOrMore;
-        occurrence.check(core::u16::MAX).unwrap();
+        occurrence.check(u16::MAX).unwrap();
     }
     #[test]
     fn test_none_or_up_to_42_zero() {

@@ -35,16 +35,37 @@ use strict_encoding::{
     WriteUnion,
 };
 
-use crate::{Layer1, OutputSeal, XOutputSeal, LIB_NAME_RGB};
+use crate::{OutputSeal, XOutputSeal, LIB_NAME_RGB_COMMIT};
 
 pub const XCHAIN_BITCOIN_PREFIX: &str = "bc";
 pub const XCHAIN_LIQUID_PREFIX: &str = "lq";
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[display(lowercase)]
+#[derive(
+    strict_encoding::StrictType,
+    StrictDumb,
+    strict_encoding::StrictEncode,
+    strict_encoding::StrictDecode
+)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[repr(u8)]
+pub enum Layer1 {
+    #[strict_type(dumb)]
+    Bitcoin = 0,
+    Liquid = 1,
+}
 
 #[derive(Wrapper, WrapperMut, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From)]
 #[wrapper(Deref, FromStr, Display)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 pub struct XOutpoint(XChain<Outpoint>);
 
 impl From<XOutputSeal> for XOutpoint {
@@ -92,7 +113,7 @@ mod _serde {
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(lowercase)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = repr, into_u8, try_from_u8)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -135,7 +156,7 @@ impl StrictDumb for Impossible {
     fn strict_dumb() -> Self { panic!("must not be instantiated") }
 }
 impl StrictType for Impossible {
-    const STRICT_LIB_NAME: &'static str = LIB_NAME_RGB;
+    const STRICT_LIB_NAME: &'static str = LIB_NAME_RGB_COMMIT;
 }
 impl StrictSum for Impossible {
     const ALL_VARIANTS: &'static [(u8, &'static str)] = &[];
@@ -168,7 +189,7 @@ impl FromStr for Impossible {
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = StrictHash)]
 #[cfg_attr(
@@ -220,7 +241,7 @@ impl<T: Conceal, X: Conceal> Conceal for XChain<T, X> {
 impl<T> StrictType for XChain<T>
 where T: StrictDumb + StrictType
 {
-    const STRICT_LIB_NAME: &'static str = LIB_NAME_RGB;
+    const STRICT_LIB_NAME: &'static str = LIB_NAME_RGB_COMMIT;
 }
 impl<T> StrictSum for XChain<T>
 where T: StrictDumb + StrictType

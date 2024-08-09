@@ -30,8 +30,13 @@ mod op_contract;
 mod op_timechain;
 #[macro_use]
 mod macroasm;
+mod contract;
 
 pub use aluvm::aluasm_isa;
+pub use contract::{
+    AssignmentWitness, ContractState, GlobalContractState, GlobalOrd, GlobalStateIter,
+    UnknownGlobalStateType, WitnessAnchor,
+};
 pub use isa::RgbIsa;
 pub use op_contract::ContractOp;
 pub use op_timechain::TimechainOp;

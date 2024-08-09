@@ -26,13 +26,13 @@ use amplify::Wrapper;
 
 use super::{ExtensionType, GlobalStateType, Occurrences, TransitionType};
 use crate::schema::schema::MetaType;
-use crate::LIB_NAME_RGB;
+use crate::LIB_NAME_RGB_COMMIT;
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
 #[display("0x{0:04X}")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -49,7 +49,7 @@ impl AssignmentType {
 #[wrapper(FromStr, LowerHex, UpperHex)]
 #[display("0x{0:04X}")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -143,7 +143,7 @@ pub trait OpSchema {
 
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -160,7 +160,7 @@ pub struct GenesisSchema {
 
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -177,7 +177,7 @@ pub struct ExtensionSchema {
 
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

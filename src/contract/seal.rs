@@ -36,7 +36,7 @@ use single_use_seals::SealWitness;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictType};
 
 use crate::contract::xchain::Impossible;
-use crate::{XChain, XOutpoint, LIB_NAME_RGB};
+use crate::{XChain, XOutpoint, LIB_NAME_RGB_COMMIT};
 
 pub type GenesisSeal = SingleBlindSeal<Method>;
 pub type GraphSeal = ChainBlindSeal<Method>;
@@ -114,7 +114,7 @@ impl<Seal: TxoSeal> TxoSeal for XChain<Seal> {
 /*
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -180,7 +180,7 @@ impl<U: ExposedSeal> XChain<U> {
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -215,28 +215,28 @@ impl Ord for WitnessPos {
 /// transaction defining the ordering of the contract state data.
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = order)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = order)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
 pub enum WitnessOrd {
+    #[display("archived")]
+    #[strict_type(dumb)]
+    Archived,
+
     #[from]
     #[display(inner)]
     OnChain(WitnessPos),
 
-    #[display("offchain")]
-    #[strict_type(dumb)]
-    OffChain,
+    #[display("offchain@{priority}")]
+    OffChain { priority: u32 },
 }
 
 impl WitnessOrd {
-    pub fn with_mempool_or_height(height: u32, timestamp: i64) -> Self {
-        WitnessPos::new(height, timestamp)
-            .map(WitnessOrd::OnChain)
-            .unwrap_or(WitnessOrd::OffChain)
-    }
+    #[inline]
+    pub fn offchain(priority: u32) -> Self { WitnessOrd::OffChain { priority } }
 }
 
 pub type XWitnessTx<X = Impossible> = XChain<Tx, X>;

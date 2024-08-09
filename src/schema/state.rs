@@ -20,15 +20,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use amplify::num::u24;
 use commit_verify::ReservedBytes;
 use strict_encoding::Primitive;
 use strict_types::SemId;
 
-use crate::{StateType, LIB_NAME_RGB};
+use crate::{StateType, LIB_NAME_RGB_COMMIT};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = repr, into_u8, try_from_u8)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -53,7 +54,7 @@ impl MediaType {
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = order)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = order)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -96,7 +97,7 @@ impl OwnedStateSchema {
 /// details as used for [`DateFormat`]
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Display)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = repr, into_u8, try_from_u8)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -111,7 +112,7 @@ pub enum FungibleType {
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -122,7 +123,7 @@ pub struct GlobalStateSchema {
     //       state having value 1.
     pub reserved: ReservedBytes<1>,
     pub sem_id: SemId,
-    pub max_items: u16,
+    pub max_items: u24,
 }
 
 impl GlobalStateSchema {
@@ -130,7 +131,7 @@ impl GlobalStateSchema {
         GlobalStateSchema {
             reserved: default!(),
             sem_id,
-            max_items: 1,
+            max_items: u24::ONE,
         }
     }
 
@@ -138,7 +139,7 @@ impl GlobalStateSchema {
         GlobalStateSchema {
             reserved: default!(),
             sem_id,
-            max_items: u16::MAX,
+            max_items: u24::MAX,
         }
     }
 }

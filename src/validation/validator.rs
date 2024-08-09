@@ -30,11 +30,11 @@ use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::{Failure, Warning};
-use super::{CheckedConsignment, ConsignmentApi, Status, Validity};
+use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Validity};
 use crate::{
-    AltLayer1, BundleId, ContractId, DbcProof, EAnchor, Layer1, OpId, OpRef, OpType, Operation,
-    Opout, Schema, SchemaId, TransitionBundle, TypedAssigns, XChain, XOutpoint, XOutputSeal,
-    XWitnessId, XWitnessTx,
+    AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout, Schema,
+    SchemaId, TransitionBundle, TypedAssigns, XChain, XOutpoint, XOutputSeal, XWitnessId,
+    XWitnessTx,
 };
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
@@ -182,8 +182,8 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     ///
     /// When a failure detected, validation is not stopped; the failure is
     /// logged into the status object, but the validation continues for the
-    /// rest of the consignment data. This can help it debugging and
-    /// detecting all problems with the consignment.
+    /// rest of the consignment data. This can help to debug and detect all
+    /// problems with the consignment.
     pub fn validate(consignment: &'consignment C, resolver: &'resolver R, testnet: bool) -> Status {
         let mut validator = Validator::init(consignment, resolver);
         // If the network mismatches there is no point in validating the contract since
@@ -277,7 +277,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         // utilize queue to keep the track of the upstream (ancestor) nodes and make
         // sure that ve have validated each one of them up to genesis. The graph is
         // valid when each of its nodes and each of its edges is valid, i.e. when all
-        // individual nodes has passed validation against the schema (we track
+        // individual nodes have passed validation against the schema (we track
         // that fact with `validation_index`) and each of the operation ancestor state
         // change to a given operation is valid against the schema + committed
         // into bitcoin transaction graph with proper anchor. That is what we are

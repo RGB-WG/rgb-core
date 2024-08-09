@@ -1,0 +1,46 @@
+{-
+  Id: stl:xhj2bmC8-029T1UM-AfYAzfu-wcywWGo-JPeJHq$-z3lCygQ#bonanza-boxer-equator
+  Name: RGBLogic
+  Version: 0.1.0
+  Description: Consensus logic layer for RGB smart contracts
+  Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+  Copyright (C) 2023-2024 LNP/BP Standards Association. All rights reserved.
+  License: Apache-2.0
+-}
+
+@context
+typelib RGBLogic
+
+import BPCore#garbo-radius-peru
+  use TapretNodePartner#roger-member-educate
+  use TapretProof#marco-border-sample
+  use TapretPathProof#kiwi-mirror-paris
+  use TapretRightBranch#miracle-patriot-touch
+  use OpretProof#good-village-flex
+
+import RGBCommit#orbit-airport-voice
+  use WitnessPos#snow-local-tonight
+  use XChainTxid#liquid-river-absorb
+  use WitnessOrd#samuel-easy-brandy
+
+import Bitcoin#signal-color-cipher
+  use ScriptBytes#equator-cockpit-gong
+  use TapNodeHash#paprika-amanda-hunter
+  use LeafScript#bison-doctor-oscar
+  use Txid#shallow-light-reverse
+  use InternalPk#habitat-paprika-oliver
+  use LeafVer#benefit-carbon-africa
+  use XOnlyPk#clever-swim-carpet
+
+
+@mnemonic(needle-change-forest)
+data DbcProof          : tapret#1 BPCore.TapretProof
+                       | opret BPCore.OpretProof
+
+@mnemonic(miguel-lava-extend)
+data GlobalOrd         : witnessAnchor WitnessAnchor?, idx U16
+
+@mnemonic(remote-daniel-bombay)
+data WitnessAnchor     : witnessOrd RGBCommit.WitnessOrd, witnessId RGBCommit.XChainTxid
+
+

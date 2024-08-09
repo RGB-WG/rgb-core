@@ -23,9 +23,11 @@
 use std::cmp::Ordering;
 use std::collections::{btree_map, btree_set, BTreeMap};
 use std::iter;
+use std::num::ParseIntError;
+use std::str::FromStr;
 
 use amplify::confinement::{Confined, SmallOrdSet, TinyOrdMap, TinyOrdSet};
-use amplify::Wrapper;
+use amplify::{hex, Wrapper};
 use commit_verify::{
     CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, ReservedBytes,
     StrictHash,
@@ -37,15 +39,67 @@ use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, Transitio
 use crate::{
     AltLayer1Set, AssetTag, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
     ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
-    GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose, OpId, Opout, SecretSeal,
-    TypedAssigns, VoidState, XChain, LIB_NAME_RGB,
+    GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose, OpId, SecretSeal, TypedAssigns,
+    VoidState, XChain, LIB_NAME_RGB_COMMIT,
 };
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[display("{op}/{ty}/{no}")]
+/// RGB contract operation output pointer, defined by the operation ID and
+/// output number.
+pub struct Opout {
+    pub op: OpId,
+    pub ty: AssignmentType,
+    pub no: u16,
+}
+
+impl Opout {
+    pub fn new(op: OpId, ty: AssignmentType, no: u16) -> Opout { Opout { op, ty, no } }
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[display(inner)]
+pub enum OpoutParseError {
+    #[from]
+    InvalidNodeId(hex::Error),
+
+    InvalidType(ParseIntError),
+
+    InvalidOutputNo(ParseIntError),
+
+    /// invalid operation outpoint format ('{0}')
+    #[display(doc_comments)]
+    WrongFormat(String),
+}
+
+impl FromStr for Opout {
+    type Err = OpoutParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.split('/');
+        match (split.next(), split.next(), split.next(), split.next()) {
+            (Some(op), Some(ty), Some(no), None) => Ok(Opout {
+                op: op.parse()?,
+                ty: ty.parse().map_err(OpoutParseError::InvalidType)?,
+                no: no.parse().map_err(OpoutParseError::InvalidOutputNo)?,
+            }),
+            _ => Err(OpoutParseError::WrongFormat(s.to_owned())),
+        }
+    }
+}
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = StrictHash)]
 #[cfg_attr(
@@ -59,7 +113,7 @@ pub struct AssetTags(TinyOrdMap<AssignmentType, AssetTag>);
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = StrictHash)]
 #[cfg_attr(
@@ -80,7 +134,7 @@ impl<'a> IntoIterator for &'a Valencies {
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = StrictHash)]
 #[cfg_attr(
@@ -101,7 +155,7 @@ impl<'a> IntoIterator for &'a Redeemed {
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -125,7 +179,7 @@ impl MerkleLeaves for Inputs {
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = MerkleHash)]
 #[cfg_attr(
@@ -263,7 +317,7 @@ pub trait Operation {
 #[wrapper(Deref, FromStr)]
 #[display(inner)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = StrictHash)]
 #[cfg_attr(
@@ -288,7 +342,7 @@ impl Identity {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -315,7 +369,7 @@ impl StrictDeserialize for Genesis {}
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -347,7 +401,7 @@ impl PartialOrd for Extension {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -677,8 +731,6 @@ impl<'op> Operation for OpRef<'op> {
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
-
     use amplify::ByteArray;
     use baid64::DisplayBaid64;
 

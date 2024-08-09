@@ -20,8 +20,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cmp::Ordering;
-
 use bp::dbc::opret::{OpretError, OpretProof};
 use bp::dbc::tapret::TapretProof;
 use bp::dbc::Method;
@@ -30,7 +28,7 @@ use commit_verify::mpc::Commitment;
 use commit_verify::{mpc, ConvolveVerifyError, EmbedVerifyError};
 use strict_encoding::{StrictDeserialize, StrictDumb, StrictSerialize};
 
-use crate::{WitnessOrd, XWitnessId, LIB_NAME_RGB};
+use crate::LIB_NAME_RGB_LOGIC;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
 #[cfg_attr(
@@ -67,7 +65,7 @@ pub enum DbcError {
 
 #[derive(Clone, Eq, PartialEq, Debug, From)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = custom, dumb = Self::Tapret(strict_dumb!()))]
+#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = custom, dumb = Self::Tapret(strict_dumb!()))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -114,60 +112,3 @@ impl dbc::Proof for DbcProof {
 
 /// Anchor which DBC proof is either Tapret or Opret.
 pub type EAnchor<P = mpc::MerkleProof> = dbc::Anchor<P, DbcProof>;
-
-/// Txid and height information ordered according to the RGB consensus rules.
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[display("{witness_id}/{witness_ord}")]
-pub struct WitnessAnchor {
-    pub witness_ord: WitnessOrd,
-    pub witness_id: XWitnessId,
-}
-
-impl PartialOrd for WitnessAnchor {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-impl Ord for WitnessAnchor {
-    fn cmp(&self, other: &Self) -> Ordering {
-        if self == other {
-            return Ordering::Equal;
-        }
-        match self.witness_ord.cmp(&other.witness_ord) {
-            Ordering::Less => Ordering::Less,
-            Ordering::Greater => Ordering::Greater,
-            Ordering::Equal => self.witness_id.cmp(&other.witness_id),
-        }
-    }
-}
-
-impl WitnessAnchor {
-    pub fn from_mempool(witness_id: XWitnessId) -> Self {
-        WitnessAnchor {
-            witness_ord: WitnessOrd::OffChain,
-            witness_id,
-        }
-    }
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[display(lowercase)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, tags = repr, into_u8, try_from_u8)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[repr(u8)]
-pub enum Layer1 {
-    #[strict_type(dumb)]
-    Bitcoin = 0,
-    Liquid = 1,
-}

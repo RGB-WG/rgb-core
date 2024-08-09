@@ -31,7 +31,7 @@ use amplify::Wrapper;
 use strict_types::TypeSystem;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
-use crate::validation::{CheckedConsignment, ConsignmentApi, Failure};
+use crate::validation::{CheckedConsignment, ConsignmentApi};
 use crate::vm::RgbIsa;
 use crate::{
     validation, AssetTags, Assignments, AssignmentsRef, ContractId, ExposedSeal, Extension,
@@ -65,14 +65,14 @@ impl Schema {
             OpRef::Genesis(genesis) => {
                 for id in genesis.asset_tags.keys() {
                     if !matches!(self.owned_types.get(id), Some(OwnedStateSchema::Fungible(_))) {
-                        status.add_failure(Failure::AssetTagNoState(*id));
+                        status.add_failure(validation::Failure::AssetTagNoState(*id));
                     }
                 }
                 for (id, ss) in &self.owned_types {
                     if ss.state_type() == StateType::Fungible &&
                         !genesis.asset_tags.contains_key(id)
                     {
-                        status.add_failure(Failure::FungibleStateNoTag(*id));
+                        status.add_failure(validation::Failure::FungibleStateNoTag(*id));
                     }
                 }
 
@@ -311,7 +311,7 @@ impl Schema {
                     opid, *type_id, err,
                 ));
             }
-            if count > *max_items {
+            if count as u32 > max_items.to_u32() {
                 status.add_failure(validation::Failure::SchemaGlobalStateLimit(
                     opid, *type_id, count, *max_items,
                 ));

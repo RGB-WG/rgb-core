@@ -31,13 +31,13 @@ use commit_verify::{CommitId, CommitmentId, Conceal, DigestExt, Sha256};
 use strict_encoding::{StrictSerialize, StrictType};
 
 use super::{ConfidentialState, ExposedState};
-use crate::{ConcealedState, RevealedState, StateType, LIB_NAME_RGB};
+use crate::{ConcealedState, RevealedState, StateType, LIB_NAME_RGB_COMMIT};
 
 /// Struct using for storing Void (i.e. absent) state
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, Default)]
 #[display("void")]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct VoidState(());
 
@@ -61,7 +61,7 @@ impl Conceal for VoidState {
 #[display(LowerHex)]
 #[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 pub struct DataState(SmallBlob);
 impl StrictSerialize for DataState {}
 
@@ -95,7 +95,7 @@ mod _serde {
 
 #[derive(Clone, Eq, PartialEq, Hash)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = ConcealedData)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
@@ -166,7 +166,7 @@ impl Debug for RevealedData {
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB, rename = "ConcealedData")]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, rename = "ConcealedData")]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

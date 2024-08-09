@@ -47,7 +47,7 @@ Schema rec
     value rec GlobalStateSchema
       reserved bytes len=1 aka=ReservedBytes1
       semId bytes len=32 aka=SemId
-      maxItems is U16
+      maxItems is U24
   ownedTypes map len=0..MAX8
     key is U16 aka=AssignmentType
     value union OwnedStateSchema

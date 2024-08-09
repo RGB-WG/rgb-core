@@ -103,12 +103,12 @@ pub enum ContractOp {
     LdG(GlobalStateType, Reg16, RegS),
 
     /// Loads part of the contract global state with type id from the first
-    /// argument at the depth from the second argument `a32` register into a
+    /// argument at the depth from the second argument `a24` register into a
     /// register provided in the third argument.
     ///
     /// If the state is absent or concealed sets destination to `None`.
     /// Does not modify content of `st0` register.
-    #[display("ldc     {0},a32{1},{2}")]
+    #[display("ldc     {0},a24{1},{2}")]
     LdC(GlobalStateType, Reg16, RegS),
 
     /// Loads operation metadata with a type id from the first argument into a
@@ -354,7 +354,7 @@ impl InstructionSet for ContractOp {
                 regs.set_s(*reg_s, Some(state.as_inner()));
             }
 
-            ContractOp::LdC(_state_type, _reg_32, _reg_s) => {
+            ContractOp::LdC(_state_type, _reg_24, _reg_s) => {
                 // TODO: implement global contract state
                 fail!()
             }
