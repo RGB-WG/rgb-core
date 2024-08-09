@@ -21,7 +21,8 @@
 // limitations under the License.
 
 use std::cell::RefCell;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet};
+use std::rc::Rc;
 
 use bp::dbc::Anchor;
 use bp::seals::txout::{CloseMethod, TxoSeal, Witness};
@@ -29,12 +30,15 @@ use bp::{dbc, Outpoint};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
-use super::status::{Failure, Warning};
+use super::status::Failure;
 use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Validity};
-use crate::{
-    AltLayer1, BundleId, ContractId, Layer1, OpId, OpRef, OpType, Operation, Opout, Schema,
-    SchemaId, TransitionBundle, TypedAssigns, XChain, XOutpoint, XOutputSeal, XWitnessId,
+use crate::vm::{
+    ContractStateAccess, ContractStateEvolve, OpOrd, OpRef, TxOrd, WitnessOrd, XWitnessId,
     XWitnessTx,
+};
+use crate::{
+    validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpType, Operation, Opout, Schema,
+    SchemaId, TransitionBundle, XChain, XOutpoint, XOutputSeal,
 };
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
@@ -62,6 +66,11 @@ pub trait ResolveWitness {
         &self,
         witness_id: XWitnessId,
     ) -> Result<XWitnessTx, WitnessResolverError>;
+
+    fn resolve_pub_witness_ord(
+        &self,
+        witness_id: XWitnessId,
+    ) -> Result<TxOrd, WitnessResolverError>;
 }
 
 impl<T: ResolveWitness> ResolveWitness for &T {
@@ -70,6 +79,13 @@ impl<T: ResolveWitness> ResolveWitness for &T {
         witness_id: XWitnessId,
     ) -> Result<XWitnessTx, WitnessResolverError> {
         ResolveWitness::resolve_pub_witness(*self, witness_id)
+    }
+
+    fn resolve_pub_witness_ord(
+        &self,
+        witness_id: XWitnessId,
+    ) -> Result<TxOrd, WitnessResolverError> {
+        ResolveWitness::resolve_pub_witness_ord(*self, witness_id)
     }
 }
 
@@ -96,9 +112,23 @@ impl<R: ResolveWitness> ResolveWitness for CheckedWitnessResolver<R> {
         }
         Ok(witness)
     }
+
+    #[inline]
+    fn resolve_pub_witness_ord(
+        &self,
+        witness_id: XWitnessId,
+    ) -> Result<TxOrd, WitnessResolverError> {
+        self.inner.resolve_pub_witness_ord(witness_id)
+    }
 }
 
-pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness> {
+pub struct Validator<
+    'consignment,
+    'resolver,
+    S: ContractStateAccess + ContractStateEvolve,
+    C: ConsignmentApi,
+    R: ResolveWitness,
+> {
     consignment: CheckedConsignment<'consignment, C>,
 
     status: RefCell<Status>,
@@ -108,19 +138,25 @@ pub struct Validator<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitne
     contract_id: ContractId,
     layers1: BTreeSet<Layer1>,
 
+    contract_state: Rc<RefCell<S>>,
     validated_op_seals: RefCell<BTreeSet<OpId>>,
     validated_op_state: RefCell<BTreeSet<OpId>>,
 
     resolver: CheckedWitnessResolver<&'resolver R>,
 }
 
-impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
-    Validator<'consignment, 'resolver, C, R>
+impl<
+    'consignment,
+    'resolver,
+    S: ContractStateAccess + ContractStateEvolve,
+    C: ConsignmentApi,
+    R: ResolveWitness,
+> Validator<'consignment, 'resolver, S, C, R>
 {
-    fn init(consignment: &'consignment C, resolver: &'resolver R) -> Self {
+    fn init(consignment: &'consignment C, resolver: &'resolver R, context: S::Context<'_>) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
-        let mut status = Status::default();
+        let status = Status::default();
         let consignment = CheckedConsignment::new(consignment);
 
         // Frequently used computation-heavy data
@@ -128,30 +164,6 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         let genesis_id = genesis.id();
         let contract_id = genesis.contract_id();
         let schema_id = genesis.schema_id;
-
-        // Collect all endpoint transitions.
-        // This is pretty simple operation; it takes a lot of code because we would like
-        // to detect any potential issues with the consignment structure and notify user
-        // about them (in form of generated warnings)
-        for (bundle_id, seal_endpoint) in consignment.terminals() {
-            let Some(bundle) = consignment.bundle(bundle_id) else {
-                status.add_failure(Failure::TerminalBundleAbsent(bundle_id));
-                continue;
-            };
-            for (opid, transition) in &bundle.known_transitions {
-                // Checking for endpoint definition duplicates
-                if !transition
-                    .assignments
-                    .values()
-                    .flat_map(TypedAssigns::to_confidential_seals)
-                    .any(|seal| seal == seal_endpoint)
-                {
-                    // We generate just a warning here because it's up to a user to decide whether
-                    // to accept consignment with wrong endpoint list
-                    status.add_warning(Warning::TerminalSealAbsent(*opid, seal_endpoint));
-                }
-            }
-        }
 
         // Validation index is used to check that all transitions presented in the
         // consignment were validated. Also, we use it to avoid double schema
@@ -172,6 +184,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
             validated_op_state,
             validated_op_seals,
             resolver: CheckedWitnessResolver::from(resolver),
+            contract_state: Rc::new(RefCell::new(S::init(context))),
         }
     }
 
@@ -184,8 +197,13 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
     /// logged into the status object, but the validation continues for the
     /// rest of the consignment data. This can help to debug and detect all
     /// problems with the consignment.
-    pub fn validate(consignment: &'consignment C, resolver: &'resolver R, testnet: bool) -> Status {
-        let mut validator = Validator::init(consignment, resolver);
+    pub fn validate(
+        consignment: &'consignment C,
+        resolver: &'resolver R,
+        testnet: bool,
+        context: S::Context<'_>,
+    ) -> Status {
+        let mut validator = Self::init(consignment, resolver, context);
         // If the network mismatches there is no point in validating the contract since
         // all witness transactions will be missed.
         if testnet != validator.consignment.genesis().testnet {
@@ -241,124 +259,113 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
         }
 
         // [VALIDATION]: Validate genesis
-        *self.status.borrow_mut() +=
-            schema.validate_state(&self.consignment, OpRef::Genesis(self.consignment.genesis()));
+        *self.status.borrow_mut() += schema.validate_state(
+            &self.consignment,
+            OpRef::Genesis(self.consignment.genesis()),
+            self.contract_state.clone(),
+        );
         self.validated_op_state.borrow_mut().insert(self.genesis_id);
 
-        // [VALIDATION]: Iterating over each endpoint, reconstructing operation
-        //               graph up to genesis for each one of them.
-        // NB: We are not aiming to validate the consignment as a whole, but instead
-        // treat it as a superposition of subgraphs, one for each endpoint; and validate
-        // them independently.
-        for (bundle_id, _) in self.consignment.terminals() {
-            let Some(bundle) = self.consignment.bundle(bundle_id) else {
-                // We already checked and errored here during the terminal validation, so just
-                // skipping.
-                continue;
-            };
-            for opid in bundle.known_transitions.keys() {
-                self.validate_logic_on_route(*opid);
+        // [VALIDATION]: Iterating over all consignment operations, ordering them according to the
+        //               consensus ordering rules.
+        let mut ops = BTreeMap::<OpOrd, OpRef>::new();
+        for bundle_id in self.consignment.bundle_ids() {
+            let bundle = self
+                .consignment
+                .bundle(bundle_id)
+                .expect("invalid checked consignment");
+            let (witness_id, _) = self
+                .consignment
+                .anchor(bundle_id)
+                .expect("invalid checked consignment");
+            let pub_ord =
+                match self.resolver.resolve_pub_witness_ord(witness_id) {
+                    Ok(ord) => ord,
+                    Err(err) => {
+                        self.status.borrow_mut().add_failure(
+                            validation::Failure::WitnessUnresolved(bundle_id, witness_id, err),
+                        );
+                        // We need to stop validation there since we can't order operations
+                        return;
+                    }
+                };
+            for (opid, op) in &bundle.known_transitions {
+                ops.insert(
+                    OpOrd {
+                        witness_ord: WitnessOrd {
+                            pub_ord,
+                            witness_id,
+                        },
+                        opid: *opid,
+                    },
+                    OpRef::Transition(op),
+                );
             }
+        }
+        // TODO: Check that we include all terminal transitions
+        for op in ops.into_values() {
+            self.validate_operation(op);
         }
     }
 
-    fn validate_logic_on_route(&self, opid: OpId) {
+    fn validate_operation(&self, operation: OpRef<'consignment>) {
         let schema = self.consignment.schema();
-        let Some(OpRef::Transition(transition)) = self.consignment.operation(opid) else {
+        let opid = operation.id();
+
+        if operation.contract_id() != self.contract_id {
             self.status
                 .borrow_mut()
-                .add_failure(Failure::OperationAbsent(opid));
-            return;
-        };
+                .add_failure(Failure::ContractMismatch(opid, operation.contract_id()));
+        }
 
-        let mut queue: VecDeque<(OpId, OpRef)> = VecDeque::new();
+        if !self.validated_op_seals.borrow().contains(&opid) &&
+            operation.op_type() == OpType::StateTransition
+        {
+            self.status
+                .borrow_mut()
+                .add_failure(Failure::SealsUnvalidated(opid));
+        }
+        // [VALIDATION]: Verify operation against the schema and scripts
+        if self.validated_op_state.borrow_mut().insert(opid) {
+            *self.status.borrow_mut() +=
+                schema.validate_state(&self.consignment, operation, self.contract_state.clone());
+        }
 
-        // Instead of constructing complex graph structures or using a recursions we
-        // utilize queue to keep the track of the upstream (ancestor) nodes and make
-        // sure that ve have validated each one of them up to genesis. The graph is
-        // valid when each of its nodes and each of its edges is valid, i.e. when all
-        // individual nodes have passed validation against the schema (we track
-        // that fact with `validation_index`) and each of the operation ancestor state
-        // change to a given operation is valid against the schema + committed
-        // into bitcoin transaction graph with proper anchor. That is what we are
-        // checking in the code below:
-        queue.push_back((opid, OpRef::Transition(transition)));
-        while let Some((opid, operation)) = queue.pop_front() {
-            let actual_opid = operation.id();
-            if opid != actual_opid {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::OperationIdMismatch {
-                        ty: operation.op_type(),
-                        expected: opid,
-                        actual: actual_opid,
-                    });
+        match operation {
+            OpRef::Genesis(_) => {
+                unreachable!("genesis is not a part of the operation history")
             }
-
-            if operation.contract_id() != self.contract_id {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::ContractMismatch(opid, operation.contract_id()));
-                continue;
-            }
-
-            if !self.validated_op_seals.borrow().contains(&opid) &&
-                operation.op_type() == OpType::StateTransition
-            {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::SealsUnvalidated(opid));
-            }
-            // [VALIDATION]: Verify operation against the schema and scripts
-            if self.validated_op_state.borrow_mut().insert(opid) {
-                *self.status.borrow_mut() += schema.validate_state(&self.consignment, operation);
-            }
-
-            match operation {
-                OpRef::Genesis(_) => {
-                    // nothing to add to the queue here
+            OpRef::Transition(transition) => {
+                for input in &transition.inputs {
+                    if self.consignment.operation(input.prev_out.op).is_none() {
+                        self.status
+                            .borrow_mut()
+                            .add_failure(Failure::OperationAbsent(input.prev_out.op));
+                    }
                 }
-                OpRef::Transition(transition) => {
-                    // Now, we must collect all parent nodes and add them to the verification queue
-                    let parent_nodes = transition.inputs.iter().filter_map(|input| {
-                        self.consignment
-                            .operation(input.prev_out.op)
-                            .map(|op| (input.prev_out.op, op))
-                            .or_else(|| {
-                                self.status
-                                    .borrow_mut()
-                                    .add_failure(Failure::OperationAbsent(input.prev_out.op));
-                                None
-                            })
-                    });
+            }
+            OpRef::Extension(extension) => {
+                for (valency, prev_id) in &extension.redeemed {
+                    let Some(prev_op) = self.consignment.operation(*prev_id) else {
+                        self.status
+                            .borrow_mut()
+                            .add_failure(Failure::ValencyNoParent {
+                                opid,
+                                prev_id: *prev_id,
+                                valency: *valency,
+                            });
+                        continue;
+                    };
 
-                    queue.extend(parent_nodes);
-                }
-                OpRef::Extension(extension) => {
-                    for (valency, prev_id) in &extension.redeemed {
-                        let Some(prev_op) = self.consignment.operation(*prev_id) else {
-                            self.status
-                                .borrow_mut()
-                                .add_failure(Failure::ValencyNoParent {
-                                    opid,
-                                    prev_id: *prev_id,
-                                    valency: *valency,
-                                });
-                            continue;
-                        };
-
-                        if !prev_op.valencies().contains(valency) {
-                            self.status
-                                .borrow_mut()
-                                .add_failure(Failure::NoPrevValency {
-                                    opid,
-                                    prev_id: *prev_id,
-                                    valency: *valency,
-                                });
-                            continue;
-                        }
-
-                        queue.push_back((*prev_id, prev_op));
+                    if !prev_op.valencies().contains(valency) {
+                        self.status
+                            .borrow_mut()
+                            .add_failure(Failure::NoPrevValency {
+                                opid,
+                                prev_id: *prev_id,
+                                valency: *valency,
+                            });
+                        continue;
                     }
                 }
             }
@@ -464,7 +471,7 @@ impl<'consignment, 'resolver, C: ConsignmentApi, R: ResolveWitness>
                 // failure!)
                 self.status
                     .borrow_mut()
-                    .add_failure(Failure::SealNoPubWitness(witness_id, err));
+                    .add_failure(Failure::SealNoPubWitness(bundle_id, witness_id, err));
                 None
             }
             Ok(pub_witness) => {

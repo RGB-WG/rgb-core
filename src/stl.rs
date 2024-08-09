@@ -29,9 +29,9 @@ use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
 
 use crate::validation::DbcProof;
-use crate::vm::GlobalOrd;
+use crate::vm::{GlobalOrd, XWitnessId};
 use crate::{
-    Extension, Genesis, OpCommitment, Schema, TransitionBundle, XWitnessId, LIB_NAME_RGB_COMMIT,
+    Extension, Genesis, OpCommitment, Schema, TransitionBundle, LIB_NAME_RGB_COMMIT,
     LIB_NAME_RGB_LOGIC,
 };
 
@@ -40,7 +40,7 @@ pub const LIB_ID_RGB_COMMIT: &str =
     "stl:tjFc6jD7-fe78CxG-WdJlH!l-uXlFfW0-XwG1!qV-MNdtNGE#orbit-airport-voice";
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_LOGIC: &str =
-    "stl:xhj2bmC8-029T1UM-AfYAzfu-wcywWGo-JPeJHq$-z3lCygQ#bonanza-boxer-equator";
+    "stl:pxDxFGo9-MbacU6J-Qug1G$1-6LsuROd-Um1H$hU-T6o2Lgk#lobster-dilemma-famous";
 
 fn _rgb_commit_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB_COMMIT), tiny_bset! {

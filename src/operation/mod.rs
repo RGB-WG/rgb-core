@@ -51,12 +51,12 @@ pub use fungible::{
 pub use global::{GlobalState, GlobalValues};
 pub use meta::{MetaValue, Metadata, MetadataError};
 pub use operations::{
-    AssetTags, Extension, Genesis, Identity, Input, Inputs, OpRef, Operation, Opout,
-    OpoutParseError, Redeemed, Transition, Valencies,
+    AssetTags, Extension, Genesis, Identity, Input, Inputs, Operation, Opout, OpoutParseError,
+    Redeemed, Transition, Valencies,
 };
 pub use seal::{
-    ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, WitnessOrd, WitnessPos,
-    XGenesisSeal, XGraphSeal, XOutputSeal, XWitnessId, XWitnessTx,
+    ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, XGenesisSeal, XGraphSeal,
+    XOutputSeal,
 };
 pub use state::{ConcealedState, ConfidentialState, ExposedState, RevealedState, StateType};
 pub use xchain::{

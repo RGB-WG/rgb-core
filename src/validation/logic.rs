@@ -20,7 +20,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::cell::RefCell;
 use std::collections::BTreeSet;
+use std::rc::Rc;
 
 use aluvm::data::Number;
 use aluvm::isa::Instr;
@@ -32,19 +34,25 @@ use strict_types::TypeSystem;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
-use crate::vm::RgbIsa;
+use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OpRef, RgbIsa, VmContext};
 use crate::{
-    validation, AssetTags, Assignments, AssignmentsRef, ContractId, ExposedSeal, Extension,
-    GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata,
-    OpFullType, OpId, OpRef, Operation, Opout, OwnedStateSchema, Schema, StateType, Transition,
-    TypedAssigns, Valencies,
+    validation, Assign, AssignmentType, Assignments, AssignmentsRef, ConcealedState,
+    ConfidentialState, ExposedSeal, ExposedState, Extension, GlobalState, GlobalStateSchema,
+    GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId, Operation, Opout,
+    OwnedStateSchema, RevealedState, Schema, StateType, Transition, TypedAssigns, Valencies,
 };
 
 impl Schema {
-    pub fn validate_state<'validator, C: ConsignmentApi>(
+    // TODO: Instead of returning status fail immediately
+    pub fn validate_state<
+        'validator,
+        C: ConsignmentApi,
+        S: ContractStateAccess + ContractStateEvolve,
+    >(
         &'validator self,
         consignment: &'validator CheckedConsignment<'_, C>,
         op: OpRef,
+        contract_state: Rc<RefCell<S>>,
     ) -> validation::Status {
         let opid = op.id();
         let mut status = validation::Status::new();
@@ -186,25 +194,24 @@ impl Schema {
         status += self.validate_valencies(opid, op.valencies(), valency_schema);
 
         let genesis = consignment.genesis();
-        let op_info = OpInfo::with(
-            genesis.contract_id(),
-            opid,
-            &op,
-            &prev_state,
-            &redeemed,
-            &genesis.asset_tags,
-        );
+        let op_info = OpInfo::with(opid, &op, &prev_state, &redeemed);
+        let context = VmContext {
+            contract_id: genesis.contract_id(),
+            asset_tags: &genesis.asset_tags,
+            op_info,
+            contract_state,
+        };
 
         // We need to run scripts as the very last step, since before that
         // we need to make sure that the operation data match the schema, so
         // scripts are not required to validate the structure of the state
         if let Some(validator) = validator {
             let scripts = consignment.scripts();
-            let mut vm = Vm::<Instr<RgbIsa>>::new();
+            let mut vm = Vm::<Instr<RgbIsa<S>>>::new();
             if let Some(ty) = ty {
                 vm.registers.set_n(RegA::A16, Reg32::Reg0, ty);
             }
-            if !vm.exec(validator, |id| scripts.get(&id), &op_info) {
+            if !vm.exec(validator, |id| scripts.get(&id), &context) {
                 let error_code: Option<Number> = vm.registers.get_n(RegA::A8, Reg32::Reg0).into();
                 status.add_failure(validation::Failure::ScriptFailure(
                     opid,
@@ -212,6 +219,8 @@ impl Schema {
                     None,
                 ));
             }
+            let contract_state = context.contract_state;
+            contract_state.borrow_mut().evolve_state(op);
         }
         status
     }
@@ -470,43 +479,6 @@ impl Schema {
     }
 }
 
-pub struct OpInfo<'op> {
-    pub contract_id: ContractId,
-    pub id: OpId,
-    pub ty: OpFullType,
-    pub asset_tags: &'op AssetTags,
-    pub metadata: &'op Metadata,
-    pub prev_state: &'op Assignments<GraphSeal>,
-    pub owned_state: AssignmentsRef<'op>,
-    pub redeemed: &'op Valencies,
-    pub valencies: &'op Valencies,
-    pub global: &'op GlobalState,
-}
-
-impl<'op> OpInfo<'op> {
-    pub fn with(
-        contract_id: ContractId,
-        id: OpId,
-        op: &'op OpRef<'op>,
-        prev_state: &'op Assignments<GraphSeal>,
-        redeemed: &'op Valencies,
-        asset_tags: &'op AssetTags,
-    ) -> Self {
-        OpInfo {
-            id,
-            contract_id,
-            ty: op.full_type(),
-            asset_tags,
-            metadata: op.metadata(),
-            prev_state,
-            owned_state: op.assignments(),
-            redeemed,
-            valencies: op.valencies(),
-            global: op.globals(),
-        }
-    }
-}
-
 fn extract_prev_state<C: ConsignmentApi>(
     consignment: &C,
     opid: OpId,
@@ -589,4 +561,99 @@ fn extract_prev_state<C: ConsignmentApi>(
     Confined::try_from(assignments)
         .expect("collections is assembled from another collection with the same size requirements")
         .into()
+}
+
+impl OwnedStateSchema {
+    pub fn validate<State: ExposedState, Seal: ExposedSeal>(
+        &self,
+        opid: OpId,
+        state_type: AssignmentType,
+        data: &Assign<State, Seal>,
+        type_system: &TypeSystem,
+    ) -> validation::Status {
+        let mut status = validation::Status::new();
+        match data {
+            Assign::Confidential { state, .. } | Assign::ConfidentialState { state, .. } => {
+                match (self, state.state_commitment()) {
+                    (OwnedStateSchema::Declarative, ConcealedState::Void) => {}
+                    (OwnedStateSchema::Fungible(_), ConcealedState::Fungible(value)) => {
+                        // [SECURITY-CRITICAL]: Bulletproofs validation
+                        if let Err(err) = value.verify_range_proof() {
+                            status.add_failure(validation::Failure::BulletproofsInvalid(
+                                opid,
+                                state_type,
+                                err.to_string(),
+                            ));
+                        }
+                    }
+                    (OwnedStateSchema::Structured(_), ConcealedState::Structured(_)) => {
+                        status.add_warning(validation::Warning::UncheckableConfidentialState(
+                            opid, state_type,
+                        ));
+                    }
+                    (OwnedStateSchema::Attachment(_), ConcealedState::Attachment(_)) => {
+                        status.add_warning(validation::Warning::UncheckableConfidentialState(
+                            opid, state_type,
+                        ));
+                    }
+                    // all other options are mismatches
+                    (state_schema, found) => {
+                        status.add_failure(validation::Failure::StateTypeMismatch {
+                            opid,
+                            state_type,
+                            expected: state_schema.state_type(),
+                            found: found.state_type(),
+                        });
+                    }
+                }
+            }
+            Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
+                match (self, state.state_data()) {
+                    (OwnedStateSchema::Declarative, RevealedState::Void) => {}
+                    (
+                        OwnedStateSchema::Attachment(media_type),
+                        RevealedState::Attachment(attach),
+                    ) if !attach.file.media_type.conforms(media_type) => {
+                        status.add_failure(validation::Failure::MediaTypeMismatch {
+                            opid,
+                            state_type,
+                            expected: *media_type,
+                            found: attach.file.media_type,
+                        });
+                    }
+                    (OwnedStateSchema::Fungible(schema), RevealedState::Fungible(v))
+                        if v.value.fungible_type() != *schema =>
+                    {
+                        status.add_failure(validation::Failure::FungibleTypeMismatch {
+                            opid,
+                            state_type,
+                            expected: *schema,
+                            found: v.value.fungible_type(),
+                        });
+                    }
+                    (OwnedStateSchema::Fungible(_), RevealedState::Fungible(_)) => {}
+                    (OwnedStateSchema::Structured(sem_id), RevealedState::Structured(data)) => {
+                        if type_system
+                            .strict_deserialize_type(*sem_id, data.value.as_ref())
+                            .is_err()
+                        {
+                            status.add_failure(validation::Failure::SchemaInvalidOwnedValue(
+                                opid, state_type, *sem_id,
+                            ));
+                        };
+                    }
+                    // all other options are mismatches
+                    (state_schema, found) => {
+                        status.add_failure(validation::Failure::StateTypeMismatch {
+                            opid,
+                            state_type,
+                            expected: state_schema.state_type(),
+                            found: found.state_type(),
+                        });
+                    }
+                }
+            }
+        }
+        status
+    }
 }

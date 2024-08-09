@@ -31,10 +31,8 @@ use amplify::confinement::Confined;
 use strict_types::TypeSystem;
 
 use super::EAnchor;
-use crate::{
-    BundleId, Genesis, OpId, OpRef, Operation, Schema, SecretSeal, TransitionBundle, XChain,
-    XWitnessId,
-};
+use crate::vm::{OpRef, XWitnessId};
+use crate::{BundleId, Genesis, OpId, Operation, Schema, TransitionBundle};
 
 pub const CONSIGNMENT_MAX_LIBS: usize = 1024;
 
@@ -58,10 +56,6 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
     }
 
     fn genesis(&self) -> &Genesis { self.0.genesis() }
-
-    fn terminals<'iter>(&self) -> impl Iterator<Item = (BundleId, XChain<SecretSeal>)> + 'iter {
-        self.0.terminals()
-    }
 
     fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter { self.0.bundle_ids() }
 
@@ -102,17 +96,6 @@ pub trait ConsignmentApi {
 
     /// Contract genesis.
     fn genesis(&self) -> &Genesis;
-
-    /// The final state ("endpoints") provided by this consignment.
-    ///
-    /// There are two reasons for having endpoints:
-    /// - navigation towards genesis from the final state is more
-    ///   computationally efficient, since state transition/extension graph is
-    ///   directed towards genesis (like bitcoin transaction graph)
-    /// - if the consignment contains concealed state (known by the receiver),
-    ///   it will be computationally inefficient to understand which of the
-    ///   state transitions represent the final state
-    fn terminals<'iter>(&self) -> impl Iterator<Item = (BundleId, XChain<SecretSeal>)> + 'iter;
 
     /// Returns iterator over all bundle ids present in the consignment.
     fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter;

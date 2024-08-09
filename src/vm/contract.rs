@@ -21,63 +21,342 @@
 // limitations under the License.
 
 use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::fmt::Debug;
+use std::num::NonZeroU32;
+use std::rc::Rc;
 
 use amplify::num::u24;
+use amplify::Bytes32;
+use bp::seals::txout::{CloseMethod, ExplicitSeal, VerifyError, Witness};
+use bp::{dbc, Tx, Txid};
+use commit_verify::mpc;
+use single_use_seals::SealWitness;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    AssignmentType, AttachState, DataState, FungibleState, GlobalStateType, WitnessOrd, XOutpoint,
-    XWitnessId, LIB_NAME_RGB_LOGIC,
+    AssetTags, AssignmentType, Assignments, AssignmentsRef, AttachState, ContractId, DataState,
+    ExposedSeal, Extension, ExtensionType, FungibleState, Genesis, GlobalState, GlobalStateType,
+    GraphSeal, Impossible, Inputs, Metadata, OpFullType, OpId, OpType, Operation, Transition,
+    TransitionType, TxoSeal, TypedAssigns, Valencies, XChain, XOutpoint, XOutputSeal,
+    LIB_NAME_RGB_LOGIC,
 };
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display, From)]
+pub type XWitnessId = XChain<Txid>;
+
+pub type XWitnessTx<X = Impossible> = XChain<Tx, X>;
+
+impl XWitnessTx {
+    pub fn witness_id(&self) -> XWitnessId {
+        match self {
+            Self::Bitcoin(tx) => XWitnessId::Bitcoin(tx.txid()),
+            Self::Liquid(tx) => XWitnessId::Liquid(tx.txid()),
+            Self::Other(_) => unreachable!(),
+        }
+    }
+}
+
+impl<Dbc: dbc::Proof> XChain<Witness<Dbc>> {
+    pub fn witness_id(&self) -> XWitnessId {
+        match self {
+            Self::Bitcoin(w) => XWitnessId::Bitcoin(w.txid),
+            Self::Liquid(w) => XWitnessId::Liquid(w.txid),
+            Self::Other(_) => unreachable!(),
+        }
+    }
+}
+
+impl<Dbc: dbc::Proof, Seal: TxoSeal> SealWitness<Seal> for XChain<Witness<Dbc>> {
+    type Message = mpc::Commitment;
+    type Error = VerifyError<Dbc::Error>;
+
+    fn verify_seal(&self, seal: &Seal, msg: &Self::Message) -> Result<(), Self::Error> {
+        match self {
+            Self::Bitcoin(witness) | Self::Liquid(witness) => witness.verify_seal(seal, msg),
+            Self::Other(_) => unreachable!(),
+        }
+    }
+
+    fn verify_many_seals<'seal>(
+        &self,
+        seals: impl IntoIterator<Item = &'seal Seal>,
+        msg: &Self::Message,
+    ) -> Result<(), Self::Error>
+    where
+        Seal: 'seal,
+    {
+        match self {
+            Self::Bitcoin(witness) | Self::Liquid(witness) => witness.verify_many_seals(seals, msg),
+            Self::Other(_) => unreachable!(),
+        }
+    }
+}
+
+impl<U: ExposedSeal> XChain<U> {
+    pub fn method(self) -> CloseMethod
+    where U: TxoSeal {
+        match self {
+            XChain::Bitcoin(seal) => seal.method(),
+            XChain::Liquid(seal) => seal.method(),
+            XChain::Other(_) => unreachable!(),
+        }
+    }
+
+    #[inline]
+    pub fn to_output_seal(self) -> Option<XOutputSeal>
+    where U: TxoSeal {
+        Some(match self {
+            XChain::Bitcoin(seal) => {
+                let outpoint = seal.outpoint()?;
+                XChain::Bitcoin(ExplicitSeal::new(seal.method(), outpoint))
+            }
+            XChain::Liquid(seal) => {
+                let outpoint = seal.outpoint()?;
+                XChain::Liquid(ExplicitSeal::new(seal.method(), outpoint))
+            }
+            XChain::Other(_) => unreachable!(),
+        })
+    }
+
+    pub fn try_to_output_seal(self, witness_id: XWitnessId) -> Result<XOutputSeal, Self>
+    where U: TxoSeal {
+        self.to_output_seal()
+            .or(match (self, witness_id) {
+                (XChain::Bitcoin(seal), XWitnessId::Bitcoin(txid)) => {
+                    Some(XChain::Bitcoin(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
+                }
+                (XChain::Liquid(seal), XWitnessId::Liquid(txid)) => {
+                    Some(XChain::Liquid(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
+                }
+                _ => None,
+            })
+            .ok_or(self)
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug, From)]
+pub enum OpRef<'op> {
+    #[from]
+    Genesis(&'op Genesis),
+    #[from]
+    Transition(&'op Transition),
+    #[from]
+    Extension(&'op Extension),
+}
+
+impl<'op> Operation for OpRef<'op> {
+    fn op_type(&self) -> OpType {
+        match self {
+            OpRef::Genesis(op) => op.op_type(),
+            OpRef::Transition(op) => op.op_type(),
+            OpRef::Extension(op) => op.op_type(),
+        }
+    }
+
+    fn full_type(&self) -> OpFullType {
+        match self {
+            OpRef::Genesis(op) => op.full_type(),
+            OpRef::Transition(op) => op.full_type(),
+            OpRef::Extension(op) => op.full_type(),
+        }
+    }
+
+    fn id(&self) -> OpId {
+        match self {
+            OpRef::Genesis(op) => op.id(),
+            OpRef::Transition(op) => op.id(),
+            OpRef::Extension(op) => op.id(),
+        }
+    }
+
+    fn contract_id(&self) -> ContractId {
+        match self {
+            OpRef::Genesis(op) => op.contract_id(),
+            OpRef::Transition(op) => op.contract_id(),
+            OpRef::Extension(op) => op.contract_id(),
+        }
+    }
+
+    fn transition_type(&self) -> Option<TransitionType> {
+        match self {
+            OpRef::Genesis(op) => op.transition_type(),
+            OpRef::Transition(op) => op.transition_type(),
+            OpRef::Extension(op) => op.transition_type(),
+        }
+    }
+
+    fn extension_type(&self) -> Option<ExtensionType> {
+        match self {
+            OpRef::Genesis(op) => op.extension_type(),
+            OpRef::Transition(op) => op.extension_type(),
+            OpRef::Extension(op) => op.extension_type(),
+        }
+    }
+
+    fn metadata(&self) -> &Metadata {
+        match self {
+            OpRef::Genesis(op) => op.metadata(),
+            OpRef::Transition(op) => op.metadata(),
+            OpRef::Extension(op) => op.metadata(),
+        }
+    }
+
+    fn globals(&self) -> &GlobalState {
+        match self {
+            OpRef::Genesis(op) => op.globals(),
+            OpRef::Transition(op) => op.globals(),
+            OpRef::Extension(op) => op.globals(),
+        }
+    }
+
+    fn valencies(&self) -> &Valencies {
+        match self {
+            OpRef::Genesis(op) => op.valencies(),
+            OpRef::Transition(op) => op.valencies(),
+            OpRef::Extension(op) => op.valencies(),
+        }
+    }
+
+    fn assignments(&self) -> AssignmentsRef<'op> {
+        match self {
+            OpRef::Genesis(op) => (&op.assignments).into(),
+            OpRef::Transition(op) => (&op.assignments).into(),
+            OpRef::Extension(op) => (&op.assignments).into(),
+        }
+    }
+
+    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
+        match self {
+            OpRef::Genesis(op) => op.assignments_by_type(t),
+            OpRef::Transition(op) => op.assignments_by_type(t),
+            OpRef::Extension(op) => op.assignments_by_type(t),
+        }
+    }
+
+    fn inputs(&self) -> Inputs {
+        match self {
+            OpRef::Genesis(op) => op.inputs(),
+            OpRef::Transition(op) => op.inputs(),
+            OpRef::Extension(op) => op.inputs(),
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = custom)]
+#[strict_type(lib = LIB_NAME_RGB_LOGIC)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[display("{height}@{timestamp}")]
+pub struct TxPos {
+    height: u32,
+    timestamp: i64,
+}
+
+impl TxPos {
+    pub fn new(height: u32, timestamp: i64) -> Option<Self> {
+        if height == 0 || timestamp < 1231006505 {
+            return None;
+        }
+        Some(TxPos { height, timestamp })
+    }
+
+    pub fn height(&self) -> NonZeroU32 { NonZeroU32::new(self.height).expect("invariant") }
+}
+
+impl PartialOrd for TxPos {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
+impl Ord for TxPos {
+    /// Since we support multiple layer 1, we have to order basing on the
+    /// timestamp information and not height. The timestamp data are consistent
+    /// accross multiple blockchains, while height evolves with a different
+    /// speed and can't be used in comparisons.
+    fn cmp(&self, other: &Self) -> Ordering {
+        assert!(self.timestamp > 0);
+        assert!(other.timestamp > 0);
+        self.timestamp.cmp(&other.timestamp)
+    }
+}
+
+/// RGB consensus information about the status of a witness transaction. This
+/// information is used in ordering state transition and state extension
+/// processing in the AluVM during the validation, as well as consensus ordering
+/// of the contract global state data, as they are presented to all contract
+/// users.
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, From)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = order)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
-pub enum AssignmentWitness {
-    #[display("~")]
-    #[strict_type(tag = 0, dumb)]
-    Absent,
+pub enum TxOrd {
+    /// Witness transaction must be excluded from the state processing.
+    ///
+    /// Cases for the exclusion:
+    /// - transaction was removed from blockchain after a re-org and its inputs
+    ///   were spent by other transaction;
+    /// - previous transaction(s) after RBF replacement, once it is excluded
+    ///   from the mempool and replaced by RBFed successors;
+    /// - past state channel transactions once a new channel state is signed
+    ///   (and until they may become valid once again due to an uncooperative
+    ///   channel closing).
+    #[display("archived")]
+    #[strict_type(dumb)]
+    Archived,
 
-    // TODO: Consider separating transition and extension witnesses
+    /// Transaction is included into layer 1 blockchain at a specific height and
+    /// timestamp.
+    ///
+    /// NB: only timestamp is used in consensus ordering though, see
+    /// [`TxPos::ord`] for the details.
     #[from]
     #[display(inner)]
-    #[strict_type(tag = 1)]
-    Present(XWitnessId),
+    OnChain(TxPos),
+
+    /// Valid witness transaction which commits the most recent RGB state, but
+    /// is not (yet) included into a layer 1 blockchain. Such transactions have
+    /// a higher priority over onchain transactions (i.e. they are processed by
+    /// the VM at the very end, and their global state becomes at the top of the
+    /// contract state).
+    ///
+    /// NB: not each and every signed offchain transaction should have this
+    /// status; all offchain cases which fall under [`Self::Archived`] must be
+    /// excluded. Valid cases for assigning [`Self::Offchain`] status are:
+    /// - transaction is present in the memepool;
+    /// - transaction is a part of transaction graph inside a state channel
+    ///   (only actual channel state is accounted for; all previous channel
+    ///   state must have corresponding transactions set to [`Self::Archived`]);
+    /// - transaction is an RBF replacement prepared to be broadcast (with the
+    ///   previous transaction set to [`Self::Archived`] at the same moment).
+    #[display("offchain@{priority}")]
+    OffChain {
+        /// Used for internal ordering inside the offchain transaction graph,
+        /// for instance to ensure that HTLC transactions in a lightning channel
+        /// have higher priority (i.e. computed after) than commitment.
+        priority: u32,
+    },
 }
 
-impl PartialEq<XWitnessId> for AssignmentWitness {
-    fn eq(&self, other: &XWitnessId) -> bool { self.witness_id() == Some(*other) }
-}
-impl PartialEq<AssignmentWitness> for XWitnessId {
-    fn eq(&self, other: &AssignmentWitness) -> bool { other.witness_id() == Some(*self) }
+impl TxOrd {
+    #[inline]
+    pub fn offchain(priority: u32) -> Self { TxOrd::OffChain { priority } }
 }
 
-impl From<Option<XWitnessId>> for AssignmentWitness {
-    fn from(value: Option<XWitnessId>) -> Self {
-        match value {
-            None => AssignmentWitness::Absent,
-            Some(id) => AssignmentWitness::Present(id),
-        }
-    }
-}
-
-impl AssignmentWitness {
-    pub fn witness_id(&self) -> Option<XWitnessId> {
-        match self {
-            AssignmentWitness::Absent => None,
-            AssignmentWitness::Present(witness_id) => Some(*witness_id),
-        }
-    }
-}
-
-/// Txid and height information ordered according to the RGB consensus rules.
+/// Information about public witness used for ordering according to the RGB
+/// consensus rules.
+///
+/// First, we account for [`TxOrd`], such that those state which witness
+/// transactions were mined earlier come into the state computing earlier as
+/// well. However, if two witness transactions were mined in the same block, we
+/// order them lexicographically basing on the witness id.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC)]
@@ -86,22 +365,22 @@ impl AssignmentWitness {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[display("{witness_id}/{witness_ord}")]
-pub struct WitnessAnchor {
-    pub witness_ord: WitnessOrd,
+#[display("{witness_id}/{pub_ord}")]
+pub struct WitnessOrd {
+    pub pub_ord: TxOrd,
     pub witness_id: XWitnessId,
 }
 
-impl PartialOrd for WitnessAnchor {
+impl PartialOrd for WitnessOrd {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl Ord for WitnessAnchor {
+impl Ord for WitnessOrd {
     fn cmp(&self, other: &Self) -> Ordering {
         if self == other {
             return Ordering::Equal;
         }
-        match self.witness_ord.cmp(&other.witness_ord) {
+        match self.pub_ord.cmp(&other.pub_ord) {
             Ordering::Less => Ordering::Less,
             Ordering::Greater => Ordering::Greater,
             Ordering::Equal => self.witness_id.cmp(&other.witness_id),
@@ -109,22 +388,37 @@ impl Ord for WitnessAnchor {
     }
 }
 
-impl WitnessAnchor {
-    pub fn with(witness_id: XWitnessId, witness_ord: WitnessOrd) -> Self {
-        WitnessAnchor {
+impl WitnessOrd {
+    pub fn with(witness_id: XWitnessId, pub_ord: TxOrd) -> Self {
+        WitnessOrd {
             witness_id,
-            witness_ord,
+            pub_ord,
         }
     }
 
     pub fn from_mempool(witness_id: XWitnessId, priority: u32) -> Self {
-        WitnessAnchor {
-            witness_ord: WitnessOrd::OffChain { priority },
+        WitnessOrd {
+            pub_ord: TxOrd::OffChain { priority },
             witness_id,
         }
     }
 }
 
+/// Consensus ordering of operations within a contract.
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_LOGIC)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct OpOrd {
+    pub witness_ord: WitnessOrd,
+    pub opid: OpId,
+}
+
+/// Consensus ordering of global state
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC)]
@@ -134,7 +428,9 @@ impl WitnessAnchor {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct GlobalOrd {
-    pub witness_anchor: Option<WitnessAnchor>,
+    // Absent for state defined in genesis
+    pub witness_ord: Option<WitnessOrd>,
+    pub opid: OpId,
     pub idx: u16,
 }
 
@@ -147,7 +443,7 @@ impl Ord for GlobalOrd {
         if self == other {
             return Ordering::Equal;
         }
-        match (self.witness_anchor, &other.witness_anchor) {
+        match (self.witness_ord, &other.witness_ord) {
             (None, None) => self.idx.cmp(&other.idx),
             (None, Some(_)) => Ordering::Less,
             (Some(_), None) => Ordering::Greater,
@@ -159,21 +455,23 @@ impl Ord for GlobalOrd {
 
 impl GlobalOrd {
     #[inline]
-    pub fn with_witness(witness_id: XWitnessId, ord: WitnessOrd, idx: u16) -> Self {
+    pub fn with_witness(opid: OpId, witness_id: XWitnessId, ord: TxOrd, idx: u16) -> Self {
         GlobalOrd {
-            witness_anchor: Some(WitnessAnchor::with(witness_id, ord)),
+            witness_ord: Some(WitnessOrd::with(witness_id, ord)),
+            opid,
             idx,
         }
     }
     #[inline]
-    pub fn genesis(idx: u16) -> Self {
+    pub fn genesis(opid: OpId, idx: u16) -> Self {
         GlobalOrd {
-            witness_anchor: None,
+            witness_ord: None,
+            opid,
             idx,
         }
     }
     #[inline]
-    pub fn witness_id(&self) -> Option<XWitnessId> { self.witness_anchor.map(|a| a.witness_id) }
+    pub fn witness_id(&self) -> Option<XWitnessId> { self.witness_ord.map(|a| a.witness_id) }
 }
 
 pub trait GlobalStateIter {
@@ -210,7 +508,9 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     #[inline]
     pub fn new(mut iter: I) -> Self {
         let last_ord = iter.prev().map(|(ord, _)| ord).unwrap_or(GlobalOrd {
-            witness_anchor: None,
+            // This is dumb object which must always have the lowest ordering.
+            witness_ord: None,
+            opid: Bytes32::zero().into(),
             idx: 0,
         });
         iter.reset(u24::ZERO);
@@ -232,10 +532,10 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
                  global state according to the consensus ordering"
             );
         }
-        if let Some(WitnessAnchor {
-            witness_ord: WitnessOrd::Archived,
+        if let Some(WitnessOrd {
+            pub_ord: TxOrd::Archived,
             ..
-        }) = ord.witness_anchor
+        }) = ord.witness_ord
         {
             panic!("invalid GlobalStateIter implementation returning WitnessAnchor::Archived")
         }
@@ -282,7 +582,7 @@ impl<I: GlobalStateIter> Iterator for GlobalContractState<I> {
 #[display("unknown global state type {0} requested from the contract")]
 pub struct UnknownGlobalStateType(pub GlobalStateType);
 
-pub trait ContractState {
+pub trait ContractStateAccess: Debug {
     fn global(
         &self,
         ty: GlobalStateType,
@@ -307,4 +607,48 @@ pub trait ContractState {
         outpoint: XOutpoint,
         ty: AssignmentType,
     ) -> impl DoubleEndedIterator<Item = impl Borrow<AttachState>>;
+}
+
+pub trait ContractStateEvolve {
+    type Context<'ctx>;
+    fn init(context: Self::Context<'_>) -> Self;
+    fn evolve_state(&mut self, op: OpRef);
+}
+
+pub struct VmContext<'op, S: ContractStateAccess> {
+    pub contract_id: ContractId,
+    pub asset_tags: &'op AssetTags,
+    pub op_info: OpInfo<'op>,
+    pub contract_state: Rc<RefCell<S>>,
+}
+
+pub struct OpInfo<'op> {
+    pub id: OpId,
+    pub ty: OpFullType,
+    pub metadata: &'op Metadata,
+    pub prev_state: &'op Assignments<GraphSeal>,
+    pub owned_state: AssignmentsRef<'op>,
+    pub redeemed: &'op Valencies,
+    pub valencies: &'op Valencies,
+    pub global: &'op GlobalState,
+}
+
+impl<'op> OpInfo<'op> {
+    pub fn with(
+        id: OpId,
+        op: &'op OpRef<'op>,
+        prev_state: &'op Assignments<GraphSeal>,
+        redeemed: &'op Valencies,
+    ) -> Self {
+        OpInfo {
+            id,
+            ty: op.full_type(),
+            metadata: op.metadata(),
+            prev_state,
+            owned_state: op.assignments(),
+            redeemed,
+            valencies: op.valencies(),
+            global: op.globals(),
+        }
+    }
 }

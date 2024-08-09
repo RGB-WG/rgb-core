@@ -27,7 +27,7 @@ use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, IsaSeg, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg};
 
-use crate::vm::opcodes::{INSTR_TIMECHAIN_FROM, INSTR_TIMECHAIN_TO};
+use super::opcodes::{INSTR_TIMECHAIN_FROM, INSTR_TIMECHAIN_TO};
 
 // TODO: Implement bitcoin blockchain introspection
 

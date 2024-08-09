@@ -30,7 +30,7 @@ use commit_verify::{Conceal, ReservedBytes};
 use strict_encoding::{StrictDumb, StrictEncode};
 
 use super::ExposedState;
-use crate::contract::seal::GenesisSeal;
+use crate::operation::seal::GenesisSeal;
 use crate::{
     AssignmentType, ExposedSeal, GraphSeal, RevealedAttach, RevealedData, RevealedValue,
     SecretSeal, StateType, VoidState, XChain, LIB_NAME_RGB_COMMIT,

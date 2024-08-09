@@ -22,14 +22,12 @@
 
 mod schema;
 mod logic;
-mod state;
 mod validator;
 mod consignment;
 mod status;
-mod anchor;
+mod commitments;
 
-pub use anchor::{DbcError, DbcProof, EAnchor};
+pub use commitments::{DbcError, DbcProof, EAnchor};
 pub use consignment::{CheckedConsignment, ConsignmentApi, Scripts, CONSIGNMENT_MAX_LIBS};
-pub(crate) use logic::OpInfo;
 pub use status::{Failure, Info, Status, Validity, Warning};
 pub use validator::{ResolveWitness, Validator, WitnessResolverError};

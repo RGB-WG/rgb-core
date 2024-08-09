@@ -28,15 +28,14 @@ use aluvm::isa::{Bytecode, BytecodeError, ExecStep, InstructionSet};
 use aluvm::library::{CodeEofError, IsaSeg, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg};
 
-use super::{ContractOp, TimechainOp};
-use crate::validation::OpInfo;
-use crate::vm::opcodes::{INSTR_RGBISA_FROM, INSTR_RGBISA_TO};
+use super::opcodes::{INSTR_RGBISA_FROM, INSTR_RGBISA_TO};
+use super::{ContractOp, ContractStateAccess, TimechainOp, VmContext};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(inner)]
 #[non_exhaustive]
-pub enum RgbIsa {
-    Contract(ContractOp),
+pub enum RgbIsa<S: ContractStateAccess> {
+    Contract(ContractOp<S>),
 
     Timechain(TimechainOp),
 
@@ -45,8 +44,8 @@ pub enum RgbIsa {
     Fail(u8),
 }
 
-impl InstructionSet for RgbIsa {
-    type Context<'ctx> = OpInfo<'ctx>;
+impl<S: ContractStateAccess> InstructionSet for RgbIsa<S> {
+    type Context<'ctx> = VmContext<'ctx, S>;
 
     fn isa_ids() -> IsaSeg { IsaSeg::with("RGB") }
 
@@ -86,7 +85,7 @@ impl InstructionSet for RgbIsa {
     }
 }
 
-impl Bytecode for RgbIsa {
+impl<S: ContractStateAccess> Bytecode for RgbIsa<S> {
     fn instr_range() -> RangeInclusive<u8> { INSTR_RGBISA_FROM..=INSTR_RGBISA_TO }
 
     fn instr_byte(&self) -> u8 {
@@ -113,7 +112,7 @@ impl Bytecode for RgbIsa {
     {
         let instr = reader.peek_u8()?;
         Ok(match instr {
-            instr if ContractOp::instr_range().contains(&instr) => {
+            instr if ContractOp::<S>::instr_range().contains(&instr) => {
                 RgbIsa::Contract(ContractOp::decode(reader)?)
             }
             instr if TimechainOp::instr_range().contains(&instr) => {

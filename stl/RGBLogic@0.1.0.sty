@@ -1,5 +1,5 @@
 {-
-  Id: stl:xhj2bmC8-029T1UM-AfYAzfu-wcywWGo-JPeJHq$-z3lCygQ#bonanza-boxer-equator
+  Id: stl:pxDxFGo9-MbacU6J-Qug1G$1-6LsuROd-Um1H$hU-T6o2Lgk#lobster-dilemma-famous
   Name: RGBLogic
   Version: 0.1.0
   Description: Consensus logic layer for RGB smart contracts
@@ -19,9 +19,8 @@ import BPCore#garbo-radius-peru
   use OpretProof#good-village-flex
 
 import RGBCommit#orbit-airport-voice
-  use WitnessPos#snow-local-tonight
   use XChainTxid#liquid-river-absorb
-  use WitnessOrd#samuel-easy-brandy
+  use OpId#picnic-single-gloria
 
 import Bitcoin#signal-color-cipher
   use ScriptBytes#equator-cockpit-gong
@@ -37,10 +36,20 @@ import Bitcoin#signal-color-cipher
 data DbcProof          : tapret#1 BPCore.TapretProof
                        | opret BPCore.OpretProof
 
-@mnemonic(miguel-lava-extend)
-data GlobalOrd         : witnessAnchor WitnessAnchor?, idx U16
+@mnemonic(fiber-lucas-harmony)
+data GlobalOrd         : witnessOrd WitnessOrd?
+                       , opid RGBCommit.OpId
+                       , idx U16
 
-@mnemonic(remote-daniel-bombay)
-data WitnessAnchor     : witnessOrd RGBCommit.WitnessOrd, witnessId RGBCommit.XChainTxid
+@mnemonic(degree-journal-mayor)
+data TxOrd             : archived ()
+                       | onChain TxPos
+                       | offChain priority U32
+
+@mnemonic(john-invest-weekend)
+data TxPos             : height U32, timestamp I64
+
+@mnemonic(fish-yoyo-logic)
+data WitnessOrd        : pubOrd TxOrd, witnessId RGBCommit.XChainTxid
 
 
