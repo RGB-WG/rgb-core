@@ -617,7 +617,8 @@ pub trait ContractStateAccess: Debug {
 pub trait ContractStateEvolve {
     type Context<'ctx>;
     fn init(context: Self::Context<'_>) -> Self;
-    // TODO: Use more specific error type
+    // TODO: distinguish contract validation failure errors from connectivity
+    //       errors. Allow custom error types here.
     fn evolve_state(&mut self, op: OrdOpRef) -> Result<(), confinement::Error>;
 }
 
