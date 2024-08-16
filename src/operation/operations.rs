@@ -161,6 +161,7 @@ impl<'a> IntoIterator for &'a Redeemed {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
+// TODO: Consider requiring minimum number of inputs to be 1
 pub struct Inputs(SmallOrdSet<Input>);
 
 impl<'a> IntoIterator for &'a Inputs {
