@@ -262,7 +262,7 @@ pub enum TypeCommitment {
 #[commit_encode(strategy = strict, id = OpId)]
 pub struct OpCommitment {
     pub ffv: Ffv,
-    pub nonce: u8,
+    pub nonce: u64,
     pub op_type: TypeCommitment,
     pub metadata: StrictHash,
     pub globals: MerkleHash,
@@ -287,7 +287,7 @@ impl Genesis {
         };
         OpCommitment {
             ffv: self.ffv,
-            nonce: u8::MAX,
+            nonce: u64::MAX,
             op_type: TypeCommitment::Genesis(base),
             metadata: self.metadata.commit_id(),
             globals: MerkleHash::merklize(&self.globals),
