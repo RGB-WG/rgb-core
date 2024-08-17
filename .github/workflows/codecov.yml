@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - master
-      - develop
-      - 'v[0-9]+.[0-9]+'
+    tags:
+      - 'v[0-9]+\.*'
   pull_request:
     branches:
       - master
@@ -19,23 +19,22 @@ jobs:
   codecov:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install Nix
-        uses: cachix/install-nix-action@V27
-      - name: Build
-        run: nix develop .#codecov -c cargo build --release
-      - name: Test
-        run: nix develop .#codecov -c cargo test --all-features --no-fail-fast
-      - name: Install grcov
-        run: nix develop .#codecov -c cargo install grcov
-      - name: Generate coverage
-        run: nix develop .#codecov -c grcov . --binary-path target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../**' --ignore '/*' -o coverage.lcov
-      - name: Upload coverage
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: llvm-tools-preview
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: taiki-e/install-action@nextest
+      - name: Collect coverage data (including doctests)
+        run: |
+          cargo +nightly llvm-cov --no-report nextest --workspace --all-features
+          cargo +nightly llvm-cov --no-report --doc --workspace --all-features
+          cargo +nightly llvm-cov report --doctests --lcov --output-path lcov.info
+      - name: Upload coverage data to codecov
         uses: codecov/codecov-action@v4
         with:
-          files: ./coverage.lcov
           flags: rust
-          # TODO: set true when CODECOV_TOKEN is set
-          fail_ci_if_error: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true

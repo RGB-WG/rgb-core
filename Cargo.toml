@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.11.0-beta.6"
+version = "0.11.0-beta.7"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -22,15 +22,15 @@ name = "rgbcore-stl"
 required-features = ["stl"]
 
 [dependencies]
-amplify = { version = "~4.6.0", features = ["rand"] }
-baid64 = "~0.2.0"
-strict_encoding = "~2.7.0-beta.4"
-strict_types = { version = "~2.7.0-beta.4", features = ["armor"] }
-aluvm = { version = "~0.11.0-beta.6", features = ["std", "ascii-armor"] }
-commit_verify = { version = "~0.11.0-beta.6", features = ["rand", "derive"] }
-single_use_seals = "~0.11.0-beta.6"
-bp-core = { version = "~0.11.0-beta.6" }
-secp256k1-zkp = { version = "0.10.1", features = ["rand", "rand-std", "global-context"] } # TODO: Update version before the release
+amplify = { version = "~4.7.0", features = ["rand"] }
+baid64 = "~0.2.2"
+strict_encoding = "~2.7.0-rc.1"
+strict_types = { version = "~2.7.0-rc.1", features = ["armor"] }
+aluvm = { version = "~0.11.0-beta.7", features = ["std", "ascii-armor"] }
+commit_verify = { version = "~0.11.0-beta.7", features = ["rand", "derive"] }
+single_use_seals = "~0.11.0-beta.7"
+bp-core = { version = "~0.11.0-beta.7" }
+secp256k1-zkp = { version = "0.11.0", features = ["rand", "rand-std", "global-context"] } # TODO: Update version before the release
 mime = "~0.3.17"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 chrono = "0.4.38"

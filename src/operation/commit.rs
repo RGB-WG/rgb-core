@@ -208,7 +208,7 @@ impl StrictDumb for BundleDisclosure {
     fn strict_dumb() -> Self {
         Self {
             id: strict_dumb!(),
-            known_transitions: confined_bset! { strict_dumb!() },
+            known_transitions: Confined::with(strict_dumb!()),
         }
     }
 }
@@ -218,7 +218,7 @@ impl TransitionBundle {
     pub fn disclose(&self) -> BundleDisclosure {
         BundleDisclosure {
             id: self.bundle_id(),
-            known_transitions: Confined::from_iter_unsafe(
+            known_transitions: Confined::from_iter_checked(
                 self.known_transitions.values().map(|t| t.disclose_hash()),
             ),
         }

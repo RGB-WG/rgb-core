@@ -298,12 +298,12 @@ pub trait Operation {
 
         OpDisclose {
             id: self.id(),
-            seals: Confined::from_collection_unsafe(seals),
-            fungible: Confined::from_iter_unsafe(
+            seals: Confined::from_checked(seals),
+            fungible: Confined::from_iter_checked(
                 fungible.into_iter().map(|(k, s)| (k, s.commitment)),
             ),
-            data: Confined::from_collection_unsafe(data),
-            attach: Confined::from_collection_unsafe(attach),
+            data: Confined::from_checked(data),
+            attach: Confined::from_checked(attach),
         }
     }
 

@@ -1,11 +1,11 @@
-name: Build Check
+name: Build
 
 on:
   push:
     branches:
       - master
-      - develop
-      - 'v[0-9]+.[0-9]+'
+    tags:
+      - 'v[0-9]+\.*'
   pull_request:
     branches:
       - master
@@ -20,62 +20,48 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # NOTE: Dont use nix here everything should be based on the ubuntu-latest
-      - name: Install rust stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - name: Latest Ubuntu build check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --workspace
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo check --workspace
+  no-default:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo check --workspace --no-default-features
   features:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        feature:
-          - stl
-          - serde
+        feature: [ stl, serde ]
     steps:
       - uses: actions/checkout@v4
-      - name: Install Nix
-        uses: cachix/install-nix-action@V27
-      - name: Check feature ${{ matrix.feature }} only
-        run: nix develop .#stable -c cargo check --no-default-features --features=${{ matrix.feature }}
-      - name: Check feature ${{ matrix.feature }} with defaults
-        run: nix develop .#stable -c cargo check --features=${{ matrix.feature }}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Feature ${{matrix.feature}}
+        run: cargo check --workspace --no-default-features --features=${{matrix.feature}}
+      - name: Feature ${{matrix.feature}}
+        run: cargo check --workspace --features=${{matrix.feature}}
   platforms:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04, ubuntu-22.04, macos-12, macos-13, windows-2019, windows-2022 ]
+        os: [ ubuntu-22.04, ubuntu-latest, macos-13, macos-latest, windows-2019, windows-latest ]
     steps:
       - uses: actions/checkout@v4
-      # NOTE: Dont use nix in platform checks everything should based on the host system
-      - name: Install rust stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - name: Build check with all features
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --workspace --all-targets --all-features
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Platform ${{matrix.os}}
+        run: cargo check --workspace --all-features # we skip test targets here to be sure that the main library can be built
   toolchains:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [ nightly, beta, stable, msrv ]
+        toolchain: [ nightly, beta, stable, 1.75.0 ]
     steps:
-      - name: checkout
-        uses: actions/checkout@v4
-      - name: Install Nix
-        uses: cachix/install-nix-action@V27
-      - name: Check rgb-core
-        run: nix develop ".#${{ matrix.toolchain }}" -c cargo check --workspace --all-targets --all-features
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{matrix.toolchain}}
+      - name: Toolchain ${{matrix.toolchain}}
+        run: cargo +${{matrix.toolchain}} check --workspace --all-targets --all-features

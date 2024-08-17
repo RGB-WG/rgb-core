@@ -80,11 +80,7 @@ impl OwnedStateSchema {
     }
 
     pub fn sem_id(&self) -> Option<SemId> {
-        if let Self::Structured(id) = self {
-            Some(*id)
-        } else {
-            None
-        }
+        if let Self::Structured(id) = self { Some(*id) } else { None }
     }
 }
 
