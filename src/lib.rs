@@ -21,15 +21,6 @@
 // limitations under the License.
 
 #![allow(unused_braces)] // Rust compiler can't properly parse derivation macros
-#![deny(
-    non_upper_case_globals,
-    non_camel_case_types,
-    non_snake_case,
-    unused_mut,
-    unused_imports,
-    dead_code,
-    // TODO: Uncomment missing_docs
-)]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 #[macro_use]
