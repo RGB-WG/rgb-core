@@ -76,8 +76,8 @@ impl Schema {
                     }
                 }
                 for (id, ss) in &self.owned_types {
-                    if ss.state_type() == StateType::Fungible &&
-                        !genesis.asset_tags.contains_key(id)
+                    if ss.state_type() == StateType::Fungible
+                        && !genesis.asset_tags.contains_key(id)
                     {
                         status.add_failure(validation::Failure::FungibleStateNoTag(*id));
                     }

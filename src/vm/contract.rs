@@ -347,13 +347,12 @@ pub enum WitnessOrd {
     /// Witness transaction must be excluded from the state processing.
     ///
     /// Cases for the exclusion:
-    /// - transaction was removed from blockchain after a re-org and its inputs
-    ///   were spent by other transaction;
-    /// - previous transaction(s) after RBF replacement, once it is excluded
-    ///   from the mempool and replaced by RBFed successors;
-    /// - past state channel transactions once a new channel state is signed
-    ///   (and until they may become valid once again due to an uncooperative
-    ///   channel closing).
+    /// - transaction was removed from blockchain after a re-org and its inputs were spent by other
+    ///   transaction;
+    /// - previous transaction(s) after RBF replacement, once it is excluded from the mempool and
+    ///   replaced by RBFed successors;
+    /// - past state channel transactions once a new channel state is signed (and until they may
+    ///   become valid once again due to an uncooperative channel closing).
     #[strict_type(dumb)]
     Archived,
 
@@ -376,11 +375,11 @@ pub enum WitnessOrd {
     /// status; all offchain cases which fall under [`Self::Archived`] must be
     /// excluded. Valid cases for assigning [`Self::Tentative`] status are:
     /// - transaction is present in the memepool;
-    /// - transaction is a part of transaction graph inside a state channel
-    ///   (only actual channel state is accounted for; all previous channel
-    ///   state must have corresponding transactions set to [`Self::Archived`]);
-    /// - transaction is an RBF replacement prepared to be broadcast (with the
-    ///   previous transaction set to [`Self::Archived`] at the same moment).
+    /// - transaction is a part of transaction graph inside a state channel (only actual channel
+    ///   state is accounted for; all previous channel state must have corresponding transactions
+    ///   set to [`Self::Archived`]);
+    /// - transaction is an RBF replacement prepared to be broadcast (with the previous transaction
+    ///   set to [`Self::Archived`] at the same moment).
     Tentative,
 }
 
@@ -394,14 +393,12 @@ impl WitnessOrd {
 ///
 /// The ordering is the following:
 /// - Genesis is processed first.
-/// - Other operations are ordered according to their witness transactions (see
-///   [`WitnessOrd`] for the details).
-/// - Extensions share witness transaction with the state transition which first
-///   to close one of the seals defined in the extension, but are processed
-///   before that state transition.
-/// - If two or more operations share the same witness transaction ordering,
-///   they are first ordered basing on their `nonce` value, and if it is also
-///   the same, basing on their operation id value.
+/// - Other operations are ordered according to their witness transactions (see [`WitnessOrd`] for
+///   the details).
+/// - Extensions share witness transaction with the state transition which first to close one of the
+///   seals defined in the extension, but are processed before that state transition.
+/// - If two or more operations share the same witness transaction ordering, they are first ordered
+///   basing on their `nonce` value, and if it is also the same, basing on their operation id value.
 ///
 /// [RCP-240731A]: https://github.com/RGB-WG/RFC/issues/10
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]

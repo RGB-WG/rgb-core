@@ -232,10 +232,8 @@ impl BlindingFactor {
     /// # Errors
     ///
     /// * if negatives are empty set;
-    /// * if any subset of the negatives or positives are inverses of other
-    ///   negatives or positives,
-    /// * if the balancing factor is zero (sum of negatives already equal to the
-    ///   sum of positives).
+    /// * if any subset of the negatives or positives are inverses of other negatives or positives,
+    /// * if the balancing factor is zero (sum of negatives already equal to the sum of positives).
     pub fn zero_balanced(
         negative: impl IntoIterator<Item = BlindingFactor>,
         positive: impl IntoIterator<Item = BlindingFactor>,

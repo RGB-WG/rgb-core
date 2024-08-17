@@ -189,17 +189,17 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
 
     fn src_regs(&self) -> BTreeSet<Reg> {
         match self {
-            ContractOp::LdP(_, reg, _) |
-            ContractOp::LdF(_, reg, _) |
-            ContractOp::LdS(_, reg, _) => bset![Reg::A(RegA::A16, (*reg).into())],
+            ContractOp::LdP(_, reg, _)
+            | ContractOp::LdF(_, reg, _)
+            | ContractOp::LdS(_, reg, _) => bset![Reg::A(RegA::A16, (*reg).into())],
             ContractOp::LdG(_, reg, _) => bset![Reg::A(RegA::A8, (*reg).into())],
             ContractOp::LdC(_, reg, _) => bset![Reg::A(RegA::A32, (*reg).into())],
 
-            ContractOp::CnP(_, _) |
-            ContractOp::CnS(_, _) |
-            ContractOp::CnG(_, _) |
-            ContractOp::CnC(_, _) |
-            ContractOp::LdM(_, _) => bset![],
+            ContractOp::CnP(_, _)
+            | ContractOp::CnS(_, _)
+            | ContractOp::CnG(_, _)
+            | ContractOp::CnC(_, _)
+            | ContractOp::LdM(_, _) => bset![],
             ContractOp::Pcvs(_) => bset![],
             ContractOp::Pcas(_) | ContractOp::Pcps(_) => bset![Reg::A(RegA::A64, Reg32::Reg0)],
             ContractOp::Fail(_, _) => bset![],
@@ -217,11 +217,11 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             ContractOp::LdF(_, _, reg) => {
                 bset![Reg::A(RegA::A64, (*reg).into())]
             }
-            ContractOp::LdG(_, _, reg) |
-            ContractOp::LdS(_, _, reg) |
-            ContractOp::LdP(_, _, reg) |
-            ContractOp::LdC(_, _, reg) |
-            ContractOp::LdM(_, reg) => {
+            ContractOp::LdG(_, _, reg)
+            | ContractOp::LdS(_, _, reg)
+            | ContractOp::LdP(_, _, reg)
+            | ContractOp::LdC(_, _, reg)
+            | ContractOp::LdM(_, reg) => {
                 bset![Reg::S(*reg)]
             }
             ContractOp::Pcvs(_) | ContractOp::Pcas(_) | ContractOp::Pcps(_) => {
@@ -233,15 +233,15 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
 
     fn complexity(&self) -> u64 {
         match self {
-            ContractOp::CnP(_, _) |
-            ContractOp::CnS(_, _) |
-            ContractOp::CnG(_, _) |
-            ContractOp::CnC(_, _) => 2,
-            ContractOp::LdP(_, _, _) |
-            ContractOp::LdS(_, _, _) |
-            ContractOp::LdF(_, _, _) |
-            ContractOp::LdG(_, _, _) |
-            ContractOp::LdC(_, _, _) => 8,
+            ContractOp::CnP(_, _)
+            | ContractOp::CnS(_, _)
+            | ContractOp::CnG(_, _)
+            | ContractOp::CnC(_, _) => 2,
+            ContractOp::LdP(_, _, _)
+            | ContractOp::LdS(_, _, _)
+            | ContractOp::LdF(_, _, _)
+            | ContractOp::LdG(_, _, _)
+            | ContractOp::LdC(_, _, _) => 8,
             ContractOp::LdM(_, _) => 6,
             ContractOp::Pcvs(_) => 1024,
             ContractOp::Pcas(_) | ContractOp::Pcps(_) => 512,

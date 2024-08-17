@@ -112,8 +112,8 @@ impl<State: ExposedState, Seal: ExposedSeal> Ord for Assign<State, Seal> {
 
 impl<State: ExposedState, Seal: ExposedSeal> PartialEq for Assign<State, Seal> {
     fn eq(&self, other: &Self) -> bool {
-        self.to_confidential_seal() == other.to_confidential_seal() &&
-            self.to_confidential_state() == other.to_confidential_state()
+        self.to_confidential_seal() == other.to_confidential_seal()
+            && self.to_confidential_state() == other.to_confidential_state()
     }
 }
 
@@ -134,8 +134,8 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
                 seal: _,
                 state,
                 lock,
-            } |
-            Assign::ConfidentialState {
+            }
+            | Assign::ConfidentialState {
                 seal: _,
                 state,
                 lock,
@@ -148,8 +148,8 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
                 seal: _,
                 state,
                 lock,
-            } |
-            Assign::Revealed {
+            }
+            | Assign::Revealed {
                 seal: _,
                 state,
                 lock,

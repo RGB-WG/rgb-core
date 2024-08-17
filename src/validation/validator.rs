@@ -324,8 +324,8 @@ impl<
                 .add_failure(Failure::ContractMismatch(opid, operation.contract_id()));
         }
 
-        if !self.validated_op_seals.borrow().contains(&opid) &&
-            operation.op_type() == OpType::StateTransition
+        if !self.validated_op_seals.borrow().contains(&opid)
+            && operation.op_type() == OpType::StateTransition
         {
             self.status
                 .borrow_mut()
