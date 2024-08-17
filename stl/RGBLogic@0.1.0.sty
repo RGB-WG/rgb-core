@@ -1,5 +1,5 @@
 {-
-  Id: stl:w3K7P7FD-SQ36YW9-C4zqzxS-9RCkgd$-osrL6RV-gk11t!g#satire-vital-richard
+  Id: stl:HgC$jfcl-ooeEyLQ-Fn4ixZg-Z6m5zh2-TQwRbCP-prFfNn4#soprano-nice-total
   Name: RGBLogic
   Version: 0.1.0
   Description: Consensus logic layer for RGB smart contracts
@@ -19,6 +19,8 @@ import BPCore#garbo-radius-peru
   use OpretProof#good-village-flex
 
 import RGBCommit#nova-lobby-dialog
+  use TransitionType#picture-reflex-brigade
+  use ExtensionType#apropos-scoop-viva
   use OpId#picnic-single-gloria
 
 import Bitcoin#signal-color-cipher
@@ -37,12 +39,14 @@ data DbcProof          : tapret#1 BPCore.TapretProof
 @mnemonic(east-sunset-extra)
 data GlobalOrd         : opOrd OpOrd, idx U16
 
-@mnemonic(france-fish-fortune)
+@mnemonic(combat-henry-flood)
 data OpOrd             : genesis ()
                        | extension (witness WitnessOrd
+                       , ty RGBCommit.ExtensionType
                        , nonce U64
                        , opid RGBCommit.OpId)
                        | transition#255 (witness WitnessOrd
+                       , ty RGBCommit.TransitionType
                        , nonce U64
                        , opid RGBCommit.OpId)
 

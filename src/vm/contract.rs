@@ -170,11 +170,13 @@ impl<'op> OrdOpRef<'op> {
             OrdOpRef::Genesis(_) => OpOrd::Genesis,
             OrdOpRef::Transition(op, _, witness_ord) => OpOrd::Transition {
                 witness: *witness_ord,
+                ty: op.transition_type,
                 nonce: op.nonce,
                 opid: op.id(),
             },
             OrdOpRef::Extension(op, _, witness_ord) => OpOrd::Extension {
                 witness: *witness_ord,
+                ty: op.extension_type,
                 nonce: op.nonce,
                 opid: op.id(),
             },
@@ -418,14 +420,14 @@ pub enum OpOrd {
     #[strict_type(tag = 0x01)]
     Extension {
         witness: WitnessOrd,
-        // TODO: Consider using extension type here
+        ty: ExtensionType,
         nonce: u64,
         opid: OpId,
     },
     #[strict_type(tag = 0xFF)]
     Transition {
         witness: WitnessOrd,
-        // TODO: Consider using transition type here
+        ty: TransitionType,
         nonce: u64,
         opid: OpId,
     },
@@ -468,20 +470,34 @@ impl GlobalOrd {
             idx,
         }
     }
-    pub fn transition(opid: OpId, idx: u16, nonce: u64, witness: WitnessOrd) -> Self {
+    pub fn transition(
+        opid: OpId,
+        idx: u16,
+        ty: TransitionType,
+        nonce: u64,
+        witness: WitnessOrd,
+    ) -> Self {
         Self {
             op_ord: OpOrd::Transition {
                 witness,
+                ty,
                 nonce,
                 opid,
             },
             idx,
         }
     }
-    pub fn extension(opid: OpId, idx: u16, nonce: u64, witness: WitnessOrd) -> Self {
+    pub fn extension(
+        opid: OpId,
+        idx: u16,
+        ty: ExtensionType,
+        nonce: u64,
+        witness: WitnessOrd,
+    ) -> Self {
         Self {
             op_ord: OpOrd::Extension {
                 witness,
+                ty,
                 nonce,
                 opid,
             },
