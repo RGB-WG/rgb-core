@@ -258,7 +258,7 @@ impl Schema {
             .keys()
             .copied()
             .collect::<BTreeSet<_>>()
-            .difference(metadata_schema.as_inner())
+            .difference(metadata_schema.as_unconfined())
             .for_each(|type_id| {
                 status.add_failure(validation::Failure::SchemaUnknownMetaType(opid, *type_id));
             });
@@ -309,7 +309,7 @@ impl Schema {
                 .get(type_id)
                 .cloned()
                 .map(GlobalValues::into_inner)
-                .map(Confined::unbox)
+                .map(Confined::release)
                 .unwrap_or_default();
 
             let GlobalStateSchema {

@@ -79,7 +79,7 @@ impl From<mpc::Message> for BundleId {
 pub struct InputMap(Confined<BTreeMap<Vin, OpId>, 1, U16MAX>);
 
 impl StrictDumb for InputMap {
-    fn strict_dumb() -> Self { Self(confined_bmap!(strict_dumb!() => strict_dumb!())) }
+    fn strict_dumb() -> Self { Self(Confined::with_key_value(strict_dumb!(), strict_dumb!())) }
 }
 
 impl InputMap {
@@ -128,7 +128,7 @@ impl StrictDumb for TransitionBundle {
         Self {
             close_method: strict_dumb!(),
             input_map: strict_dumb!(),
-            known_transitions: confined_bmap! { strict_dumb!() => strict_dumb!() },
+            known_transitions: Confined::with_key_value(strict_dumb!(), strict_dumb!()),
         }
     }
 }

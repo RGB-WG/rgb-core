@@ -522,10 +522,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
                 if index as usize >= vec.len() {
                     return Err(UnknownDataError);
                 }
-                Ok(vec
-                    .into_inner()
-                    .remove(index as usize)
-                    .into_revealed_state())
+                Ok(vec.release().remove(index as usize).into_revealed_state())
             }
             _ => Err(UnknownDataError),
         }
@@ -540,10 +537,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
                 if index as usize >= vec.len() {
                     return Err(UnknownDataError);
                 }
-                Ok(vec
-                    .into_inner()
-                    .remove(index as usize)
-                    .into_revealed_state())
+                Ok(vec.release().remove(index as usize).into_revealed_state())
             }
             _ => Err(UnknownDataError),
         }

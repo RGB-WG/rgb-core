@@ -42,7 +42,7 @@ use crate::{schema, DataState, LIB_NAME_RGB_COMMIT};
 pub struct GlobalValues(Confined<Vec<DataState>, 1, U16>);
 
 impl StrictDumb for GlobalValues {
-    fn strict_dumb() -> Self { Self(confined_vec!(DataState::strict_dumb())) }
+    fn strict_dumb() -> Self { Self(Confined::with(DataState::strict_dumb())) }
 }
 
 impl GlobalValues {
