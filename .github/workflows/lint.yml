@@ -1,11 +1,6 @@
 name: Lints
 
 on:
-  push:
-    branches:
-      - master
-      - develop
-      - 'v[0-9]+.[0-9]+'
   pull_request:
     branches:
       - master
@@ -20,26 +15,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Nix
-        uses: cachix/install-nix-action@V27
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
       - name: Formatting
-        run: nix develop .#nightly -c cargo fmt --all -- --check
+        run: cargo +nightly fmt --all -- --check
   clippy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Nix
-        uses: cachix/install-nix-action@V27
-      - name: Clippy
-        run: nix develop .#stable -c cargo clippy --workspace --all-features --all-targets -- -D warnings
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Formatting
+        run: cargo clippy --workspace --all-features --all-targets -- -D warnings
   doc:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Nix
-        uses: cachix/install-nix-action@V27
-      - name: Doc
-        run: nix develop .#stable -c cargo doc --workspace --all-features
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-docs
+      - name: Formatting
+        run: cargo +nightly doc --workspace --all-features
   typos:
     runs-on: ubuntu-latest
     steps:
