@@ -8,8 +8,6 @@ Atack = "Atack"
 
 [default]
 extend-ignore-re = [
-    # Don't correct RGB address
-    "[0-9A-Za-z]{7}-[0-9A-Za-z]{9}-[0-9A-Za-z]{9}-[0-9A-Za-z]{9}-[0-9A-Za-z]{9}-[0-9A-Za-z]{6}",
-    "rgb:[0-9A-Za-z-]+",
-    "[0-9A-Za-z]{49}"
+    # Don't correct URIs
+    "([a-z]+:)*[$!0-9A-Za-z-]+",
 ]
