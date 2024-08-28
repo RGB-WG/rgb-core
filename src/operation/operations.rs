@@ -229,7 +229,7 @@ pub trait Operation {
 
     /// Returns nonce used in consensus ordering of state transitions and
     /// extensions.
-    fn nonce(&self) -> u8;
+    fn nonce(&self) -> u64;
 
     /// Returns [`Option::Some`]`(`[`TransitionType`]`)` for transitions or
     /// [`Option::None`] for genesis and extension operation types
@@ -383,7 +383,7 @@ impl StrictDeserialize for Genesis {}
 pub struct Extension {
     pub ffv: Ffv,
     pub contract_id: ContractId,
-    pub nonce: u8,
+    pub nonce: u64,
     pub extension_type: ExtensionType,
     pub metadata: Metadata,
     pub globals: GlobalState,
@@ -416,7 +416,7 @@ impl PartialOrd for Extension {
 pub struct Transition {
     pub ffv: Ffv,
     pub contract_id: ContractId,
-    pub nonce: u8,
+    pub nonce: u64,
     pub transition_type: TransitionType,
     pub metadata: Metadata,
     pub globals: GlobalState,
@@ -519,7 +519,7 @@ impl Operation for Genesis {
     fn contract_id(&self) -> ContractId { ContractId::from_inner(self.id().into_inner()) }
 
     #[inline]
-    fn nonce(&self) -> u8 { u8::MAX }
+    fn nonce(&self) -> u64 { u64::MAX }
 
     #[inline]
     fn transition_type(&self) -> Option<TransitionType> { None }
@@ -564,7 +564,7 @@ impl Operation for Extension {
     fn contract_id(&self) -> ContractId { self.contract_id }
 
     #[inline]
-    fn nonce(&self) -> u8 { self.nonce }
+    fn nonce(&self) -> u64 { self.nonce }
 
     #[inline]
     fn transition_type(&self) -> Option<TransitionType> { None }
@@ -609,7 +609,7 @@ impl Operation for Transition {
     fn contract_id(&self) -> ContractId { self.contract_id }
 
     #[inline]
-    fn nonce(&self) -> u8 { self.nonce }
+    fn nonce(&self) -> u64 { self.nonce }
 
     #[inline]
     fn transition_type(&self) -> Option<TransitionType> { Some(self.transition_type) }

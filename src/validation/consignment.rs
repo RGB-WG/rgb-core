@@ -85,7 +85,7 @@ impl<'op> Operation for OpRef<'op> {
         }
     }
 
-    fn nonce(&self) -> u8 {
+    fn nonce(&self) -> u64 {
         match self {
             Self::Genesis(op) => op.nonce(),
             Self::Transition(op) => op.nonce(),

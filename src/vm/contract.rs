@@ -170,11 +170,13 @@ impl<'op> OrdOpRef<'op> {
             OrdOpRef::Genesis(_) => OpOrd::Genesis,
             OrdOpRef::Transition(op, _, witness_ord) => OpOrd::Transition {
                 witness: *witness_ord,
+                ty: op.transition_type,
                 nonce: op.nonce,
                 opid: op.id(),
             },
             OrdOpRef::Extension(op, _, witness_ord) => OpOrd::Extension {
                 witness: *witness_ord,
+                ty: op.extension_type,
                 nonce: op.nonce,
                 opid: op.id(),
             },
@@ -215,7 +217,7 @@ impl<'op> Operation for OrdOpRef<'op> {
         }
     }
 
-    fn nonce(&self) -> u8 {
+    fn nonce(&self) -> u64 {
         match self {
             OrdOpRef::Genesis(op) => op.nonce(),
             OrdOpRef::Transition(op, ..) => op.nonce(),
@@ -415,15 +417,15 @@ pub enum OpOrd {
     #[strict_type(tag = 0x01)]
     Extension {
         witness: WitnessOrd,
-        // TODO: Consider using extension type here
-        nonce: u8,
+        ty: ExtensionType,
+        nonce: u64,
         opid: OpId,
     },
     #[strict_type(tag = 0xFF)]
     Transition {
         witness: WitnessOrd,
-        // TODO: Consider using transition type here
-        nonce: u8,
+        ty: TransitionType,
+        nonce: u64,
         opid: OpId,
     },
 }
@@ -465,20 +467,34 @@ impl GlobalOrd {
             idx,
         }
     }
-    pub fn transition(opid: OpId, idx: u16, nonce: u8, witness: WitnessOrd) -> Self {
+    pub fn transition(
+        opid: OpId,
+        idx: u16,
+        ty: TransitionType,
+        nonce: u64,
+        witness: WitnessOrd,
+    ) -> Self {
         Self {
             op_ord: OpOrd::Transition {
                 witness,
+                ty,
                 nonce,
                 opid,
             },
             idx,
         }
     }
-    pub fn extension(opid: OpId, idx: u16, nonce: u8, witness: WitnessOrd) -> Self {
+    pub fn extension(
+        opid: OpId,
+        idx: u16,
+        ty: ExtensionType,
+        nonce: u64,
+        witness: WitnessOrd,
+    ) -> Self {
         Self {
             op_ord: OpOrd::Extension {
                 witness,
+                ty,
                 nonce,
                 opid,
             },
