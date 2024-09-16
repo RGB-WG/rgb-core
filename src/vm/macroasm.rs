@@ -36,6 +36,9 @@ macro_rules! isa_instr {
     (pcvs $no:ident) => {{ RgbIsa::Contract(ContractOp::Pcvs($no)) }};
     (pcas $no:ident) => {{ RgbIsa::Contract(ContractOp::Pcas($no)) }};
     (pcps $no:ident) => {{ RgbIsa::Contract(ContractOp::Pcps($no)) }};
+    (svs $no:ident) => {{ RgbIsa::Contract(ContractOp::Svs($no)) }};
+    (sas $no:ident) => {{ RgbIsa::Contract(ContractOp::Sas($no)) }};
+    (sps $no:ident) => {{ RgbIsa::Contract(ContractOp::Sps($no)) }};
     (cng $t:ident,a8[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnG($t, Reg32::from(u5::with($a_idx)))) }};
     (cnc $t:ident,a16[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnC($t, Reg32::from(u5::with($a_idx)))) }};
     (ldm $t:ident,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdM($t, RegS::from($s_idx))) }};

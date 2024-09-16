@@ -47,8 +47,11 @@ pub const INSTR_PCVS: u8 = 0b11_010_000;
 pub const INSTR_PCAS: u8 = 0b11_010_001;
 pub const INSTR_PCPS: u8 = 0b11_010_010;
 // Reserved 0b11_010_011
+pub const INSTR_SVS: u8 = 0b11_010_100;
+pub const INSTR_SAS: u8 = 0b11_010_101;
+pub const INSTR_SPS: u8 = 0b11_010_110;
 pub const INSTR_CONTRACT_FROM: u8 = 0b11_000_000;
-pub const INSTR_CONTRACT_TO: u8 = 0b11_010_011;
+pub const INSTR_CONTRACT_TO: u8 = 0b11_011_011;
 
 // TIMECHAIN:
 pub const INSTR_TIMECHAIN_FROM: u8 = 0b11_011_100;
