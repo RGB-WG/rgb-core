@@ -324,10 +324,16 @@ impl Ord for WitnessPos {
     /// timestamp information and not height. The timestamp data are consistent
     /// across multiple blockchains, while height evolves with a different
     /// speed and can't be used in comparisons.
+    ///
+    /// If the timestamp of two witnesses is the same, we use the height for the ordering. This
+    /// might be the case for regtests, where multiple blocks can be mined with the same timestamp.
     fn cmp(&self, other: &Self) -> Ordering {
         assert!(self.timestamp > 0);
         assert!(other.timestamp > 0);
-        self.timestamp.cmp(&other.timestamp)
+        match self.timestamp.cmp(&other.timestamp) {
+            Ordering::Equal => self.height.cmp(&other.height),
+            ordering => ordering,
+        }
     }
 }
 
