@@ -23,7 +23,7 @@
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::cmp::Ordering;
-use std::fmt::Debug;
+use std::fmt::{self, Debug, Display, Formatter};
 use std::num::NonZeroU32;
 use std::rc::Rc;
 
@@ -31,6 +31,7 @@ use amplify::confinement;
 use amplify::num::u24;
 use bp::seals::txout::{CloseMethod, ExplicitSeal, VerifyError, Witness};
 use bp::{dbc, Tx, Txid};
+use chrono::{MappedLocalTime, TimeZone, Utc};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
@@ -290,7 +291,7 @@ impl<'op> Operation for OrdOpRef<'op> {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC)]
 #[cfg_attr(
@@ -298,7 +299,6 @@ impl<'op> Operation for OrdOpRef<'op> {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[display("{height}@{timestamp}")]
 pub struct WitnessPos {
     height: u32,
     timestamp: i64,
@@ -333,6 +333,16 @@ impl Ord for WitnessPos {
         match self.timestamp.cmp(&other.timestamp) {
             Ordering::Equal => self.height.cmp(&other.height),
             ordering => ordering,
+        }
+    }
+}
+
+impl Display for WitnessPos {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}, ", self.height)?;
+        match Utc.timestamp_opt(self.timestamp, 0) {
+            MappedLocalTime::Single(time) => write!(f, "{}", time.format("%Y-%m-%d %H:%M:%S")),
+            _ => f.write_str("invalid timestamp"),
         }
     }
 }
