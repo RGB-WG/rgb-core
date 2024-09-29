@@ -38,8 +38,8 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use crate::{
     AssetTags, AssignmentType, Assignments, AssignmentsRef, AttachState, ContractId, DataState,
     ExposedSeal, Extension, ExtensionType, FungibleState, Genesis, GlobalState, GlobalStateType,
-    GraphSeal, Impossible, Inputs, Metadata, OpFullType, OpId, OpType, Operation, Transition,
-    TransitionType, TxoSeal, TypedAssigns, Valencies, XChain, XOutpoint, XOutputSeal,
+    GraphSeal, Impossible, Inputs, Layer1, Metadata, OpFullType, OpId, OpType, Operation,
+    Transition, TransitionType, TxoSeal, TypedAssigns, Valencies, XChain, XOutpoint, XOutputSeal,
     LIB_NAME_RGB_LOGIC,
 };
 
@@ -290,9 +290,10 @@ impl<'op> Operation for OrdOpRef<'op> {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[derive(Getters, Copy, Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC)]
+#[getter(as_copy)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -300,19 +301,52 @@ impl<'op> Operation for OrdOpRef<'op> {
 )]
 #[display("{height}@{timestamp}")]
 pub struct WitnessPos {
-    height: u32,
+    layer1: Layer1,
+    // TODO: Move BlockHeight from bp-wallet to bp-consensus and use it here
+    height: NonZeroU32,
     timestamp: i64,
 }
 
-impl WitnessPos {
-    pub fn new(height: u32, timestamp: i64) -> Option<Self> {
-        if height == 0 || timestamp < 1231006505 {
-            return None;
+impl StrictDumb for WitnessPos {
+    fn strict_dumb() -> Self {
+        Self {
+            layer1: Layer1::Bitcoin,
+            height: NonZeroU32::MIN,
+            timestamp: 1231006505,
         }
-        Some(WitnessPos { height, timestamp })
+    }
+}
+
+impl WitnessPos {
+    #[deprecated(
+        since = "0.11.0-beta.9",
+        note = "please use `WitnessPos::bitcoin` or `WitnessPos::liquid` instead"
+    )]
+    pub fn new(height: NonZeroU32, timestamp: i64) -> Option<Self> {
+        Self::bitcoin(height, timestamp)
     }
 
-    pub fn height(&self) -> NonZeroU32 { NonZeroU32::new(self.height).expect("invariant") }
+    pub fn bitcoin(height: NonZeroU32, timestamp: i64) -> Option<Self> {
+        if timestamp < 1231006505 {
+            return None;
+        }
+        Some(WitnessPos {
+            layer1: Layer1::Bitcoin,
+            height,
+            timestamp,
+        })
+    }
+
+    pub fn liquid(height: NonZeroU32, timestamp: i64) -> Option<Self> {
+        if timestamp < 1231006505 {
+            return None;
+        }
+        Some(WitnessPos {
+            layer1: Layer1::Liquid,
+            height,
+            timestamp,
+        })
+    }
 }
 
 impl PartialOrd for WitnessPos {
@@ -327,7 +361,21 @@ impl Ord for WitnessPos {
     fn cmp(&self, other: &Self) -> Ordering {
         assert!(self.timestamp > 0);
         assert!(other.timestamp > 0);
-        self.timestamp.cmp(&other.timestamp)
+        const BLOCK_TIME: i64 = 10 /*min*/ * 60 /*secs*/;
+        match (self.layer1, other.layer1) {
+            (a, b) if a == b => self.height.cmp(&other.height),
+            (Layer1::Bitcoin, Layer1::Liquid)
+                if (self.timestamp - other.timestamp).abs() >= BLOCK_TIME =>
+            {
+                Ordering::Greater
+            }
+            (Layer1::Liquid, Layer1::Bitcoin)
+                if (other.timestamp - self.timestamp).abs() >= BLOCK_TIME =>
+            {
+                Ordering::Less
+            }
+            _ => self.timestamp.cmp(&other.timestamp),
+        }
     }
 }
 
