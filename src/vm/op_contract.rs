@@ -137,6 +137,43 @@ pub enum ContractOp<S: ContractStateAccess> {
     #[display("ldm     {0},{1}")]
     LdM(MetaType, RegS),
 
+    /// Verify sum of inputs and outputs are equal.
+    ///
+    /// The only argument specifies owned state type for the sum operation. If
+    /// this state does not exist, or either inputs or outputs does not have
+    /// any data for the state, the verification fails.
+    ///
+    /// If verification succeeds, doesn't change `st0` value; otherwise sets it
+    /// to `false` and stops execution.
+    #[display("svs    {0}")]
+    Svs(AssignmentType),
+
+    /// Verify sum of outputs and value in `a64[0]` register are equal.
+    ///
+    /// The first argument specifies owned state type for the sum operation. If
+    /// this state does not exist, or either inputs or outputs does not have
+    /// any data for the state, the verification fails.
+    ///
+    /// If `a64[0]` register does not contain value, the verification fails.
+    ///
+    /// If verification succeeds, doesn't change `st0` value; otherwise sets it
+    /// to `false` and stops execution.
+    #[display("sas    {0}")]
+    Sas(/** owned state type */ AssignmentType),
+
+    /// Verify sum of inputs and value in `a64[0]` register are equal.
+    ///
+    /// The first argument specifies owned state type for the sum operation. If
+    /// this state does not exist, or either inputs or outputs does not have
+    /// any data for the state, the verification fails.
+    ///
+    /// If `a64[0]` register does not contain value, the verification fails.
+    ///
+    /// If verification succeeds, doesn't change `st0` value; otherwise sets it
+    /// to `false` and stops execution.
+    #[display("sps    {0}")]
+    Sps(/** owned state type */ AssignmentType),
+
     /// Verify sum of pedersen commitments from inputs and outputs.
     ///
     /// The only argument specifies owned state type for the sum operation. If
@@ -202,6 +239,8 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             | ContractOp::LdM(_, _) => bset![],
             ContractOp::Pcvs(_) => bset![],
             ContractOp::Pcas(_) | ContractOp::Pcps(_) => bset![Reg::A(RegA::A64, Reg32::Reg0)],
+            ContractOp::Svs(_) => bset![],
+            ContractOp::Sas(_) | ContractOp::Sps(_) => bset![Reg::A(RegA::A64, Reg32::Reg0)],
             ContractOp::Fail(_, _) => bset![],
         }
     }
@@ -227,6 +266,9 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             ContractOp::Pcvs(_) | ContractOp::Pcas(_) | ContractOp::Pcps(_) => {
                 bset![]
             }
+            ContractOp::Svs(_) | ContractOp::Sas(_) | ContractOp::Sps(_) => {
+                bset![]
+            }
             ContractOp::Fail(_, _) => bset![],
         }
     }
@@ -243,6 +285,10 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             | ContractOp::LdG(_, _, _)
             | ContractOp::LdC(_, _, _) => 8,
             ContractOp::LdM(_, _) => 6,
+            // TODO: what are the proper values for complexity?
+            ContractOp::Svs(_)
+            | ContractOp::Sas(_)
+            | ContractOp::Sps(_) => 20,
             ContractOp::Pcvs(_) => 1024,
             ContractOp::Pcas(_) | ContractOp::Pcps(_) => 512,
             ContractOp::Fail(_, _) => u64::MAX,
@@ -281,6 +327,38 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                         .iter()
                         .map(Assign::to_confidential_state)
                         .map(|s| s.commitment.into_inner())
+                        .collect::<Vec<_>>(),
+                    _ => fail!(),
+                }
+            }};
+        }
+        macro_rules! load_revealed_inputs {
+            ($state_type:ident) => {{
+                let Some(prev_state) = context.op_info.prev_state.get($state_type) else {
+                    fail!()
+                };
+                match prev_state {
+                    TypedAssigns::Fungible(state) => state
+                        .iter()
+                        .map(Assign::as_revealed_state)
+                        // TODO: properly fail if we can't read revealed state
+                        .map(|s| s.unwrap().value.as_u64())
+                        .collect::<Vec<_>>(),
+                    _ => fail!(),
+                }
+            }};
+        }
+        macro_rules! load_revealed_outputs {
+            ($state_type:ident) => {{
+                let Some(new_state) = context.op_info.owned_state.get(*$state_type) else {
+                    fail!()
+                };
+                match new_state {
+                    TypedAssigns::Fungible(state) => state
+                        .iter()
+                        .map(Assign::as_revealed_state)
+                        // TODO: properly fail if we can't read revealed state
+                        .map(|s| s.unwrap().value.as_u64())
                         .collect::<Vec<_>>(),
                     _ => fail!(),
                 }
@@ -473,6 +551,59 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                     fail!()
                 }
             }
+            ContractOp::Svs(state_type) => {
+                let Some(input_amt) = load_revealed_inputs!(state_type)
+                    .iter()
+                    .try_fold(0u64, |acc, &x| acc.checked_add(x))
+                else {
+                    fail!()
+                };
+                let Some(output_amt) = load_revealed_outputs!(state_type)
+                    .iter()
+                    .try_fold(0u64, |acc, &x| acc.checked_add(x))
+                else {
+                    fail!()
+                };
+                if input_amt != output_amt {
+                    fail!()
+                }
+            }
+
+            ContractOp::Sas(owned_state) => {
+                let Some(sum) = *regs.get_n(RegA::A64, Reg32::Reg0) else {
+                    fail!()
+                };
+                let sum = u64::from(sum);
+
+                let Some(output_amt) = load_revealed_outputs!(owned_state)
+                    .iter()
+                    .try_fold(0u64, |acc, &x| acc.checked_add(x))
+                else {
+                    fail!()
+                };
+
+                if sum != output_amt {
+                    fail!()
+                }
+            }
+
+            ContractOp::Sps(owned_state) => {
+                let Some(sum) = *regs.get_n(RegA::A64, Reg32::Reg0) else {
+                    fail!()
+                };
+                let sum = u64::from(sum);
+
+                let Some(input_amt) = load_revealed_inputs!(owned_state)
+                    .iter()
+                    .try_fold(0u64, |acc, &x| acc.checked_add(x))
+                else {
+                    fail!()
+                };
+
+                if sum != input_amt {
+                    fail!()
+                }
+            }
             // All other future unsupported operations, which must set `st0` to `false`.
             _ => fail!(),
         }
@@ -500,6 +631,10 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
             ContractOp::Pcvs(_) => INSTR_PCVS,
             ContractOp::Pcas(_) => INSTR_PCAS,
             ContractOp::Pcps(_) => INSTR_PCPS,
+
+            ContractOp::Svs(_) => INSTR_SVS,
+            ContractOp::Sas(_) => INSTR_SAS,
+            ContractOp::Sps(_) => INSTR_SPS,
 
             ContractOp::Fail(other, _) => *other,
         }
@@ -559,9 +694,12 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
                 writer.write_u4(u4::ZERO)?;
             }
 
-            ContractOp::Pcvs(state_type) => writer.write_u16(*state_type)?,
-            ContractOp::Pcas(owned_type) => writer.write_u16(*owned_type)?,
-            ContractOp::Pcps(owned_type) => writer.write_u16(*owned_type)?,
+            ContractOp::Pcvs(state_type)
+            | ContractOp::Svs(state_type) => writer.write_u16(*state_type)?,
+            ContractOp::Pcas(owned_type)
+            | ContractOp::Sas(owned_type)  => writer.write_u16(*owned_type)?,
+            ContractOp::Pcps(owned_type)
+            | ContractOp::Sps(owned_type)  => writer.write_u16(*owned_type)?,
 
             ContractOp::Fail(_, _) => {}
         }
@@ -629,6 +767,10 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
             INSTR_PCVS => Self::Pcvs(reader.read_u16()?.into()),
             INSTR_PCAS => Self::Pcas(reader.read_u16()?.into()),
             INSTR_PCPS => Self::Pcps(reader.read_u16()?.into()),
+
+            INSTR_SVS => Self::Svs(reader.read_u16()?.into()),
+            INSTR_SAS => Self::Sas(reader.read_u16()?.into()),
+            INSTR_SPS => Self::Sps(reader.read_u16()?.into()),
 
             x => Self::Fail(x, PhantomData),
         })
