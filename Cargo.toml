@@ -62,7 +62,7 @@ wasm-bindgen-test = "0.3"
 features = ["all"]
 
 [patch.crates-io]
-bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "methods" }
-bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "methods" }
-bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "methods" }
-bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "methods" }
+bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }
+bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }
+bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }
+bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }
