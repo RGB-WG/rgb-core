@@ -86,7 +86,13 @@ impl StrictDeserialize for DbcProof {}
 
 impl dbc::Proof for DbcProof {
     type Error = DbcError;
-    const METHOD: Method = Method::OpretFirst;
+
+    fn method(&self) -> Method {
+        match self {
+            DbcProof::Tapret(_) => Method::TapretFirst,
+            DbcProof::Opret(_) => Method::OpretFirst,
+        }
+    }
 
     fn verify(&self, msg: &Commitment, tx: &Tx) -> Result<(), Self::Error> {
         match self {
