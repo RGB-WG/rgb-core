@@ -24,8 +24,8 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
-use bp::dbc::Anchor;
-use bp::seals::txout::{CloseMethod, TxoSeal, Witness};
+use bp::dbc::{Anchor, Proof};
+use bp::seals::txout::{TxoSeal, Witness};
 use bp::{dbc, Outpoint};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
@@ -395,7 +395,7 @@ impl<
             // [VALIDATION]: We validate that the seals were properly defined on BP-type layers
             let (seals, input_map) = self.validate_seal_definitions(witness_id.layer1(), bundle);
 
-            if anchor.method != bundle.close_method {
+            if anchor.dbc_proof.method() != bundle.close_method {
                 self.status
                     .borrow_mut()
                     .add_failure(Failure::AnchorMethodMismatch(bundle_id));
@@ -482,7 +482,10 @@ impl<
             }
             Ok(pub_witness) => {
                 let seals = seals.as_ref();
-                for seal in seals.iter().filter(|seal| seal.method() != anchor.method) {
+                for seal in seals
+                    .iter()
+                    .filter(|seal| seal.method() != anchor.dbc_proof.method())
+                {
                     self.status
                         .borrow_mut()
                         .add_failure(Failure::SealInvalidMethod(bundle_id, *seal));
@@ -491,7 +494,7 @@ impl<
                     EAnchor {
                         mpc_proof,
                         dbc_proof: DbcProof::Tapret(tapret),
-                        method: CloseMethod::TapretFirst,
+                        ..
                     } => {
                         let witness = pub_witness.clone().map(|tx| Witness::with(tx, tapret));
                         self.validate_seal_closing(seals, bundle_id, witness, mpc_proof)
@@ -499,17 +502,10 @@ impl<
                     EAnchor {
                         mpc_proof,
                         dbc_proof: DbcProof::Opret(opret),
-                        method: CloseMethod::OpretFirst,
+                        ..
                     } => {
                         let witness = pub_witness.clone().map(|tx| Witness::with(tx, opret));
                         self.validate_seal_closing(seals, bundle_id, witness, mpc_proof)
-                    }
-                    _ => {
-                        panic!(
-                            "RGB standard library consignment implementation provides with \
-                             anchors which DBC proof method doesn't match the anchor method. The \
-                             RGB standard library used by this software is broken"
-                        )
                     }
                 }
 
