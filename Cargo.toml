@@ -62,6 +62,8 @@ wasm-bindgen-test = "0.3"
 features = ["all"]
 
 [patch.crates-io]
+commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "develop" }
+single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "develop" }
 bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }
 bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }
 bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }

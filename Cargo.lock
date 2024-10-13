@@ -1198,3 +1198,13 @@ dependencies = [
  "quote",
  "syn 2.0.77",
 ]
+
+[[patch.unused]]
+name = "commit_verify"
+version = "0.11.0-beta.9"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#4015f1fb9e99fdc536c69b957fa5727da9cfa6a9"
+
+[[patch.unused]]
+name = "single_use_seals"
+version = "0.11.0-beta.9"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#4015f1fb9e99fdc536c69b957fa5727da9cfa6a9"
