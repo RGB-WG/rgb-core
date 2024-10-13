@@ -45,7 +45,6 @@ pub trait ExposedState:
     + StrictDecode
     + Conceal<Concealed = Self::Confidential>
     + Eq
-    + Ord
     + Clone
 {
     type Confidential: ConfidentialState + StrictEncode + StrictDecode + StrictDumb;
@@ -77,7 +76,7 @@ pub enum StateType {
 }
 
 /// Categories of the state
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

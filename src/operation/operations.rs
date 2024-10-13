@@ -300,7 +300,7 @@ pub trait Operation {
             id: self.id(),
             seals: Confined::from_checked(seals),
             fungible: Confined::from_iter_checked(
-                fungible.into_iter().map(|(k, s)| (k, s.commitment)),
+                fungible.into_iter().map(|(k, s)| (k, s.commitment())),
             ),
             data: Confined::from_checked(data),
             attach: Confined::from_checked(attach),

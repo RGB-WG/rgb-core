@@ -343,7 +343,7 @@ impl ConcealedState {
     fn commit_encode(&self, e: &mut CommitEngine) {
         match self {
             ConcealedState::Void => {}
-            ConcealedState::Fungible(val) => e.commit_to_serialized(&val.commitment),
+            ConcealedState::Fungible(val) => e.commit_to_serialized(&val.commitment()),
             ConcealedState::Structured(dat) => e.commit_to_serialized(dat),
             ConcealedState::Attachment(att) => e.commit_to_serialized(att),
         }

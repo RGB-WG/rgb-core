@@ -373,7 +373,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 else {
                     fail!()
                 };
-                regs.set_n(RegA::A64, *reg, state.map(|s| s.value.as_u64()));
+                regs.set_n(RegA::A64, *reg, state.map(|s| s.value().to_u64()));
             }
             ContractOp::LdG(state_type, reg_8, reg_s) => {
                 let Some(reg_32) = *regs.get_n(RegA::A8, *reg_8) else {

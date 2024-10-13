@@ -30,7 +30,6 @@
 //! properties regarding their total sum and, thus, can be made confidential
 //! using elliptic curve homomorphic cryptography such as Pedesen commitments.
 
-use core::cmp::Ordering;
 use core::fmt::Debug;
 use core::num::ParseIntError;
 use core::ops::Deref;
@@ -45,9 +44,7 @@ use amplify::hex::ToHex;
 use amplify::{hex, Array, Bytes32, Wrapper};
 use bp::secp256k1::rand::thread_rng;
 use chrono::{DateTime, Utc};
-use commit_verify::{
-    CommitVerify, CommitmentProtocol, Conceal, DigestExt, Sha256, UntaggedProtocol,
-};
+use commit_verify::{CommitVerify, CommitmentProtocol, Conceal, DigestExt, Sha256};
 use secp256k1_zkp::rand::{Rng, RngCore};
 use secp256k1_zkp::SECP256K1;
 use strict_encoding::{
@@ -57,7 +54,7 @@ use strict_encoding::{
 
 use super::{ConfidentialState, ExposedState};
 use crate::{
-    schema, AssignmentType, ConcealedState, RevealedState, StateType, LIB_NAME_RGB_COMMIT,
+    AssignmentType, ConcealedState, FungibleType, RevealedState, StateType, LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
@@ -102,52 +99,36 @@ impl AssetTag {
 }
 
 /// An atom of an additive state, which thus can be monomorphically encrypted.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display, From)]
 #[display(inner)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase", untagged)
+    serde(crate = "serde_crate", rename_all = "camelCase", transparent)
 )]
-pub enum FungibleState {
-    /// 64-bit value.
-    #[from]
-    #[strict_type(tag = 8)] // Matches strict types U64 primitive value
-    Bits64(u64),
-    // When/if adding more variants do not forget to re-write FromStr impl
-}
-
-impl Default for FungibleState {
-    fn default() -> Self { FungibleState::Bits64(0) }
-}
+pub struct FungibleState(u64);
 
 impl From<RevealedValue> for FungibleState {
-    fn from(revealed: RevealedValue) -> Self { revealed.value }
+    #[inline]
+    fn from(revealed: RevealedValue) -> Self { revealed.value() }
 }
 
 impl FromStr for FungibleState {
     type Err = ParseIntError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> { s.parse().map(FungibleState::Bits64) }
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> { s.parse().map(Self) }
 }
 
 impl From<FungibleState> for u64 {
-    fn from(value: FungibleState) -> Self {
-        match value {
-            FungibleState::Bits64(val) => val,
-        }
-    }
+    #[inline]
+    fn from(value: FungibleState) -> Self { value.0 }
 }
 
 impl FungibleState {
-    pub fn fungible_type(&self) -> schema::FungibleType {
-        match self {
-            FungibleState::Bits64(_) => schema::FungibleType::Unsigned64Bit,
-        }
-    }
-
-    pub fn as_u64(&self) -> u64 { (*self).into() }
+    pub fn to_u64(&self) -> u64 { (*self).into() }
 }
 
 /// value provided for a blinding factor overflows prime field order for
@@ -280,47 +261,99 @@ impl TryFrom<Bytes32> for BlindingFactor {
 ///
 /// Consists of the 64-bit value and
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, rename = "RevealedFungible")]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct RevealedValue {
-    /// Original value in smallest indivisible units
-    pub value: FungibleState,
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, rename = "RevealedFungible", tags = custom)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", untagged)
+)]
+pub enum RevealedValue {
+    #[strict_type(tag = 8)]
+    Asset {
+        /// Original value in smallest indivisible units
+        value: FungibleState,
 
-    /// Blinding factor used in Pedersen commitment
-    pub blinding: BlindingFactor,
+        /// Blinding factor used in hashing
+        blinding: BlindingFactor,
+    },
 
-    /// Asset-specific tag preventing mixing assets of different type.
-    pub tag: AssetTag,
+    #[strict_type(tag = 0xFF)]
+    ConfidentialAsset {
+        /// Original value in smallest indivisible units
+        value: FungibleState,
+
+        /// Blinding factor used in Pedersen commitment
+        blinding: BlindingFactor,
+
+        /// Asset-specific tag preventing mixing assets of different type.
+        tag: AssetTag,
+    },
+}
+
+impl StrictDumb for RevealedValue {
+    fn strict_dumb() -> Self {
+        Self::Asset {
+            value: strict_dumb!(),
+            blinding: strict_dumb!(),
+        }
+    }
 }
 
 impl RevealedValue {
     /// Constructs new state using the provided value using random blinding
     /// factor.
-    pub fn new_random_blinding(value: impl Into<FungibleState>, tag: AssetTag) -> Self {
-        Self::with_blinding(value, BlindingFactor::random(), tag)
+    pub fn confidential_random_blinding(value: impl Into<FungibleState>, tag: AssetTag) -> Self {
+        Self::ConfidentialAsset {
+            value: value.into(),
+            blinding: BlindingFactor::random(),
+            tag,
+        }
     }
 
-    /// Constructs new state using the provided value and random generator for
+    /// Constructs new confidential asset using the provided value and random generator for
     /// creating blinding factor.
-    pub fn with_rng<R: Rng + RngCore>(
+    pub fn confidential_with_rng<R: Rng + RngCore>(
         value: impl Into<FungibleState>,
         rng: &mut R,
         tag: AssetTag,
     ) -> Self {
-        Self::with_blinding(value, BlindingFactor::random_custom(rng), tag)
+        Self::ConfidentialAsset {
+            value: value.into(),
+            blinding: BlindingFactor::random_custom(rng),
+            tag,
+        }
     }
 
-    /// Convenience constructor.
-    pub fn with_blinding(
-        value: impl Into<FungibleState>,
-        blinding: BlindingFactor,
-        tag: AssetTag,
-    ) -> Self {
-        Self {
+    /// Constructs new non-confidential asset using the provided value using random blinding
+    /// factor.
+    pub fn asset_random_blinding(value: impl Into<FungibleState>) -> Self {
+        Self::Asset {
             value: value.into(),
-            blinding,
-            tag,
+            blinding: BlindingFactor::random(),
+        }
+    }
+
+    /// Constructs new non-confidential asset using the provided value and random generator for
+    /// creating blinding factor.
+    pub fn asset_with_rng<R: Rng + RngCore>(value: impl Into<FungibleState>, rng: &mut R) -> Self {
+        Self::Asset {
+            value: value.into(),
+            blinding: BlindingFactor::random_custom(rng),
+        }
+    }
+
+    pub fn fungible_type(&self) -> FungibleType {
+        match self {
+            RevealedValue::Asset { .. } => FungibleType::U64,
+            RevealedValue::ConfidentialAsset { .. } => FungibleType::ConfidentialAsset,
+        }
+    }
+
+    pub fn value(&self) -> FungibleState {
+        match self {
+            RevealedValue::Asset { value, .. } => *value,
+            RevealedValue::ConfidentialAsset { value, .. } => *value,
         }
     }
 }
@@ -335,19 +368,6 @@ impl Conceal for RevealedValue {
     type Concealed = ConcealedValue;
 
     fn conceal(&self) -> Self::Concealed { ConcealedValue::commit(self) }
-}
-
-impl PartialOrd for RevealedValue {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-impl Ord for RevealedValue {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match self.value.cmp(&other.value) {
-            Ordering::Equal => self.blinding.0.cmp(&other.blinding.0),
-            other => other,
-        }
-    }
 }
 
 /// Opaque type holding pedersen commitment for an [`FungibleState`].
@@ -386,21 +406,6 @@ impl StrictDecode for PedersenCommitment {
                 })
                 .map(PedersenCommitment::from_inner)
         })
-    }
-}
-
-impl CommitVerify<RevealedValue, UntaggedProtocol> for PedersenCommitment {
-    fn commit(revealed: &RevealedValue) -> Self {
-        use secp256k1_zkp::{Generator, Tag, Tweak};
-
-        let blinding = Tweak::from_inner(revealed.blinding.0.into_inner())
-            .expect("type guarantees of BlindingFactor are broken");
-        let FungibleState::Bits64(value) = revealed.value;
-
-        let tag = Tag::from(revealed.tag.to_byte_array());
-        let generator = Generator::new_unblinded(SECP256K1, tag);
-
-        secp256k1_zkp::PedersenCommitment::new(SECP256K1, value, blinding, generator).into()
     }
 }
 
@@ -464,26 +469,42 @@ pub struct PedersenProtocol;
 
 impl CommitmentProtocol for PedersenProtocol {}
 
-/// Confidential version of the additive state.
+/// Confidential version of the fungible state.
 ///
 /// See also revealed version [`RevealedValue`].
 #[derive(Clone, Copy, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, rename = "ConcealedFungible")]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, rename = "ConcealedFungible", tags = custom, dumb = Self::HashedValue(strict_dumb!()))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
+    serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
-pub struct ConcealedValue {
-    /// Pedersen commitment to the original [`FungibleState`].
-    pub commitment: PedersenCommitment,
-    /// Range proof for the [`FungibleState`] not exceeding type boundaries.
-    pub range_proof: RangeProof,
+pub enum ConcealedValue {
+    #[strict_type(tag = 0x00)]
+    HashedValue(Bytes32),
+
+    #[strict_type(tag = 0xFF)]
+    ConfidentialAsset {
+        /// Pedersen commitment to the original [`FungibleState`].
+        commitment: PedersenCommitment,
+        /// Range proof for the [`FungibleState`] not exceeding type boundaries.
+        range_proof: RangeProof,
+    },
 }
 
 impl PartialEq for ConcealedValue {
-    fn eq(&self, other: &Self) -> bool { self.commitment == other.commitment }
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::HashedValue(h1), Self::HashedValue(h2)) => h1 == h2,
+            (
+                Self::ConfidentialAsset { commitment: c1, .. },
+                Self::ConfidentialAsset { commitment: c2, .. },
+            ) => c1 == c2,
+            (Self::HashedValue(_), Self::ConfidentialAsset { .. })
+            | (Self::ConfidentialAsset { .. }, Self::HashedValue(_)) => false,
+        }
+    }
 }
 
 impl ConfidentialState for ConcealedValue {
@@ -493,12 +514,37 @@ impl ConfidentialState for ConcealedValue {
 
 impl CommitVerify<RevealedValue, PedersenProtocol> for ConcealedValue {
     fn commit(revealed: &RevealedValue) -> Self {
-        let commitment = PedersenCommitment::commit(revealed);
-        // TODO: Do actual conceal upon integration of bulletproofs library
-        let range_proof = RangeProof::default();
-        ConcealedValue {
-            commitment,
-            range_proof,
+        match revealed {
+            RevealedValue::Asset { value, blinding } => {}
+
+            RevealedValue::ConfidentialAsset {
+                value,
+                blinding,
+                tag,
+            } => {
+                use secp256k1_zkp::{Generator, Tag, Tweak};
+
+                let blinding = Tweak::from_inner(blinding.0.into_inner())
+                    .expect("type guarantees of BlindingFactor are broken");
+
+                let tag = Tag::from(tag.to_byte_array());
+                let generator = Generator::new_unblinded(SECP256K1, tag);
+
+                let commitment = secp256k1_zkp::PedersenCommitment::new(
+                    SECP256K1,
+                    value.to_u64(),
+                    blinding,
+                    generator,
+                )
+                .into();
+
+                // TODO: Do actual conceal upon integration of bulletproofs library
+                let range_proof = RangeProof::default();
+                ConcealedValue::ConfidentialAsset {
+                    commitment,
+                    range_proof,
+                }
+            }
         }
     }
 }
@@ -535,11 +581,15 @@ mod test {
         let mut r = thread_rng();
         let tag = AssetTag::from_byte_array([1u8; 32]);
 
-        let a = PedersenCommitment::commit(&RevealedValue::with_rng(15, &mut r, tag)).into_inner();
-        let b = PedersenCommitment::commit(&RevealedValue::with_rng(7, &mut r, tag)).into_inner();
+        let a = PedersenCommitment::commit(&RevealedValue::confidential_rng(15, &mut r, tag))
+            .into_inner();
+        let b = PedersenCommitment::commit(&RevealedValue::confidential_rng(7, &mut r, tag))
+            .into_inner();
 
-        let c = PedersenCommitment::commit(&RevealedValue::with_rng(13, &mut r, tag)).into_inner();
-        let d = PedersenCommitment::commit(&RevealedValue::with_rng(9, &mut r, tag)).into_inner();
+        let c = PedersenCommitment::commit(&RevealedValue::confidential_rng(13, &mut r, tag))
+            .into_inner();
+        let d = PedersenCommitment::commit(&RevealedValue::confidential_rng(9, &mut r, tag))
+            .into_inner();
 
         assert!(!secp256k1_zkp::verify_commitments_sum_to_equal(SECP256K1, &[a, b], &[c, d]))
     }

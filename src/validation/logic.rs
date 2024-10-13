@@ -630,13 +630,13 @@ impl OwnedStateSchema {
                         });
                     }
                     (OwnedStateSchema::Fungible(schema), RevealedState::Fungible(v))
-                        if v.value.fungible_type() != *schema =>
+                        if v.fungible_type() != *schema =>
                     {
                         status.add_failure(validation::Failure::FungibleTypeMismatch {
                             opid,
                             state_type,
                             expected: *schema,
-                            found: v.value.fungible_type(),
+                            found: v.fungible_type(),
                         });
                     }
                     (OwnedStateSchema::Fungible(_), RevealedState::Fungible(_)) => {}
