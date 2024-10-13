@@ -386,7 +386,9 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
 
 impl<Seal: ExposedSeal> MerkleLeaves for Assignments<Seal> {
     type Leaf = AssignmentCommitment;
-    type LeafIter<'tmp> = vec::IntoIter<AssignmentCommitment> where Seal: 'tmp;
+    type LeafIter<'tmp>
+        = vec::IntoIter<AssignmentCommitment>
+    where Seal: 'tmp;
 
     fn merkle_leaves(&self) -> Self::LeafIter<'_> {
         self.iter()

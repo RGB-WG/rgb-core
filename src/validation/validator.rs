@@ -143,12 +143,12 @@ pub struct Validator<
 }
 
 impl<
-    'consignment,
-    'resolver,
-    S: ContractStateAccess + ContractStateEvolve,
-    C: ConsignmentApi,
-    R: ResolveWitness,
-> Validator<'consignment, 'resolver, S, C, R>
+        'consignment,
+        'resolver,
+        S: ContractStateAccess + ContractStateEvolve,
+        C: ConsignmentApi,
+        R: ResolveWitness,
+    > Validator<'consignment, 'resolver, S, C, R>
 {
     fn init(consignment: &'consignment C, resolver: &'resolver R, context: S::Context<'_>) -> Self {
         // We use validation status object to store all detected failures and
