@@ -21,7 +21,7 @@
 // limitations under the License.
 
 use std::cell::RefCell;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
 use aluvm::data::Number;
@@ -36,10 +36,9 @@ use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OrdOpRef, RgbIsa, VmContext};
 use crate::{
-    validation, Assign, AssignmentType, Assignments, AssignmentsRef, ConcealedState,
-    ConfidentialState, ExposedSeal, ExposedState, Extension, GlobalState, GlobalStateSchema,
-    GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId, Operation, Opout,
-    OwnedStateSchema, RevealedState, Schema, StateType, Transition, TypedAssigns, Valencies,
+    validation, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal, Extension,
+    GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId,
+    Operation, Opout, OwnedStateSchema, Schema, Transition, TypedAssigns, Valencies,
 };
 
 impl Schema {
@@ -69,31 +68,16 @@ impl Schema {
             validator,
             ty,
         ) = match op {
-            OrdOpRef::Genesis(genesis) => {
-                for id in genesis.asset_tags.keys() {
-                    if !matches!(self.owned_types.get(id), Some(OwnedStateSchema::Fungible(_))) {
-                        status.add_failure(validation::Failure::AssetTagNoState(*id));
-                    }
-                }
-                for (id, ss) in &self.owned_types {
-                    if ss.state_type() == StateType::Fungible
-                        && !genesis.asset_tags.contains_key(id)
-                    {
-                        status.add_failure(validation::Failure::FungibleStateNoTag(*id));
-                    }
-                }
-
-                (
-                    &self.genesis.metadata,
-                    &self.genesis.globals,
-                    &empty_assign_schema,
-                    &empty_valency_schema,
-                    &self.genesis.assignments,
-                    &self.genesis.valencies,
-                    self.genesis.validator,
-                    None::<u16>,
-                )
-            }
+            OrdOpRef::Genesis(_) => (
+                &self.genesis.metadata,
+                &self.genesis.globals,
+                &empty_assign_schema,
+                &empty_valency_schema,
+                &self.genesis.assignments,
+                &self.genesis.valencies,
+                self.genesis.validator,
+                None::<u16>,
+            ),
             OrdOpRef::Transition(
                 Transition {
                     transition_type, ..
@@ -199,7 +183,6 @@ impl Schema {
         let op_info = OpInfo::with(opid, &op, &prev_state, &redeemed);
         let context = VmContext {
             contract_id: genesis.contract_id(),
-            asset_tags: &genesis.asset_tags,
             op_info,
             contract_state,
         };
@@ -372,7 +355,7 @@ impl Schema {
         for (owned_type_id, occ) in assign_schema {
             let len = owned_state
                 .get(owned_type_id)
-                .map(TypedAssigns::len_u16)
+                .map(|ta| ta.len_u16())
                 .unwrap_or(0);
 
             // Checking number of ancestor's assignment occurrences
@@ -431,7 +414,7 @@ impl Schema {
         for (state_id, occ) in assign_schema {
             let len = owned_state
                 .get(state_id)
-                .map(TypedAssigns::len_u16)
+                .map(|ta| ta.len_u16())
                 .unwrap_or(0);
 
             // Checking number of assignment occurrences
@@ -446,21 +429,11 @@ impl Schema {
                  validation and we would not reach this point",
             );
 
-            match owned_state.get(state_id) {
-                None => {}
-                Some(TypedAssigns::Declarative(set)) => set
+            if let Some(assignments) = owned_state.get(state_id) {
+                assignments
                     .iter()
-                    .for_each(|data| status += assignment.validate(id, *state_id, data, types)),
-                Some(TypedAssigns::Fungible(set)) => set
-                    .iter()
-                    .for_each(|data| status += assignment.validate(id, *state_id, data, types)),
-                Some(TypedAssigns::Structured(set)) => set
-                    .iter()
-                    .for_each(|data| status += assignment.validate(id, *state_id, data, types)),
-                Some(TypedAssigns::Attachment(set)) => set
-                    .iter()
-                    .for_each(|data| status += assignment.validate(id, *state_id, data, types)),
-            };
+                    .for_each(|data| status += assignment.validate(id, *state_id, data, types))
+            }
         }
 
         status
@@ -493,7 +466,7 @@ fn extract_prev_state<C: ConsignmentApi>(
     inputs: &Inputs,
     status: &mut validation::Status,
 ) -> Assignments<GraphSeal> {
-    let mut assignments = bmap! {};
+    let mut assignments = BTreeMap::<AssignmentType, TypedAssigns<GraphSeal>>::new();
     for input in inputs {
         let Opout { op, ty, no } = input.prev_out;
 
@@ -506,64 +479,22 @@ fn extract_prev_state<C: ConsignmentApi>(
         };
 
         let no = no as usize;
-        match prev_op.assignments_by_type(ty) {
-            Some(TypedAssigns::Declarative(prev_assignments)) => {
-                if let Some(prev_assign) = prev_assignments.get(no) {
-                    if let Some(typed_assigns) = assignments
-                        .entry(ty)
-                        .or_insert_with(|| TypedAssigns::Declarative(Default::default()))
-                        .as_declarative_mut()
-                    {
-                        typed_assigns.push(prev_assign.clone()).expect("same size");
-                    }
+        if let Some(prev_assignments) = prev_op.assignments_by_type(ty) {
+            if let Some(prev_assign) = prev_assignments.get(no).cloned() {
+                if let Some(typed_assigns) = assignments.get_mut(&ty) {
+                    typed_assigns.push(prev_assign).expect("same size");
                 } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
+                    assignments
+                        .insert(ty, TypedAssigns::with(prev_assign))
+                        .expect("same size");
                 }
+            } else {
+                status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
             }
-            Some(TypedAssigns::Fungible(prev_assignments)) => {
-                if let Some(prev_assign) = prev_assignments.get(no) {
-                    if let Some(typed_assigns) = assignments
-                        .entry(ty)
-                        .or_insert_with(|| TypedAssigns::Fungible(Default::default()))
-                        .as_fungible_mut()
-                    {
-                        typed_assigns.push(prev_assign.clone()).expect("same size");
-                    }
-                } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
-                }
-            }
-            Some(TypedAssigns::Structured(prev_assignments)) => {
-                if let Some(prev_assign) = prev_assignments.get(no) {
-                    if let Some(typed_assigns) = assignments
-                        .entry(ty)
-                        .or_insert_with(|| TypedAssigns::Structured(Default::default()))
-                        .as_structured_mut()
-                    {
-                        typed_assigns.push(prev_assign.clone()).expect("same size");
-                    }
-                } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
-                }
-            }
-            Some(TypedAssigns::Attachment(prev_assignments)) => {
-                if let Some(prev_assign) = prev_assignments.get(no) {
-                    if let Some(typed_assigns) = assignments
-                        .entry(ty)
-                        .or_insert_with(|| TypedAssigns::Attachment(Default::default()))
-                        .as_attachment_mut()
-                    {
-                        typed_assigns.push(prev_assign.clone()).expect("same size");
-                    }
-                } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
-                }
-            }
-            None => {
-                // Presence of the required owned rights type in the
-                // parent operation was already validated; we have nothing
-                // to report here
-            }
+        } else {
+            // Presence of the required owned rights type in the
+            // parent operation was already validated; we have nothing
+            // to report here
         }
     }
     Confined::try_from(assignments)
@@ -572,95 +503,23 @@ fn extract_prev_state<C: ConsignmentApi>(
 }
 
 impl OwnedStateSchema {
-    pub fn validate<State: ExposedState, Seal: ExposedSeal>(
+    pub fn validate<Seal: ExposedSeal>(
         &self,
         opid: OpId,
         state_type: AssignmentType,
-        data: &Assign<State, Seal>,
+        assign: &Assign<Seal>,
         type_system: &TypeSystem,
     ) -> validation::Status {
         let mut status = validation::Status::new();
-        match data {
-            Assign::Confidential { state, .. } | Assign::ConfidentialState { state, .. } => {
-                match (self, state.state_commitment()) {
-                    (OwnedStateSchema::Declarative, ConcealedState::Void) => {}
-                    (OwnedStateSchema::Fungible(_), ConcealedState::Fungible(value)) => {
-                        // [SECURITY-CRITICAL]: Bulletproofs validation
-                        if let Err(err) = value.verify_range_proof() {
-                            status.add_failure(validation::Failure::BulletproofsInvalid(
-                                opid,
-                                state_type,
-                                err.to_string(),
-                            ));
-                        }
-                    }
-                    (OwnedStateSchema::Structured(_), ConcealedState::Structured(_)) => {
-                        status.add_warning(validation::Warning::UncheckableConfidentialState(
-                            opid, state_type,
-                        ));
-                    }
-                    (OwnedStateSchema::Attachment(_), ConcealedState::Attachment(_)) => {
-                        status.add_warning(validation::Warning::UncheckableConfidentialState(
-                            opid, state_type,
-                        ));
-                    }
-                    // all other options are mismatches
-                    (state_schema, found) => {
-                        status.add_failure(validation::Failure::StateTypeMismatch {
-                            opid,
-                            state_type,
-                            expected: state_schema.state_type(),
-                            found: found.state_type(),
-                        });
-                    }
-                }
-            }
-            Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
-                match (self, state.state_data()) {
-                    (OwnedStateSchema::Declarative, RevealedState::Void) => {}
-                    (
-                        OwnedStateSchema::Attachment(media_type),
-                        RevealedState::Attachment(attach),
-                    ) if !attach.file.media_type.conforms(media_type) => {
-                        status.add_failure(validation::Failure::MediaTypeMismatch {
-                            opid,
-                            state_type,
-                            expected: *media_type,
-                            found: attach.file.media_type,
-                        });
-                    }
-                    (OwnedStateSchema::Fungible(schema), RevealedState::Fungible(v))
-                        if v.fungible_type() != *schema =>
-                    {
-                        status.add_failure(validation::Failure::FungibleTypeMismatch {
-                            opid,
-                            state_type,
-                            expected: *schema,
-                            found: v.fungible_type(),
-                        });
-                    }
-                    (OwnedStateSchema::Fungible(_), RevealedState::Fungible(_)) => {}
-                    (OwnedStateSchema::Structured(sem_id), RevealedState::Structured(data)) => {
-                        if type_system
-                            .strict_deserialize_type(*sem_id, data.value.as_ref())
-                            .is_err()
-                        {
-                            status.add_failure(validation::Failure::SchemaInvalidOwnedValue(
-                                opid, state_type, *sem_id,
-                            ));
-                        };
-                    }
-                    // all other options are mismatches
-                    (state_schema, found) => {
-                        status.add_failure(validation::Failure::StateTypeMismatch {
-                            opid,
-                            state_type,
-                            expected: state_schema.state_type(),
-                            found: found.state_type(),
-                        });
-                    }
-                }
-            }
+        if type_system
+            .strict_deserialize_type(self.sem_id, assign.as_state().value.as_ref())
+            .is_err()
+        {
+            status.add_failure(validation::Failure::SchemaInvalidOwnedValue(
+                opid,
+                state_type,
+                self.sem_id,
+            ));
         }
         status
     }

@@ -22,9 +22,6 @@
 
 mod meta;
 mod global;
-mod data;
-mod fungible;
-mod attachment;
 mod state;
 pub mod seal;
 pub mod assignments;
@@ -33,32 +30,23 @@ mod bundle;
 mod xchain;
 mod commit;
 
-pub use assignments::{
-    Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
-    TypedAssigns,
-};
-pub use attachment::{AttachId, AttachState, ConcealedAttach, RevealedAttach};
+pub use assignments::{Assign, Assignments, AssignmentsRef, ItemAbsent, TypedAssigns};
 pub use bundle::{BundleId, InputMap, TransitionBundle, Vin};
 pub use commit::{
     AssignmentCommitment, AssignmentIndex, BaseCommitment, BundleDisclosure, ContractId,
     DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
 };
-pub use data::{ConcealedData, DataState, RevealedData, VoidState};
-pub use fungible::{
-    AssetTag, BlindingFactor, BlindingParseError, ConcealedValue, FungibleState,
-    InvalidFieldElement, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError, RevealedValue,
-};
 pub use global::{GlobalState, GlobalValues};
 pub use meta::{MetaValue, Metadata, MetadataError};
 pub use operations::{
-    AssetTags, Extension, Genesis, Identity, Input, Inputs, Operation, Opout, OpoutParseError,
-    Redeemed, Transition, Valencies,
+    Extension, Genesis, Identity, Input, Inputs, Operation, Opout, OpoutParseError, Redeemed,
+    Transition, Valencies,
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, XGenesisSeal, XGraphSeal,
     XOutputSeal,
 };
-pub use state::{ConcealedState, ConfidentialState, ExposedState, RevealedState, StateType};
+pub use state::{AttachId, State, StateCommitment};
 pub use xchain::{
     AltLayer1, AltLayer1Set, Impossible, Layer1, XChain, XChainParseError, XOutpoint,
     XCHAIN_BITCOIN_PREFIX, XCHAIN_LIQUID_PREFIX,

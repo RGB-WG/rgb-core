@@ -31,8 +31,8 @@ use crate::schema::{self, SchemaId};
 use crate::validation::WitnessResolverError;
 use crate::vm::XWitnessId;
 use crate::{
-    BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, Opout, StateType, Vin,
-    XGraphSeal, XOutputSeal,
+    BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, Opout, Vin, XGraphSeal,
+    XOutputSeal,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -263,13 +263,6 @@ pub enum Failure {
     /// which is an input of the state transition {3}.
     BundleInvalidCommitment(BundleId, Vin, XWitnessId, OpId),
 
-    // Errors checking asset tags
-    /// asset type provided in genesis references unknown fungible state of type
-    /// {0}.
-    AssetTagNoState(schema::AssignmentType),
-    /// fungible state {0} has no asset tag defined.
-    FungibleStateNoTag(schema::AssignmentType),
-
     // Errors checking seal closing
     /// transition {opid} references state type {state_type} absent in the
     /// outputs of previous state transition {prev_id}.
@@ -322,33 +315,6 @@ pub enum Failure {
         valency: schema::ValencyType,
     },
 
-    // State check errors
-    /// state in {opid}/{state_type} is of {found} type, while schema requires
-    /// it to be {expected}.
-    StateTypeMismatch {
-        opid: OpId,
-        state_type: schema::AssignmentType,
-        expected: StateType,
-        found: StateType,
-    },
-    /// state in {opid}/{state_type} is of {found} type, while schema requires
-    /// it to be {expected}.
-    MediaTypeMismatch {
-        opid: OpId,
-        state_type: schema::AssignmentType,
-        expected: schema::MediaType,
-        found: schema::MediaType,
-    },
-    /// state in {opid}/{state_type} is of {found} type, while schema requires
-    /// it to be {expected}.
-    FungibleTypeMismatch {
-        opid: OpId,
-        state_type: schema::AssignmentType,
-        expected: schema::FungibleType,
-        found: schema::FungibleType,
-    },
-    /// invalid bulletproofs in {0}:{1}: {2}
-    BulletproofsInvalid(OpId, schema::AssignmentType, String),
     /// evaluation of AluVM script for operation {0} has failed with the code
     /// {1:?} and message {2:?}.
     ScriptFailure(OpId, Option<u8>, Option<String>),
@@ -368,10 +334,6 @@ pub enum Failure {
 )]
 #[display(doc_comments)]
 pub enum Warning {
-    /// operation {0} contains state in assignment {1} which is confidential and
-    /// thus was not validated.
-    UncheckableConfidentialState(OpId, schema::AssignmentType),
-
     /// Custom warning by external services on top of RGB Core.
     #[display(inner)]
     Custom(String),

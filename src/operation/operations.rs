@@ -37,10 +37,9 @@ use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize}
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    AltLayer1Set, AssetTag, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
-    ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
-    GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose, OpId, SecretSeal, TypedAssigns,
-    VoidState, XChain, LIB_NAME_RGB_COMMIT,
+    AltLayer1Set, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ContractId,
+    DiscloseHash, Ffv, GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose, OpId, SecretSeal,
+    StateCommitment, TypedAssigns, XChain, LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -94,20 +93,6 @@ impl FromStr for Opout {
         }
     }
 }
-
-#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
-#[wrapper(Deref)]
-#[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict, id = StrictHash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct AssetTags(TinyOrdMap<AssignmentType, AssetTag>);
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
 #[wrapper(Deref)]
@@ -258,52 +243,24 @@ pub trait Operation {
 
     /// Provides summary about parts of the operation which are revealed.
     fn disclose(&self) -> OpDisclose {
-        fn proc_seals<State: ExposedState>(
-            ty: AssignmentType,
-            a: &[Assign<State, GraphSeal>],
-            seals: &mut BTreeMap<AssignmentIndex, XChain<SecretSeal>>,
-            state: &mut BTreeMap<AssignmentIndex, State::Concealed>,
-        ) {
-            for (index, assignment) in a.iter().enumerate() {
+        let mut seals: BTreeMap<AssignmentIndex, XChain<SecretSeal>> = bmap!();
+        let mut state: BTreeMap<AssignmentIndex, StateCommitment> = bmap!();
+        for (ty, assigns) in self.assignments().to_graph_seals() {
+            for (index, assignment) in assigns.iter().enumerate() {
                 if let Some(seal) = assignment.revealed_seal() {
                     seals.insert(AssignmentIndex::new(ty, index as u16), seal.to_secret_seal());
                 }
-                if let Some(revealed) = assignment.as_revealed_state() {
-                    state.insert(AssignmentIndex::new(ty, index as u16), revealed.conceal());
-                }
-            }
-        }
-
-        let mut seals: BTreeMap<AssignmentIndex, XChain<SecretSeal>> = bmap!();
-        let mut void: BTreeMap<AssignmentIndex, VoidState> = bmap!();
-        let mut fungible: BTreeMap<AssignmentIndex, ConcealedValue> = bmap!();
-        let mut data: BTreeMap<AssignmentIndex, ConcealedData> = bmap!();
-        let mut attach: BTreeMap<AssignmentIndex, ConcealedAttach> = bmap!();
-        for (ty, assigns) in self.assignments().flat() {
-            match assigns {
-                TypedAssigns::Declarative(a) => {
-                    proc_seals(ty, &a, &mut seals, &mut void);
-                }
-                TypedAssigns::Fungible(a) => {
-                    proc_seals(ty, &a, &mut seals, &mut fungible);
-                }
-                TypedAssigns::Structured(a) => {
-                    proc_seals(ty, &a, &mut seals, &mut data);
-                }
-                TypedAssigns::Attachment(a) => {
-                    proc_seals(ty, &a, &mut seals, &mut attach);
-                }
+                state.insert(
+                    AssignmentIndex::new(ty, index as u16),
+                    assignment.as_state().commit_id(),
+                );
             }
         }
 
         OpDisclose {
             id: self.id(),
             seals: Confined::from_checked(seals),
-            fungible: Confined::from_iter_checked(
-                fungible.into_iter().map(|(k, s)| (k, s.commitment())),
-            ),
-            data: Confined::from_checked(data),
-            attach: Confined::from_checked(attach),
+            state: Confined::from_checked(state),
         }
     }
 
@@ -361,7 +318,6 @@ pub struct Genesis {
     pub issuer: Identity,
     pub testnet: bool,
     pub alt_layers1: AltLayer1Set,
-    pub asset_tags: AssetTags,
     pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
@@ -541,9 +497,7 @@ impl Operation for Genesis {
 
     #[inline]
     fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
-        self.assignments
-            .get(&t)
-            .map(TypedAssigns::transmutate_seals)
+        self.assignments.get(&t).map(TypedAssigns::transmute_seals)
     }
 
     #[inline]
@@ -586,9 +540,7 @@ impl Operation for Extension {
 
     #[inline]
     fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
-        self.assignments
-            .get(&t)
-            .map(TypedAssigns::transmutate_seals)
+        self.assignments.get(&t).map(TypedAssigns::transmute_seals)
     }
 
     #[inline]

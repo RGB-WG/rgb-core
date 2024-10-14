@@ -25,7 +25,7 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::{fmt, vec};
 
-use amplify::confinement::{Confined, MediumOrdMap, U16 as U16MAX};
+use amplify::confinement::{Confined, MediumOrdMap, SmallBlob, U16 as U16MAX};
 use amplify::hex::{FromHex, ToHex};
 use amplify::num::u256;
 use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
@@ -36,12 +36,11 @@ use commit_verify::{
 };
 use strict_encoding::StrictDumb;
 
+use crate::operation::state::StateCommitment;
 use crate::{
-    impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ConcealedAttach,
-    ConcealedData, ConcealedState, ConfidentialState, DataState, ExposedSeal, ExposedState,
-    Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Operation,
-    PedersenCommitment, Redeemed, SchemaId, SecretSeal, Transition, TransitionBundle,
-    TransitionType, TypedAssigns, XChain, LIB_NAME_RGB_COMMIT,
+    impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ExposedSeal, Extension,
+    ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Operation, Redeemed, SchemaId,
+    SecretSeal, Transition, TransitionBundle, TransitionType, XChain, LIB_NAME_RGB_COMMIT,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -189,9 +188,7 @@ impl AssignmentIndex {
 pub struct OpDisclose {
     pub id: OpId,
     pub seals: MediumOrdMap<AssignmentIndex, XChain<SecretSeal>>,
-    pub fungible: MediumOrdMap<AssignmentIndex, PedersenCommitment>,
-    pub data: MediumOrdMap<AssignmentIndex, ConcealedData>,
-    pub attach: MediumOrdMap<AssignmentIndex, ConcealedAttach>,
+    pub state: MediumOrdMap<AssignmentIndex, StateCommitment>,
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -238,7 +235,6 @@ pub struct BaseCommitment {
     pub issuer: StrictHash,
     pub testnet: bool,
     pub alt_layers1: StrictHash,
-    pub asset_tags: StrictHash,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -283,7 +279,6 @@ impl Genesis {
             testnet: self.testnet,
             alt_layers1: self.alt_layers1.commit_id(),
             issuer: self.issuer.commit_id(),
-            asset_tags: self.asset_tags.commit_id(),
         };
         OpCommitment {
             ffv: self.ffv,
@@ -339,21 +334,10 @@ impl Extension {
     }
 }
 
-impl ConcealedState {
-    fn commit_encode(&self, e: &mut CommitEngine) {
-        match self {
-            ConcealedState::Void => {}
-            ConcealedState::Fungible(val) => e.commit_to_serialized(&val.commitment()),
-            ConcealedState::Structured(dat) => e.commit_to_serialized(dat),
-            ConcealedState::Attachment(att) => e.commit_to_serialized(att),
-        }
-    }
-}
-
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct AssignmentCommitment {
     pub ty: AssignmentType,
-    pub state: ConcealedState,
+    pub state: StateCommitment,
     pub seal: XChain<SecretSeal>,
     pub lock: ReservedBytes<2, 0>,
 }
@@ -363,21 +347,21 @@ impl CommitEncode for AssignmentCommitment {
 
     fn commit_encode(&self, e: &mut CommitEngine) {
         e.commit_to_serialized(&self.ty);
-        self.state.commit_encode(e);
         e.commit_to_serialized(&self.seal);
+        e.commit_to_serialized(&self.state);
         e.commit_to_serialized(&self.lock);
         e.set_finished();
     }
 }
 
-impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
+impl<Seal: ExposedSeal> Assign<Seal> {
     pub fn commitment(&self, ty: AssignmentType) -> AssignmentCommitment {
         let Self::Confidential { seal, state, lock } = self.conceal() else {
             unreachable!();
         };
         AssignmentCommitment {
             ty,
-            state: state.state_commitment(),
+            state: state.commit_id(),
             seal,
             lock,
         }
@@ -392,23 +376,7 @@ impl<Seal: ExposedSeal> MerkleLeaves for Assignments<Seal> {
 
     fn merkle_leaves(&self) -> Self::LeafIter<'_> {
         self.iter()
-            .flat_map(|(ty, a)| {
-                match a {
-                    TypedAssigns::Declarative(list) => {
-                        list.iter().map(|a| a.commitment(*ty)).collect::<Vec<_>>()
-                    }
-                    TypedAssigns::Fungible(list) => {
-                        list.iter().map(|a| a.commitment(*ty)).collect()
-                    }
-                    TypedAssigns::Structured(list) => {
-                        list.iter().map(|a| a.commitment(*ty)).collect()
-                    }
-                    TypedAssigns::Attachment(list) => {
-                        list.iter().map(|a| a.commitment(*ty)).collect()
-                    }
-                }
-                .into_iter()
-            })
+            .flat_map(|(ty, a)| a.iter().map(|a| a.commitment(*ty)))
             .collect::<Vec<_>>()
             .into_iter()
     }
@@ -417,7 +385,7 @@ impl<Seal: ExposedSeal> MerkleLeaves for Assignments<Seal> {
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GlobalCommitment {
     pub ty: GlobalStateType,
-    pub state: DataState,
+    pub state: SmallBlob,
 }
 
 impl CommitEncode for GlobalCommitment {

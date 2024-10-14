@@ -37,11 +37,10 @@ use single_use_seals::SealWitness;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    AssetTags, AssignmentType, Assignments, AssignmentsRef, AttachState, ContractId, DataState,
-    ExposedSeal, Extension, ExtensionType, FungibleState, Genesis, GlobalState, GlobalStateType,
-    GraphSeal, Impossible, Inputs, Layer1, Metadata, OpFullType, OpId, OpType, Operation,
-    Transition, TransitionType, TxoSeal, TypedAssigns, Valencies, XChain, XOutpoint, XOutputSeal,
-    LIB_NAME_RGB_LOGIC,
+    AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal, Extension, ExtensionType,
+    Genesis, GlobalState, GlobalStateType, GraphSeal, Impossible, Inputs, Layer1, Metadata,
+    OpFullType, OpId, OpType, Operation, State, Transition, TransitionType, TxoSeal, TypedAssigns,
+    Valencies, XChain, XOutpoint, XOutputSeal, LIB_NAME_RGB_LOGIC,
 };
 
 pub type XWitnessId = XChain<Txid>;
@@ -572,7 +571,7 @@ impl GlobalOrd {
 }
 
 pub trait GlobalStateIter {
-    type Data: Borrow<DataState>;
+    type Data: Borrow<State>;
     fn size(&mut self) -> u24;
     fn prev(&mut self) -> Option<(GlobalOrd, Self::Data)>;
     fn last(&mut self) -> Option<(GlobalOrd, Self::Data)>;
@@ -633,7 +632,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     /// Retrieves global state data located `depth` items back from the most
     /// recent global state value. Ensures that the global state ordering is
     /// consensus-based.
-    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<DataState> + '_> {
+    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<State> + '_> {
         if depth >= self.iter.size() {
             return None;
         }
@@ -674,25 +673,11 @@ pub trait ContractStateAccess: Debug {
         ty: GlobalStateType,
     ) -> Result<GlobalContractState<impl GlobalStateIter>, UnknownGlobalStateType>;
 
-    fn rights(&self, outpoint: XOutpoint, ty: AssignmentType) -> u32;
-
-    fn fungible(
+    fn state(
         &self,
         outpoint: XOutpoint,
         ty: AssignmentType,
-    ) -> impl DoubleEndedIterator<Item = FungibleState>;
-
-    fn data(
-        &self,
-        outpoint: XOutpoint,
-        ty: AssignmentType,
-    ) -> impl DoubleEndedIterator<Item = impl Borrow<DataState>>;
-
-    fn attach(
-        &self,
-        outpoint: XOutpoint,
-        ty: AssignmentType,
-    ) -> impl DoubleEndedIterator<Item = impl Borrow<AttachState>>;
+    ) -> impl DoubleEndedIterator<Item = impl Borrow<State>>;
 }
 
 pub trait ContractStateEvolve {
@@ -705,7 +690,6 @@ pub trait ContractStateEvolve {
 
 pub struct VmContext<'op, S: ContractStateAccess> {
     pub contract_id: ContractId,
-    pub asset_tags: &'op AssetTags,
     pub op_info: OpInfo<'op>,
     pub contract_state: Rc<RefCell<S>>,
 }

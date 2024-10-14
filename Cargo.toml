@@ -22,16 +22,14 @@ name = "rgbcore-stl"
 required-features = ["stl"]
 
 [dependencies]
-amplify = { version = "~4.7.0", features = ["rand"] }
+amplify = "~4.7.0"
 baid64 = "~0.2.2"
 strict_encoding = "~2.7.0"
 strict_types = { version = "~2.7.0", features = ["armor"] }
 aluvm = { version = "~0.11.0-beta.9", features = ["std", "ascii-armor"] }
-commit_verify = { version = "~0.11.0-beta.9", features = ["rand", "derive"] }
+commit_verify = { version = "~0.11.0-beta.9", features = ["derive"] }
 single_use_seals = "~0.11.0-beta.9"
 bp-core = { version = "~0.11.0-beta.9" }
-secp256k1-zkp = { version = "0.11.0", features = ["rand", "rand-std", "global-context"] } # TODO: Update version before the release
-mime = "~0.3.17"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 chrono = "0.4.38"
 
@@ -47,7 +45,6 @@ serde = [
     "commit_verify/serde",
     "bp-core/serde",
     "aluvm/serde",
-    "secp256k1-zkp/serde"
 ]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

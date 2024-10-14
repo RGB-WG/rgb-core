@@ -33,151 +33,92 @@ use aluvm::library::{CodeEofError, IsaSeg, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg, Reg16, Reg32, RegA, RegS};
 use amplify::num::{u24, u3, u4};
 use amplify::Wrapper;
-use commit_verify::CommitVerify;
 
 use super::opcodes::*;
 use super::{ContractStateAccess, VmContext};
-use crate::{
-    Assign, AssignmentType, BlindingFactor, GlobalStateType, MetaType, PedersenCommitment,
-    RevealedValue, TypedAssigns,
-};
+use crate::{AssignmentType, GlobalStateType, MetaType};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum ContractOp<S: ContractStateAccess> {
-    /// Counts number of inputs (previous state entries) of the provided type
-    /// and puts the number to the destination `a16` register.
+    /// Counts number of inputs (previous state entries) of the provided type and puts the number
+    /// to the destination `a16` register.
     ///
-    /// If the operation doesn't contain inputs with a given assignment type,
-    /// sets destination index to zero. Does not change `st0` register.
+    /// If the operation doesn't contain inputs with a given assignment type, sets destination
+    /// index to zero. Does not change `st0` register.
     #[display("cnp     {0},a16{1}")]
     CnP(AssignmentType, Reg32),
 
-    /// Counts number of outputs (owned state entries) of the provided type
-    /// and puts the number to the destination `a16` register.
+    /// Counts number of outputs (owned state entries) of the provided type and puts the number to
+    /// the destination `a16` register.
     ///
-    /// If the operation doesn't contain inputs with a given assignment type,
-    /// sets destination index to zero. Does not change `st0` register.
+    /// If the operation doesn't contain inputs with a given assignment type, sets destination
+    /// index to zero. Does not change `st0` register.
     #[display("cns     {0},a16{1}")]
     CnS(AssignmentType, Reg32),
 
-    /// Counts number of global state items of the provided type affected by the
-    /// current operation and puts the number to the destination `a8` register.
+    /// Counts number of global state items of the provided type affected by the current operation
+    /// and puts the number to the destination `a8` register.
     ///
-    /// If the operation doesn't contain inputs with a given assignment type,
-    /// sets destination index to zero. Does not change `st0` register.
+    /// If the operation doesn't contain inputs with a given assignment type, sets destination
+    /// index to zero. Does not change `st0` register.
     #[display("cng     {0},a8{1}")]
     CnG(GlobalStateType, Reg32),
 
-    /// Counts number of global state items of the provided type in the contract
-    /// state and puts the number to the destination `a32` register.
+    /// Counts number of global state items of the provided type in the contract state and puts the
+    /// number to the destination `a32` register.
     ///
-    /// If the operation doesn't contain inputs with a given assignment type,
-    /// sets destination index to zero. Does not change `st0` register.
+    /// If the operation doesn't contain inputs with a given assignment type, sets destination
+    /// index to zero. Does not change `st0` register.
     #[display("cnc     {0},a32{1}")]
     CnC(GlobalStateType, Reg32),
 
-    /// Loads input (previous) structured state with type id from the first
-    /// argument and index from the second argument `a16` register into a
-    /// register provided in the third argument.
+    /// Loads input (previous) state with type id from the first argument and index from the second
+    /// argument `a16` register into a register provided in the third argument.
     ///
-    /// If the state is absent or is not a structured state sets `st0` to
-    /// `false` and terminates the program.
+    /// If the state is absent or is not a structured state sets `st0` to `false` and terminates
+    /// the program.
     ///
     /// If the state at the index is concealed, sets destination to `None`.
     #[display("ldp     {0},a16{1},{2}")]
     LdP(AssignmentType, Reg16, RegS),
 
-    /// Loads owned structured state with type id from the first argument and
-    /// index from the second argument `a16` register into a register provided
-    /// in the third argument.
+    /// Loads owned state with type id from the first argument and index from the second argument
+    /// `a16` register into a register provided in the third argument.
     ///
-    /// If the state is absent or is not a structured state sets `st0` to
-    /// `false` and terminates the program.
+    /// If the state is absent or is not a structured state sets `st0` to `false` and terminates
+    /// the program.
     ///
     /// If the state at the index is concealed, sets destination to `None`.
     #[display("lds     {0},a16{1},{2}")]
     LdS(AssignmentType, Reg16, RegS),
 
-    /// Loads owned fungible state with type id from the first argument and
-    /// index from the second argument `a16` register into `a64` register
-    /// provided in the third argument.
-    ///
-    /// If the state is absent or is not a fungible state sets `st0` to
-    /// `false` and terminates the program.
-    ///
-    /// If the state at the index is concealed, sets destination to `None`.
-    #[display("ldf     {0},a16{1},a64{2}")]
-    LdF(AssignmentType, Reg16, Reg16),
-
-    /// Loads global state from the current operation with type id from the
-    /// first argument and index from the second argument `a8` register into a
-    /// register provided in the third argument.
+    /// Loads global state from the current operation with type id from the first argument and
+    /// index from the second argument `a8` register into a register provided in the third
+    /// argument.
     ///
     /// If the state is absent sets `st0` to `false` and terminates the program.
     #[display("ldg     {0},a8{1},{2}")]
     LdG(GlobalStateType, Reg16, RegS),
 
-    /// Loads part of the contract global state with type id from the first
-    /// argument at the depth from the second argument `a32` register into a
-    /// register provided in the third argument.
+    /// Loads part of the contract global state with type id from the first argument at the depth
+    /// from the second argument `a32` register into a register provided in the third argument.
     ///
-    /// If the contract doesn't have the provided global state type, or it
-    /// doesn't contain a value at the requested index, sets `st0`
-    /// to fail state and terminates the program. The value of the
-    /// destination register is not changed.
+    /// If the contract doesn't have the provided global state type, or it doesn't contain a value
+    /// at the requested index, sets `st0` to fail state and terminates the program. The value
+    /// of the destination register is not changed.
     #[display("ldc     {0},a32{1},{2}")]
     LdC(GlobalStateType, Reg16, RegS),
 
-    /// Loads operation metadata with a type id from the first argument into a
-    /// register provided in the second argument.
+    /// Loads operation metadata with a type id from the first argument into a register provided in
+    /// the second argument.
     ///
-    /// If the operation doesn't have metadata, sets `st0` to fail state and
-    /// terminates the program. The value of the destination register is not
-    /// changed.
+    /// If the operation doesn't have metadata, sets `st0` to fail state and terminates the
+    /// program. The value of the destination register is not changed.
     #[display("ldm     {0},{1}")]
     LdM(MetaType, RegS),
 
-    /// Verify sum of pedersen commitments from inputs and outputs.
-    ///
-    /// The only argument specifies owned state type for the sum operation. If
-    /// this state does not exist, or either inputs or outputs does not have
-    /// any data for the state, the verification fails.
-    ///
-    /// If verification succeeds, doesn't change `st0` value; otherwise sets it
-    /// to `false` and stops execution.
-    #[display("pcvs    {0}")]
-    Pcvs(AssignmentType),
-
-    /// Verifies equivalence of a sum of pedersen commitments for the list of
-    /// assignment outputs to a value from `a64[0]` register.
-    ///
-    /// The first argument specifies owned state type for the sum operation. If
-    /// this state does not exist, or either inputs or outputs does not have
-    /// any data for the state, the verification fails.
-    ///
-    /// If `a64[0]` register does not contain value, the verification fails.
-    ///
-    /// If verification succeeds, doesn't change `st0` value; otherwise sets it
-    /// to `false` and stops execution.
-    #[display("pcas    {0}")]
-    Pcas(/** owned state type */ AssignmentType),
-
-    /// Verifies equivalence of a sum of pedersen commitments for the list of
-    /// inputs to a value from `a64[0]` register.
-    ///
-    /// The first argument specifies owned state type for the sum operation. If
-    /// this state does not exist, or either inputs or outputs does not have
-    /// any data for the state, the verification fails.
-    ///
-    /// If `a64[0]` register does not contain value, the verification fails.
-    ///
-    /// If verification succeeds, doesn't change `st0` value; otherwise sets it
-    /// to `false` and stops execution.
-    #[display("pcps    {0}")]
-    Pcps(/** owned state type */ AssignmentType),
-
-    /// All other future unsupported operations, which must set `st0` to
-    /// `false` and stop the execution.
+    /// All other future unsupported operations, which must set `st0` to `false` and stop the
+    /// execution.
     #[display("fail    {0}")]
     Fail(u8, PhantomData<S>),
 }
@@ -189,9 +130,9 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
 
     fn src_regs(&self) -> BTreeSet<Reg> {
         match self {
-            ContractOp::LdP(_, reg, _)
-            | ContractOp::LdF(_, reg, _)
-            | ContractOp::LdS(_, reg, _) => bset![Reg::A(RegA::A16, (*reg).into())],
+            ContractOp::LdP(_, reg, _) | ContractOp::LdS(_, reg, _) => {
+                bset![Reg::A(RegA::A16, (*reg).into())]
+            }
             ContractOp::LdG(_, reg, _) => bset![Reg::A(RegA::A8, (*reg).into())],
             ContractOp::LdC(_, reg, _) => bset![Reg::A(RegA::A32, (*reg).into())],
 
@@ -200,8 +141,6 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             | ContractOp::CnG(_, _)
             | ContractOp::CnC(_, _)
             | ContractOp::LdM(_, _) => bset![],
-            ContractOp::Pcvs(_) => bset![],
-            ContractOp::Pcas(_) | ContractOp::Pcps(_) => bset![Reg::A(RegA::A64, Reg32::Reg0)],
             ContractOp::Fail(_, _) => bset![],
         }
     }
@@ -214,18 +153,12 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             ContractOp::CnP(_, reg) | ContractOp::CnS(_, reg) | ContractOp::CnC(_, reg) => {
                 bset![Reg::A(RegA::A16, *reg)]
             }
-            ContractOp::LdF(_, _, reg) => {
-                bset![Reg::A(RegA::A64, (*reg).into())]
-            }
             ContractOp::LdG(_, _, reg)
             | ContractOp::LdS(_, _, reg)
             | ContractOp::LdP(_, _, reg)
             | ContractOp::LdC(_, _, reg)
             | ContractOp::LdM(_, reg) => {
                 bset![Reg::S(*reg)]
-            }
-            ContractOp::Pcvs(_) | ContractOp::Pcas(_) | ContractOp::Pcps(_) => {
-                bset![]
             }
             ContractOp::Fail(_, _) => bset![],
         }
@@ -239,12 +172,9 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             | ContractOp::CnC(_, _) => 2,
             ContractOp::LdP(_, _, _)
             | ContractOp::LdS(_, _, _)
-            | ContractOp::LdF(_, _, _)
             | ContractOp::LdG(_, _, _)
             | ContractOp::LdC(_, _, _) => 8,
             ContractOp::LdM(_, _) => 6,
-            ContractOp::Pcvs(_) => 1024,
-            ContractOp::Pcas(_) | ContractOp::Pcps(_) => 512,
             ContractOp::Fail(_, _) => u64::MAX,
         }
     }
@@ -254,36 +184,6 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             () => {{
                 regs.set_failure();
                 return ExecStep::Stop;
-            }};
-        }
-        macro_rules! load_inputs {
-            ($state_type:ident) => {{
-                let Some(prev_state) = context.op_info.prev_state.get($state_type) else {
-                    fail!()
-                };
-                match prev_state {
-                    TypedAssigns::Fungible(state) => state
-                        .iter()
-                        .map(Assign::to_confidential_state)
-                        .map(|s| s.commitment.into_inner())
-                        .collect::<Vec<_>>(),
-                    _ => fail!(),
-                }
-            }};
-        }
-        macro_rules! load_outputs {
-            ($state_type:ident) => {{
-                let Some(new_state) = context.op_info.owned_state.get(*$state_type) else {
-                    fail!()
-                };
-                match new_state {
-                    TypedAssigns::Fungible(state) => state
-                        .iter()
-                        .map(Assign::to_confidential_state)
-                        .map(|s| s.commitment.into_inner())
-                        .collect::<Vec<_>>(),
-                    _ => fail!(),
-                }
             }};
         }
 
@@ -331,16 +231,15 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 };
                 let index: u16 = reg_32.into();
 
-                let Some(Ok(state)) = context
+                let Some(state) = context
                     .op_info
                     .prev_state
                     .get(state_type)
-                    .map(|a| a.as_structured_state_at(index))
+                    .and_then(|a| a.as_state_at(index).ok())
                 else {
                     fail!()
                 };
-                let state = state.map(|s| s.value.as_inner());
-                regs.set_s(*reg, state);
+                regs.set_s(*reg, Some(&state.value));
             }
             ContractOp::LdS(state_type, reg_32, reg) => {
                 let Some(reg_32) = *regs.get_n(RegA::A16, *reg_32) else {
@@ -348,32 +247,15 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 };
                 let index: u16 = reg_32.into();
 
-                let Some(Ok(state)) = context
+                let Some(state) = context
                     .op_info
                     .owned_state
                     .get(*state_type)
-                    .map(|a| a.into_structured_state_at(index))
+                    .and_then(|a| a.into_state_at(index).ok())
                 else {
                     fail!()
                 };
-                let state = state.map(|s| s.value.into_inner());
-                regs.set_s(*reg, state);
-            }
-            ContractOp::LdF(state_type, reg_32, reg) => {
-                let Some(reg_32) = *regs.get_n(RegA::A16, *reg_32) else {
-                    fail!()
-                };
-                let index: u16 = reg_32.into();
-
-                let Some(Ok(state)) = context
-                    .op_info
-                    .owned_state
-                    .get(*state_type)
-                    .map(|a| a.into_fungible_state_at(index))
-                else {
-                    fail!()
-                };
-                regs.set_n(RegA::A64, *reg, state.map(|s| s.value().to_u64()));
+                regs.set_s(*reg, Some(state.value));
             }
             ContractOp::LdG(state_type, reg_8, reg_s) => {
                 let Some(reg_32) = *regs.get_n(RegA::A8, *reg_8) else {
@@ -389,7 +271,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 else {
                     fail!()
                 };
-                regs.set_s(*reg_s, Some(state.as_inner()));
+                regs.set_s(*reg_s, Some(state));
             }
 
             ContractOp::LdC(state_type, reg_32, reg_s) => {
@@ -407,7 +289,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 let Some(state) = global.nth(index) else {
                     fail!()
                 };
-                regs.set_s(*reg_s, Some(state.borrow().as_inner()));
+                regs.set_s(*reg_s, Some(&state.borrow().value));
             }
             ContractOp::LdM(type_id, reg) => {
                 let Some(meta) = context.op_info.metadata.get(type_id) else {
@@ -416,63 +298,6 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 regs.set_s(*reg, Some(meta.to_inner()));
             }
 
-            ContractOp::Pcvs(state_type) => {
-                let inputs = load_inputs!(state_type);
-                let outputs = load_outputs!(state_type);
-                if !secp256k1_zkp::verify_commitments_sum_to_equal(
-                    secp256k1_zkp::SECP256K1,
-                    &inputs,
-                    &outputs,
-                ) {
-                    fail!()
-                }
-            }
-
-            ContractOp::Pcas(owned_state) => {
-                let Some(sum) = *regs.get_n(RegA::A64, Reg32::Reg0) else {
-                    fail!()
-                };
-                let sum = u64::from(sum);
-
-                let Some(tag) = context.asset_tags.get(owned_state) else {
-                    fail!()
-                };
-                let sum = RevealedValue::with_blinding(sum, BlindingFactor::EMPTY, *tag);
-
-                let inputs = [PedersenCommitment::commit(&sum).into_inner()];
-                let outputs = load_outputs!(owned_state);
-
-                if !secp256k1_zkp::verify_commitments_sum_to_equal(
-                    secp256k1_zkp::SECP256K1,
-                    &inputs,
-                    &outputs,
-                ) {
-                    fail!()
-                }
-            }
-
-            ContractOp::Pcps(owned_state) => {
-                let Some(sum) = *regs.get_n(RegA::A64, Reg32::Reg0) else {
-                    fail!()
-                };
-                let sum = u64::from(sum);
-
-                let Some(tag) = context.asset_tags.get(owned_state) else {
-                    fail!()
-                };
-                let sum = RevealedValue::with_blinding(sum, BlindingFactor::EMPTY, *tag);
-
-                let inputs = [PedersenCommitment::commit(&sum).into_inner()];
-                let outputs = load_inputs!(owned_state);
-
-                if !secp256k1_zkp::verify_commitments_sum_to_equal(
-                    secp256k1_zkp::SECP256K1,
-                    &inputs,
-                    &outputs,
-                ) {
-                    fail!()
-                }
-            }
             // All other future unsupported operations, which must set `st0` to `false`.
             _ => fail!(),
         }
@@ -493,13 +318,8 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
             ContractOp::LdG(_, _, _) => INSTR_LDG,
             ContractOp::LdS(_, _, _) => INSTR_LDS,
             ContractOp::LdP(_, _, _) => INSTR_LDP,
-            ContractOp::LdF(_, _, _) => INSTR_LDF,
             ContractOp::LdC(_, _, _) => INSTR_LDC,
             ContractOp::LdM(_, _) => INSTR_LDM,
-
-            ContractOp::Pcvs(_) => INSTR_PCVS,
-            ContractOp::Pcas(_) => INSTR_PCAS,
-            ContractOp::Pcps(_) => INSTR_PCPS,
 
             ContractOp::Fail(other, _) => *other,
         }
@@ -538,11 +358,6 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
                 writer.write_u4(reg_a)?;
                 writer.write_u4(reg_s)?;
             }
-            ContractOp::LdF(state_type, reg_a, reg_dst) => {
-                writer.write_u16(*state_type)?;
-                writer.write_u4(reg_a)?;
-                writer.write_u4(reg_dst)?;
-            }
             ContractOp::LdG(state_type, reg_a, reg_s) => {
                 writer.write_u16(*state_type)?;
                 writer.write_u4(reg_a)?;
@@ -558,10 +373,6 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
                 writer.write_u4(reg)?;
                 writer.write_u4(u4::ZERO)?;
             }
-
-            ContractOp::Pcvs(state_type) => writer.write_u16(*state_type)?,
-            ContractOp::Pcas(owned_type) => writer.write_u16(*owned_type)?,
-            ContractOp::Pcps(owned_type) => writer.write_u16(*owned_type)?,
 
             ContractOp::Fail(_, _) => {}
         }
@@ -600,11 +411,6 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
                 reader.read_u4()?.into(),
                 reader.read_u4()?.into(),
             ),
-            INSTR_LDF => Self::LdF(
-                reader.read_u16()?.into(),
-                reader.read_u4()?.into(),
-                reader.read_u4()?.into(),
-            ),
             INSTR_LDG => Self::LdG(
                 reader.read_u16()?.into(),
                 reader.read_u4()?.into(),
@@ -625,10 +431,6 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
                 reader.read_u4()?; // Discard garbage bits
                 i
             }
-
-            INSTR_PCVS => Self::Pcvs(reader.read_u16()?.into()),
-            INSTR_PCAS => Self::Pcas(reader.read_u16()?.into()),
-            INSTR_PCPS => Self::Pcps(reader.read_u16()?.into()),
 
             x => Self::Fail(x, PhantomData),
         })

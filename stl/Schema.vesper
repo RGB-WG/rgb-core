@@ -50,11 +50,9 @@ Schema rec
       maxItems is U24
   ownedTypes map len=0..MAX8
     key is U16 aka=AssignmentType
-    value union OwnedStateSchema
-      declarative is Unit tag=0
-      fungible enum FungibleType wrapped unsigned64Bit=8 tag=1
-      structured bytes len=32 wrapped aka=SemId tag=2
-      attachment enum MediaType wrapped any=255 tag=3
+    value rec OwnedStateSchema
+      reserved bytes len=1 aka=ReservedBytes1
+      semId bytes len=32 aka=SemId
   valencyTypes set len=0..MAX8
     element is U16 aka=ValencyType
   genesis rec GenesisSchema

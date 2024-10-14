@@ -23,11 +23,11 @@
 use std::collections::btree_map;
 use std::vec;
 
-use amplify::confinement::{Confined, TinyOrdMap, U16};
+use amplify::confinement::{Confined, NonEmptyVec, SmallBlob, TinyOrdMap, U16 as U16MAX};
 use amplify::{confinement, Wrapper};
 use strict_encoding::StrictDumb;
 
-use crate::{schema, DataState, LIB_NAME_RGB_COMMIT};
+use crate::{schema, LIB_NAME_RGB_COMMIT};
 
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]
@@ -39,19 +39,19 @@ use crate::{schema, DataState, LIB_NAME_RGB_COMMIT};
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct GlobalValues(Confined<Vec<DataState>, 1, U16>);
+pub struct GlobalValues(NonEmptyVec<SmallBlob, U16MAX>);
 
 impl StrictDumb for GlobalValues {
-    fn strict_dumb() -> Self { Self(Confined::with(DataState::strict_dumb())) }
+    fn strict_dumb() -> Self { Self(NonEmptyVec::with(SmallBlob::strict_dumb())) }
 }
 
 impl GlobalValues {
-    pub fn with(state: DataState) -> Self { GlobalValues(Confined::with(state)) }
+    pub fn with(state: SmallBlob) -> Self { GlobalValues(Confined::with(state)) }
 }
 
 impl IntoIterator for GlobalValues {
-    type Item = DataState;
-    type IntoIter = vec::IntoIter<DataState>;
+    type Item = SmallBlob;
+    type IntoIter = vec::IntoIter<SmallBlob>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
 }
@@ -72,7 +72,7 @@ impl GlobalState {
     pub fn add_state(
         &mut self,
         ty: schema::GlobalStateType,
-        state: DataState,
+        state: SmallBlob,
     ) -> Result<(), confinement::Error> {
         match self.0.get_mut(&ty) {
             Some(vec) => vec.push(state),
@@ -83,7 +83,7 @@ impl GlobalState {
     pub fn extend_state(
         &mut self,
         ty: schema::GlobalStateType,
-        iter: impl IntoIterator<Item = DataState>,
+        iter: impl IntoIterator<Item = SmallBlob>,
     ) -> Result<(), confinement::Error> {
         match self.0.get_mut(&ty) {
             Some(vec) => vec.extend(iter),
