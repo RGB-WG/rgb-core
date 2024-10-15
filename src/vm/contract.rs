@@ -375,12 +375,12 @@ impl Ord for WitnessPos {
         match (self.layer1, other.layer1) {
             (a, b) if a == b => self.height.cmp(&other.height),
             (Layer1::Bitcoin, Layer1::Liquid)
-                if (self.timestamp - other.timestamp).abs() >= BLOCK_TIME =>
+                if (self.timestamp - other.timestamp).abs() < BLOCK_TIME =>
             {
                 Ordering::Greater
             }
             (Layer1::Liquid, Layer1::Bitcoin)
-                if (other.timestamp - self.timestamp).abs() >= BLOCK_TIME =>
+                if (other.timestamp - self.timestamp).abs() < BLOCK_TIME =>
             {
                 Ordering::Less
             }
