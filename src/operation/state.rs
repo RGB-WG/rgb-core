@@ -29,7 +29,7 @@ use amplify::confinement::{SmallBlob, U16 as U16MAX};
 use amplify::{Bytes32, Wrapper};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use commit_verify::{CommitmentId, DigestExt, ReservedBytes, Sha256};
-use strict_encoding::{StrictSerialize, StrictType};
+use strict_encoding::{StrictDeserialize, StrictSerialize, StrictType};
 
 use crate::{impl_serde_baid64, LIB_NAME_RGB_COMMIT};
 
@@ -74,6 +74,9 @@ pub struct State {
     pub value: SmallBlob,
     pub attach: Option<AttachId>,
 }
+
+impl StrictSerialize for State {}
+impl StrictDeserialize for State {}
 
 impl State {
     /// # Panics
