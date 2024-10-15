@@ -1,5 +1,5 @@
 edition = "2021"
-version = "Two"
+style_edition = "2021"
 
 max_width = 100
 array_width = 100

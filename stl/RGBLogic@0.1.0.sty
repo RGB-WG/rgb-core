@@ -1,5 +1,5 @@
 {-
-  Id: stl:bioTBozT-NqelHGE-SPbnpMA-XBNSbXZ-6X0dANE-WHVirL8#explain-marvin-bless
+  Id: stl:mqltqlPk-O9$pYOd-BACRI70-DOMJ6cp-TFvhcK1-ibrOI9U#import-boxer-seminar
   Name: RGBLogic
   Version: 0.1.0
   Description: Consensus logic layer for RGB smart contracts
@@ -11,12 +11,13 @@
 @context
 typelib RGBLogic
 
-import RGBCommit#tuna-safari-design
+import RGBCommit#harvest-person-orion
   use TransitionType#picture-reflex-brigade
   use ExtensionType#apropos-scoop-viva
+  use Layer1#camilla-basket-justin
   use OpId#picnic-single-gloria
 
-import BPCore#totem-holiday-helena
+import BPCore#austin-story-retro
   use TapretNodePartner#roger-member-educate
   use TapretProof#marco-border-sample
   use TapretPathProof#kiwi-mirror-paris
@@ -55,7 +56,9 @@ data WitnessOrd        : archived ()
                        | mined WitnessPos
                        | tentative ()
 
-@mnemonic(snow-local-tonight)
-data WitnessPos        : height U32, timestamp I64
+@mnemonic(cliff-enrico-nominal)
+data WitnessPos        : layer1 RGBCommit.Layer1
+                       , height U32
+                       , timestamp I64
 
 

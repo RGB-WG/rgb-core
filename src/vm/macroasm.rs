@@ -33,14 +33,34 @@ macro_rules! rgbasm {
 
 #[macro_export]
 macro_rules! isa_instr {
-    (pcvs $no:ident) => {{ RgbIsa::Contract(ContractOp::Pcvs($no)) }};
-    (pcas $no:ident) => {{ RgbIsa::Contract(ContractOp::Pcas($no)) }};
-    (pcps $no:ident) => {{ RgbIsa::Contract(ContractOp::Pcps($no)) }};
-    (cng $t:ident,a8[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnG($t, Reg32::from(u5::with($a_idx)))) }};
-    (cnc $t:ident,a16[$a_idx:literal]) => {{ RgbIsa::Contract(ContractOp::CnC($t, Reg32::from(u5::with($a_idx)))) }};
-    (ldm $t:ident,s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdM($t, RegS::from($s_idx))) }};
-    (ldg $t:ident,a8[$a_idx:literal],s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdG($t, Reg16::from(u4::with($a_idx)), RegS::from($s_idx))) }};
-    (ldp $t:ident,a16[$a_idx:literal],s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdP($t, Reg16::from(u4::with($a_idx)), RegS::from($s_idx))) }};
-    (lds $t:ident,a16[$a_idx:literal],s16[$s_idx:literal]) => {{ RgbIsa::Contract(ContractOp::LdS($t, Reg16::from(u4::with($a_idx)), RegS::from($s_idx))) }};
-    ($op:ident $($tt:tt)+) => {{ compile_error!(concat!("unknown RGB assembly opcode `", stringify!($op), "`")) }};
+    (pcvs $no:ident) => {{
+        RgbIsa::Contract(ContractOp::Pcvs($no))
+    }};
+    (pcas $no:ident) => {{
+        RgbIsa::Contract(ContractOp::Pcas($no))
+    }};
+    (pcps $no:ident) => {{
+        RgbIsa::Contract(ContractOp::Pcps($no))
+    }};
+    (cng $t:ident,a8[$a_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::CnG($t, Reg32::from(u5::with($a_idx))))
+    }};
+    (cnc $t:ident,a16[$a_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::CnC($t, Reg32::from(u5::with($a_idx))))
+    }};
+    (ldm $t:ident,s16[$s_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::LdM($t, RegS::from($s_idx)))
+    }};
+    (ldg $t:ident,a8[$a_idx:literal],s16[$s_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::LdG($t, Reg16::from(u4::with($a_idx)), RegS::from($s_idx)))
+    }};
+    (ldp $t:ident,a16[$a_idx:literal],s16[$s_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::LdP($t, Reg16::from(u4::with($a_idx)), RegS::from($s_idx)))
+    }};
+    (lds $t:ident,a16[$a_idx:literal],s16[$s_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::LdS($t, Reg16::from(u4::with($a_idx)), RegS::from($s_idx)))
+    }};
+    ($op:ident $($tt:tt)+) => {{
+        compile_error!(concat!("unknown RGB assembly opcode `", stringify!($op), "`"))
+    }};
 }
