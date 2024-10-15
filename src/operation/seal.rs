@@ -57,9 +57,7 @@ pub trait ExposedSeal:
 {
 }
 
-impl ExposedSeal for GraphSeal {}
-
-impl ExposedSeal for GenesisSeal {}
+impl<Id: SealTxid> ExposedSeal for BlindSeal<Id> {}
 
 impl<Seal: TxoSeal> TxoSeal for XChain<Seal> {
     fn method(&self) -> CloseMethod {
