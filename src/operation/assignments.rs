@@ -25,10 +25,11 @@ use std::collections::{btree_map, BTreeSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::{Deref, DerefMut};
+use std::vec;
 
 use amplify::confinement::{Confined, NonEmptyVec, TinyOrdMap, U16 as U16MAX};
 use commit_verify::{Conceal, ReservedBytes};
-use strict_encoding::{StrictDumb, StrictEncode};
+use strict_encoding::{StrictDumb, StrictEncode, StrictType};
 
 use crate::{
     AssignmentType, ExposedSeal, GenesisSeal, GraphSeal, SecretSeal, State, XChain,
@@ -231,8 +232,30 @@ impl<Seal: ExposedSeal> Conceal for TypedAssigns<Seal> {
     }
 }
 
+impl<Seal: ExposedSeal> IntoIterator for TypedAssigns<Seal> {
+    type Item = Assign<Seal>;
+    type IntoIter = vec::IntoIter<Assign<Seal>>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+}
+
 impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     pub fn with(item: Assign<Seal>) -> Self { Self(NonEmptyVec::with(item)) }
+
+    pub fn reveal_seal(&mut self, revealed: XChain<Seal>) {
+        for assign in self.iter_mut() {
+            match assign {
+                Assign::Confidential { seal, state, lock } if *seal == revealed.conceal() => {
+                    *assign = Assign::Revealed {
+                        seal: revealed,
+                        state: state.clone(),
+                        lock: *lock,
+                    }
+                }
+                Assign::Confidential { .. } | Assign::Revealed { .. } => {}
+            }
+        }
+    }
 
     /// If seal definition does not exist, returns [`ItemAbsent`]. If the
     /// seal is confidential, returns `Ok(None)`; otherwise returns revealed
