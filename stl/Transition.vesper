@@ -47,7 +47,7 @@ Transition rec
   globals map len=0..MAX8 aka=GlobalState
     key is U16 aka=GlobalStateType
     value list len=1..MAX16 aka=GlobalValues
-      element bytes len=0..MAX16
+      element bytes len=0..MAX16 aka=StateData
   inputs set len=0..MAX16 aka=Inputs
     Input rec
       prevOut rec Opout
@@ -65,7 +65,7 @@ Transition rec
             liquid bytes len=32 wrapped aka=SecretSeal tag=1
           state rec State
             reserved bytes len=1 aka=ReservedBytes1
-            value bytes len=0..MAX16
+            value bytes len=0..MAX16 aka=StateData
               some bytes len=32 option wrapped aka=AttachId tag=1
           lock bytes len=2 aka=ReservedBytes2
         revealed rec tag=1
@@ -86,7 +86,7 @@ Transition rec
               blinding is U64
           state rec State
             reserved bytes len=1 aka=ReservedBytes1
-            value bytes len=0..MAX16
+            value bytes len=0..MAX16 aka=StateData
               some bytes len=32 option wrapped aka=AttachId tag=1
           lock bytes len=2 aka=ReservedBytes2
   valencies set len=0..MAX8 aka=Valencies

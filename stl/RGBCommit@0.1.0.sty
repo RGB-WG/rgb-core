@@ -1,5 +1,5 @@
 {-
-  Id: stl:JepgtiGZ-TYqkSmV-vo6ysWP-gZZEU03-pVoHbyj-nR02608#aspect-shoe-garcia
+  Id: stl:r43G92Ru-4TQgKzY-eeZQr$e-k0DccV0-6d0mlAI-Dil$Hr4#printer-window-alpine
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -149,8 +149,8 @@ data GlobalStateSchema : reserved CommitVerify.ReservedBytes1
 @mnemonic(yoga-quick-jasmine)
 data GlobalStateType   : U16
 
-@mnemonic(nerve-jackson-fashion)
-data GlobalValues      : [[Byte] ^ 1..]
+@mnemonic(trinity-jaguar-michael)
+data GlobalValues      : [StateData ^ 1..]
 
 @mnemonic(smart-pioneer-nominal)
 data Identity          : Std.AsciiPrintable, [Std.AsciiPrintable ^ ..0xfff]
@@ -221,10 +221,13 @@ data Schema            : ffv Ffv
 @mnemonic(ramirez-patron-simon)
 data SchemaId          : [Byte ^ 32]
 
-@mnemonic(teacher-bridge-vienna)
+@mnemonic(trapeze-gustav-shoe)
 data State             : reserved CommitVerify.ReservedBytes1
-                       , value [Byte]
+                       , value StateData
                        , attach AttachId?
+
+@mnemonic(nissan-pattern-inside)
+data StateData         : [Byte]
 
 @mnemonic(michael-exact-eric)
 data Transition        : ffv Ffv

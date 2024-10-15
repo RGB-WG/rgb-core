@@ -239,7 +239,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 else {
                     fail!()
                 };
-                regs.set_s(*reg, Some(&state.value));
+                regs.set_s(*reg, Some(state.value.as_inner()));
             }
             ContractOp::LdS(state_type, reg_32, reg) => {
                 let Some(reg_32) = *regs.get_n(RegA::A16, *reg_32) else {
@@ -255,7 +255,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 else {
                     fail!()
                 };
-                regs.set_s(*reg, Some(state.value));
+                regs.set_s(*reg, Some(state.value.into_inner()));
             }
             ContractOp::LdG(state_type, reg_8, reg_s) => {
                 let Some(reg_32) = *regs.get_n(RegA::A8, *reg_8) else {
@@ -271,7 +271,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 else {
                     fail!()
                 };
-                regs.set_s(*reg_s, Some(state));
+                regs.set_s(*reg_s, Some(state.as_inner()));
             }
 
             ContractOp::LdC(state_type, reg_32, reg_s) => {
@@ -289,7 +289,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 let Some(state) = global.nth(index) else {
                     fail!()
                 };
-                regs.set_s(*reg_s, Some(state.borrow()));
+                regs.set_s(*reg_s, Some(state.borrow().as_inner()));
             }
             ContractOp::LdM(type_id, reg) => {
                 let Some(meta) = context.op_info.metadata.get(type_id) else {

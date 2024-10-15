@@ -26,7 +26,7 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 use amplify::confinement::{SmallBlob, U16 as U16MAX};
-use amplify::{Bytes32, Wrapper};
+use amplify::{ByteArray, Bytes32, Wrapper};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use commit_verify::{CommitmentId, DigestExt, ReservedBytes, Sha256};
 use strict_encoding::{StrictDeserialize, StrictSerialize, StrictType};
@@ -63,6 +63,30 @@ impl Display for AttachId {
 
 impl_serde_baid64!(AttachId);
 
+#[derive(Wrapper, Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug, From)]
+#[wrapper(Deref, BorrowSlice, Index, RangeOps)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct StateData(SmallBlob);
+
+impl StrictSerialize for StateData {}
+impl StrictDeserialize for StateData {}
+
+impl AsRef<[u8]> for StateData {
+    fn as_ref(&self) -> &[u8] { self.0.as_slice() }
+}
+
+impl StateData {
+    pub fn from_checked(vec: Vec<u8>) -> Self { Self(SmallBlob::from_checked(vec)) }
+
+    pub fn as_slice(&self) -> &[u8] { self.0.as_slice() }
+}
+
 #[derive(Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
@@ -71,12 +95,19 @@ impl_serde_baid64!(AttachId);
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct State {
     pub reserved: ReservedBytes<1>,
-    pub value: SmallBlob,
+    pub value: StateData,
     pub attach: Option<AttachId>,
 }
 
-impl StrictSerialize for State {}
-impl StrictDeserialize for State {}
+impl From<StateData> for State {
+    fn from(value: StateData) -> Self {
+        State {
+            reserved: default!(),
+            value,
+            attach: None,
+        }
+    }
+}
 
 impl State {
     /// # Panics
@@ -87,7 +118,8 @@ impl State {
             reserved: default!(),
             value: value
                 .to_strict_serialized::<U16MAX>()
-                .expect("unable to fit in the data"),
+                .expect("unable to fit in the data")
+                .into(),
             attach: None,
         }
     }
@@ -100,7 +132,8 @@ impl State {
             reserved: default!(),
             value: value
                 .to_strict_serialized::<U16MAX>()
-                .expect("unable to fit in the data"),
+                .expect("unable to fit in the data")
+                .into(),
             attach: Some(attach),
         }
     }

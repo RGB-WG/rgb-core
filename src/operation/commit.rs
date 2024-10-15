@@ -25,7 +25,7 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::{fmt, vec};
 
-use amplify::confinement::{Confined, MediumOrdMap, SmallBlob, U16 as U16MAX};
+use amplify::confinement::{Confined, MediumOrdMap, U16 as U16MAX};
 use amplify::hex::{FromHex, ToHex};
 use amplify::num::u256;
 use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
@@ -40,7 +40,8 @@ use crate::operation::state::StateCommitment;
 use crate::{
     impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ExposedSeal, Extension,
     ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Operation, Redeemed, SchemaId,
-    SecretSeal, Transition, TransitionBundle, TransitionType, XChain, LIB_NAME_RGB_COMMIT,
+    SecretSeal, StateData, Transition, TransitionBundle, TransitionType, XChain,
+    LIB_NAME_RGB_COMMIT,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -385,7 +386,7 @@ impl<Seal: ExposedSeal> MerkleLeaves for Assignments<Seal> {
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GlobalCommitment {
     pub ty: GlobalStateType,
-    pub state: SmallBlob,
+    pub state: StateData,
 }
 
 impl CommitEncode for GlobalCommitment {

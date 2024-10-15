@@ -23,11 +23,11 @@
 use std::collections::btree_map;
 use std::vec;
 
-use amplify::confinement::{Confined, NonEmptyVec, SmallBlob, TinyOrdMap, U16 as U16MAX};
+use amplify::confinement::{Confined, NonEmptyVec, TinyOrdMap, U16 as U16MAX};
 use amplify::{confinement, Wrapper};
 use strict_encoding::StrictDumb;
 
-use crate::{schema, LIB_NAME_RGB_COMMIT};
+use crate::{schema, StateData, LIB_NAME_RGB_COMMIT};
 
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]
@@ -39,19 +39,19 @@ use crate::{schema, LIB_NAME_RGB_COMMIT};
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct GlobalValues(NonEmptyVec<SmallBlob, U16MAX>);
+pub struct GlobalValues(NonEmptyVec<StateData, U16MAX>);
 
 impl StrictDumb for GlobalValues {
-    fn strict_dumb() -> Self { Self(NonEmptyVec::with(SmallBlob::strict_dumb())) }
+    fn strict_dumb() -> Self { Self(NonEmptyVec::with(StateData::strict_dumb())) }
 }
 
 impl GlobalValues {
-    pub fn with(state: SmallBlob) -> Self { GlobalValues(Confined::with(state)) }
+    pub fn with(state: impl Into<StateData>) -> Self { GlobalValues(Confined::with(state.into())) }
 }
 
 impl IntoIterator for GlobalValues {
-    type Item = SmallBlob;
-    type IntoIter = vec::IntoIter<SmallBlob>;
+    type Item = StateData;
+    type IntoIter = vec::IntoIter<StateData>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
 }
@@ -72,7 +72,7 @@ impl GlobalState {
     pub fn add_state(
         &mut self,
         ty: schema::GlobalStateType,
-        state: SmallBlob,
+        state: StateData,
     ) -> Result<(), confinement::Error> {
         match self.0.get_mut(&ty) {
             Some(vec) => vec.push(state),
@@ -83,7 +83,7 @@ impl GlobalState {
     pub fn extend_state(
         &mut self,
         ty: schema::GlobalStateType,
-        iter: impl IntoIterator<Item = SmallBlob>,
+        iter: impl IntoIterator<Item = StateData>,
     ) -> Result<(), confinement::Error> {
         match self.0.get_mut(&ty) {
             Some(vec) => vec.extend(iter),
