@@ -289,7 +289,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 let Some(state) = global.nth(index) else {
                     fail!()
                 };
-                regs.set_s(*reg_s, Some(&state.borrow().value));
+                regs.set_s(*reg_s, Some(state.borrow()));
             }
             ContractOp::LdM(type_id, reg) => {
                 let Some(meta) = context.op_info.metadata.get(type_id) else {

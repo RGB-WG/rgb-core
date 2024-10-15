@@ -28,6 +28,7 @@ use std::num::NonZeroU32;
 use std::rc::Rc;
 
 use amplify::confinement;
+use amplify::confinement::SmallBlob;
 use amplify::num::u24;
 use bp::seals::txout::{CloseMethod, ExplicitSeal, VerifyError, Witness};
 use bp::{dbc, Tx, Txid};
@@ -571,7 +572,7 @@ impl GlobalOrd {
 }
 
 pub trait GlobalStateIter {
-    type Data: Borrow<State>;
+    type Data: Borrow<SmallBlob>;
     fn size(&mut self) -> u24;
     fn prev(&mut self) -> Option<(GlobalOrd, Self::Data)>;
     fn last(&mut self) -> Option<(GlobalOrd, Self::Data)>;
@@ -632,7 +633,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     /// Retrieves global state data located `depth` items back from the most
     /// recent global state value. Ensures that the global state ordering is
     /// consensus-based.
-    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<State> + '_> {
+    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<SmallBlob> + '_> {
         if depth >= self.iter.size() {
             return None;
         }
