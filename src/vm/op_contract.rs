@@ -340,7 +340,11 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                     fail!()
                 };
                 let state = state.map(|s| s.value.as_inner());
-                regs.set_s(*reg, state);
+                if let Some(state) = state {
+                    regs.set_s16(*reg, state);
+                } else {
+                    regs.clr_s16(*reg);
+                }
             }
             ContractOp::LdS(state_type, reg_32, reg) => {
                 let Some(reg_32) = *regs.get_n(RegA::A16, *reg_32) else {
@@ -357,7 +361,11 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                     fail!()
                 };
                 let state = state.map(|s| s.value.into_inner());
-                regs.set_s(*reg, state);
+                if let Some(state) = state {
+                    regs.set_s16(*reg, state);
+                } else {
+                    regs.clr_s16(*reg);
+                }
             }
             ContractOp::LdF(state_type, reg_32, reg) => {
                 let Some(reg_32) = *regs.get_n(RegA::A16, *reg_32) else {
@@ -389,7 +397,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 else {
                     fail!()
                 };
-                regs.set_s(*reg_s, Some(state.as_inner()));
+                regs.set_s16(*reg_s, state.as_inner());
             }
 
             ContractOp::LdC(state_type, reg_32, reg_s) => {
@@ -407,13 +415,13 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 let Some(state) = global.nth(index) else {
                     fail!()
                 };
-                regs.set_s(*reg_s, Some(state.borrow().as_inner()));
+                regs.set_s16(*reg_s, state.borrow().as_inner());
             }
             ContractOp::LdM(type_id, reg) => {
                 let Some(meta) = context.op_info.metadata.get(type_id) else {
                     fail!()
                 };
-                regs.set_s(*reg, Some(meta.to_inner()));
+                regs.set_s16(*reg, meta.to_inner());
             }
 
             ContractOp::Pcvs(state_type) => {

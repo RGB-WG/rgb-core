@@ -45,7 +45,7 @@ import Bitcoin#signal-color-cipher
 
 
 @mnemonic(edison-survive-nitro)
-data AltLayer1         : liquid#1
+data AltLayer1         : liquid#1 | (|)
 
 
 @mnemonic(almond-office-pulse)
@@ -239,10 +239,10 @@ data ExtensionType     : U16
 data Ffv               : U16
 
 @mnemonic(guide-poker-coconut)
-data FungibleState     : bits64#8 U64
+data FungibleState     : bits64#8 U64 | (|)
 
 @mnemonic(matrix-optimal-sinatra)
-data FungibleType      : unsigned64Bit#8
+data FungibleType      : unsigned64Bit#8 | (|)
 
 
 @mnemonic(fashion-delta-polka)
@@ -294,7 +294,7 @@ data InputMap          : {Bitcoin.Vout -> ^ 1.. OpId}
 data Inputs            : {Input}
 
 @mnemonic(isabel-heaven-north)
-data MediaType         : any#255
+data MediaType         : any#255 | (|)
 
 
 @mnemonic(quebec-mission-quota)

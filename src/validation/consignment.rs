@@ -24,10 +24,8 @@
 //! state transitions, extensions, genesis, outputs, assignments &
 //! single-use-seal data.
 
-use std::collections::BTreeMap;
-
 use aluvm::library::{Lib, LibId};
-use amplify::confinement::Confined;
+use amplify::confinement::ConfinedOrdMap;
 use strict_types::TypeSystem;
 
 use super::EAnchor;
@@ -40,7 +38,7 @@ use crate::{
 
 pub const CONSIGNMENT_MAX_LIBS: usize = 1024;
 
-pub type Scripts = Confined<BTreeMap<LibId, Lib>, 0, CONSIGNMENT_MAX_LIBS>;
+pub type Scripts = ConfinedOrdMap<LibId, Lib, 0, CONSIGNMENT_MAX_LIBS>;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, From)]
 pub enum OpRef<'op> {
