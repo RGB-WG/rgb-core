@@ -27,7 +27,7 @@ use std::str::FromStr;
 
 use amplify::confinement::{SmallBlob, U16 as U16MAX};
 use amplify::{confinement, ByteArray, Bytes32, Wrapper};
-use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str, BAID64_ALPHABET};
+use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use base64::alphabet::Alphabet;
 use base64::engine::general_purpose::NO_PAD;
 use base64::engine::GeneralPurpose;
@@ -36,6 +36,10 @@ use commit_verify::{CommitmentId, DigestExt, ReservedBytes, Sha256};
 use strict_encoding::{SerializeError, StrictDeserialize, StrictSerialize, StrictType};
 
 use crate::{impl_serde_baid64, LIB_NAME_RGB_COMMIT};
+
+// We put in the middle the least desirable characters to occur in typical numbers.
+pub const STATE_DATA_BASE32_ALPHABET: &str =
+    "-abcdefghijklmnopqrstuvwxyz!#@&$ABCDEFGHIJKLMNOPQRSTUVWXYZ*~;:.,";
 
 /// Unique data attachment identifier
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
@@ -106,13 +110,15 @@ impl StateData {
     pub fn as_slice(&self) -> &[u8] { self.0.as_slice() }
 
     fn to_base64(&self) -> String {
-        let alphabet = Alphabet::new(BAID64_ALPHABET).expect("invalid Baid64 alphabet");
+        let alphabet =
+            Alphabet::new(STATE_DATA_BASE32_ALPHABET).expect("invalid state data alphabet");
         let engine = GeneralPurpose::new(&alphabet, NO_PAD);
         engine.encode(&self)
     }
 
     fn from_base64(s: &str) -> Result<Self, StateParseError> {
-        let alphabet = Alphabet::new(BAID64_ALPHABET).expect("invalid Baid64 alphabet");
+        let alphabet =
+            Alphabet::new(STATE_DATA_BASE32_ALPHABET).expect("invalid state data alphabet");
         let engine = GeneralPurpose::new(&alphabet, NO_PAD);
         let data = engine.decode(s)?;
         Ok(Self(SmallBlob::try_from(data)?))
@@ -238,13 +244,70 @@ mod test {
 
     #[test]
     fn state_data_encoding() {
-        const STR: &'static str = "6AMAAAAAAAA";
+        const STR: &str = "*-l--------";
         let amount = Amount(1000u64);
         let data = StateData::from_serialized(&amount).unwrap();
         assert_eq!(data.as_slice(), &[0xe8, 0x03, 0, 0, 0, 0, 0, 0]);
         assert_eq!(data.to_string(), STR);
         assert_eq!(StateData::from_str(STR).unwrap(), data);
-        StateData::from_str("0xE80").unwrap_err();
-        StateData::from_str("10").unwrap_err();
+        StateData::from_str("U").unwrap_err();
+    }
+
+    #[test]
+    fn typical_encodings() {
+        const ENC: &[&str] = &[
+            "-----------", // 0
+            "-p---------", // 1
+            "-A---------", // 2
+            "-Q---------", // 3
+            "a----------", // 4
+            "ap---------", // 5
+            "aA---------", // 6
+            "aQ---------", // 7
+            "b----------", // 8
+            "bp---------", // 9
+            "bA---------", // 10
+            "e----------", // 20
+            "gA---------", // 30
+            "j----------", // 40
+            "lA---------", // 50
+            "y----------", // 100
+            "S----------", // 200
+            ".A---------", // 250
+            "k-d--------", // 300
+            ":-d--------", // 500
+            "~Ah--------", // 750
+            "*-l--------", // 1000
+            "db#--------", // 10000
+            "hdY--------", // 20000
+            "Kfd--------", // 25000
+            "tll--------", // 50000
+            "Ihxa-------", // 100000
+            "hjdg-------", // 500000
+            "pdho-------", // 1000000
+        ];
+        const VAL: &[u64] = &[
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50, 100, 200, 250, 300, 500, 750, 1000,
+            10_000, 20_000, 25_000, 50_000, 100_000, 500_000, 1_000_000,
+        ];
+        for (idx, val) in VAL.iter().enumerate() {
+            let data = StateData::from_serialized(&Amount(*val)).unwrap();
+            //println!(r#""{data}", // {val}"#);
+            assert_eq!(data.to_string(), ENC[idx]);
+        }
+    }
+
+    // Ensures that no decimal integer represents a valid state encoding
+    #[test]
+    fn no_int_encoding() {
+        for int in 1..100 {
+            StateData::from_str(&int.to_string()).unwrap_err();
+        }
+        for int in 1..=10 {
+            StateData::from_str(&(int * 10).to_string()).unwrap_err();
+        }
+        for int in 11..100 {
+            StateData::from_str(&(int * 10).to_string()).unwrap_err();
+        }
     }
 }
