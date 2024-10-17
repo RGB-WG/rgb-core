@@ -512,7 +512,7 @@ impl OwnedStateSchema {
     ) -> validation::Status {
         let mut status = validation::Status::new();
         if type_system
-            .strict_deserialize_type(self.sem_id, assign.as_state().value.as_ref())
+            .strict_deserialize_type(self.sem_id, assign.as_state().data.as_ref())
             .is_err()
         {
             status.add_failure(validation::Failure::SchemaInvalidOwnedValue(

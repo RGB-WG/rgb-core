@@ -63,8 +63,9 @@ impl Display for AttachId {
 
 impl_serde_baid64!(AttachId);
 
+/// Binary state data, serialized using strict type notation from the structured data type.
 #[derive(Wrapper, Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug, From)]
-#[wrapper(Deref, BorrowSlice, Index, RangeOps)]
+#[wrapper(Deref, AsSlice, BorrowSlice, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
@@ -76,10 +77,6 @@ pub struct StateData(SmallBlob);
 
 impl StrictSerialize for StateData {}
 impl StrictDeserialize for StateData {}
-
-impl AsRef<[u8]> for StateData {
-    fn as_ref(&self) -> &[u8] { self.0.as_slice() }
-}
 
 impl StateData {
     pub fn from_checked(vec: Vec<u8>) -> Self { Self(SmallBlob::from_checked(vec)) }
@@ -95,28 +92,41 @@ impl StateData {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct State {
     pub reserved: ReservedBytes<1>,
-    pub value: StateData,
+    pub data: StateData,
     pub attach: Option<AttachId>,
 }
 
 impl From<StateData> for State {
-    fn from(value: StateData) -> Self {
+    /// Constructs new state object using the provided pre-serialized binary data. Sets attachment
+    /// to `None`.
+    fn from(data: StateData) -> Self {
         State {
             reserved: default!(),
-            value,
+            data,
             attach: None,
         }
     }
 }
 
 impl State {
+    /// Constructs new state object by performing strict serialization of the provided structured
+    /// data type. Sets attachment to `None`.
+    ///
+    /// The data type must implement [`StrictSerialize`].
+    ///
+    /// # NB
+    ///
+    /// Use the function carefully, since the common pitfall here is to perform double serialization
+    /// of an already serialized data type, like `SmallBlob`. This produces an invalid state object
+    /// which can't be properly parsed later.
+    ///
     /// # Panics
     ///
     /// If the size of the serialized value exceeds 0xFFFF bytes.
-    pub fn new(value: impl StrictSerialize) -> Self {
+    pub fn from_serialized(typed_data: impl StrictSerialize) -> Self {
         State {
             reserved: default!(),
-            value: value
+            data: typed_data
                 .to_strict_serialized::<U16MAX>()
                 .expect("unable to fit in the data")
                 .into(),
@@ -124,17 +134,13 @@ impl State {
         }
     }
 
-    /// # Panics
-    ///
-    /// If the size of the serialized value exceeds 0xFFFF bytes.
-    pub fn with(value: impl StrictSerialize, attach: AttachId) -> Self {
+    /// Constructs new state object using the provided pre-serialized binary data and attachment
+    /// information.
+    pub fn with(data: StateData, attach_id: AttachId) -> Self {
         State {
             reserved: default!(),
-            value: value
-                .to_strict_serialized::<U16MAX>()
-                .expect("unable to fit in the data")
-                .into(),
-            attach: Some(attach),
+            data,
+            attach: Some(attach_id),
         }
     }
 }
