@@ -32,4 +32,4 @@ pub use operations::{
     OpFullType, OpSchema, OpType, TransitionSchema, ValencySchema, ValencyType,
 };
 pub use schema::{ExtensionType, GlobalStateType, MetaType, Schema, SchemaId, TransitionType};
-pub use state::{FungibleType, GlobalStateSchema, MediaType, OwnedStateSchema};
+pub use state::{GlobalStateSchema, OwnedStateSchema};

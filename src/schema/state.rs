@@ -22,92 +22,30 @@
 
 use amplify::num::u24;
 use commit_verify::ReservedBytes;
-use strict_encoding::Primitive;
 use strict_types::SemId;
 
-use crate::{StateType, LIB_NAME_RGB_COMMIT};
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase", tag = "type")
-)]
-#[non_exhaustive]
-#[repr(u8)]
-pub enum MediaType {
-    #[display("*/*")]
-    #[strict_type(dumb)]
-    Any = 0xFF,
-    // TODO: Complete MIME type implementation
-}
-
-impl MediaType {
-    pub fn conforms(&self, other: &MediaType) -> bool {
-        match (self, other) {
-            (MediaType::Any, MediaType::Any) => true,
-        }
-    }
-}
+use crate::LIB_NAME_RGB_COMMIT;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = order)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum OwnedStateSchema {
-    #[strict_type(dumb)]
-    Declarative,
-    Fungible(FungibleType),
-    Structured(SemId),
-    Attachment(MediaType),
-    // TODO: Computed state (RCP240327A) will be added here
+pub struct OwnedStateSchema {
+    pub reserved: ReservedBytes<1>,
+    pub sem_id: SemId,
 }
 
-impl OwnedStateSchema {
-    pub fn state_type(&self) -> StateType {
-        match self {
-            OwnedStateSchema::Declarative => StateType::Void,
-            OwnedStateSchema::Fungible(_) => StateType::Fungible,
-            OwnedStateSchema::Structured(_) => StateType::Structured,
-            OwnedStateSchema::Attachment(_) => StateType::Attachment,
+impl From<SemId> for OwnedStateSchema {
+    fn from(sem_id: SemId) -> Self {
+        Self {
+            reserved: none!(),
+            sem_id,
         }
     }
-
-    pub fn sem_id(&self) -> Option<SemId> {
-        if let Self::Structured(id) = self {
-            Some(*id)
-        } else {
-            None
-        }
-    }
-}
-
-/// Today we support only a single format of confidential data, because of the
-/// limitations of the underlying secp256k1-zkp library: it works only with
-/// u64 numbers. Nevertheless, homomorphic commitments can be created to
-/// everything that has up to 256 bits and commutative arithmetics, so in the
-/// future we plan to support more types. We reserve this possibility by
-/// internally encoding [`ConfidentialFormat`] with the same type specification
-/// details as used for [`DateFormat`]
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Display)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[repr(u8)]
-pub enum FungibleType {
-    #[default]
-    #[display("64bit")]
-    Unsigned64Bit = Primitive::U64.into_code(),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -119,8 +57,6 @@ pub enum FungibleType {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct GlobalStateSchema {
-    // TODO: Reserved for computed state (RCP240327A): will be used as an enum tag with computed
-    //       state having value 1.
     pub reserved: ReservedBytes<1>,
     pub sem_id: SemId,
     pub max_items: u24,

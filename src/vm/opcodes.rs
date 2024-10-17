@@ -35,7 +35,6 @@ pub const INSTR_CNC: u8 = 0b11_000_011;
 
 pub const INSTR_LDP: u8 = 0b11_000_100;
 pub const INSTR_LDS: u8 = 0b11_000_101;
-pub const INSTR_LDF: u8 = 0b11_000_110;
 // Reserved 0b11_000_111
 
 pub const INSTR_LDG: u8 = 0b11_001_000;
@@ -43,12 +42,9 @@ pub const INSTR_LDC: u8 = 0b11_001_001;
 pub const INSTR_LDM: u8 = 0b11_001_010;
 // Reserved 0b11_001_111
 
-pub const INSTR_PCVS: u8 = 0b11_010_000;
-pub const INSTR_PCAS: u8 = 0b11_010_001;
-pub const INSTR_PCPS: u8 = 0b11_010_010;
 // Reserved 0b11_010_011
 pub const INSTR_CONTRACT_FROM: u8 = 0b11_000_000;
-pub const INSTR_CONTRACT_TO: u8 = 0b11_010_011;
+pub const INSTR_CONTRACT_TO: u8 = 0b11_001_111;
 
 // TIMECHAIN:
 pub const INSTR_TIMECHAIN_FROM: u8 = 0b11_011_100;

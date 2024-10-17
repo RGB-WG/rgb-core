@@ -21,6 +21,7 @@
 // limitations under the License.
 
 use std::cmp::Ordering;
+use std::collections::BTreeSet;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
@@ -227,19 +228,16 @@ impl Schema {
         schema
     }
 
-    pub fn types(&self) -> impl Iterator<Item = SemId> + '_ {
+    pub fn types(&self) -> BTreeSet<SemId> {
         self.meta_types
             .values()
             .copied()
             .chain(self.global_types.values().map(|i| i.sem_id))
-            .chain(
-                self.owned_types
-                    .values()
-                    .filter_map(OwnedStateSchema::sem_id),
-            )
+            .chain(self.owned_types.values().map(|s| s.sem_id))
+            .collect()
     }
 
-    pub fn libs(&self) -> impl Iterator<Item = LibId> + '_ {
+    pub fn libs(&self) -> BTreeSet<LibId> {
         self.genesis
             .validator
             .iter()
@@ -247,6 +245,7 @@ impl Schema {
             .chain(self.transitions.values().filter_map(|i| i.validator))
             .chain(self.extensions.values().filter_map(|i| i.validator))
             .map(|site| site.lib)
+            .collect()
     }
 }
 

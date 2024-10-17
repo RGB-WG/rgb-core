@@ -22,7 +22,7 @@
 
 use strict_types::TypeSystem;
 
-use crate::{validation, OpFullType, OpSchema, OwnedStateSchema, Schema, TransitionType};
+use crate::{validation, OpFullType, OpSchema, Schema, TransitionType};
 
 impl Schema {
     pub fn verify(&self, types: &TypeSystem) -> validation::Status {
@@ -56,12 +56,11 @@ impl Schema {
         }
 
         for (type_id, schema) in &self.owned_types {
-            if let OwnedStateSchema::Structured(sem_id) = schema {
-                if !types.contains_key(sem_id) {
-                    status.add_failure(validation::Failure::SchemaOwnedSemIdUnknown(
-                        *type_id, *sem_id,
-                    ));
-                }
+            if !types.contains_key(&schema.sem_id) {
+                status.add_failure(validation::Failure::SchemaOwnedSemIdUnknown(
+                    *type_id,
+                    schema.sem_id,
+                ));
             }
         }
 
