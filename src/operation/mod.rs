@@ -46,7 +46,10 @@ pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, XGenesisSeal, XGraphSeal,
     XOutputSeal,
 };
-pub use state::{AttachId, State, StateCommitment, StateData, StateParseError};
+pub use state::{
+    AttachId, State, StateCommitment, StateData, StateParseError, STATE_DATA_BASE32_ALPHABET,
+    STATE_DATA_MAX_LEN,
+};
 pub use xchain::{
     AltLayer1, AltLayer1Set, Impossible, Layer1, XChain, XChainParseError, XOutpoint,
     XCHAIN_BITCOIN_PREFIX, XCHAIN_LIQUID_PREFIX,

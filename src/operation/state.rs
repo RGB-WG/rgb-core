@@ -25,7 +25,7 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-use amplify::confinement::{SmallBlob, U16 as U16MAX};
+use amplify::confinement::SmallBlob;
 use amplify::{confinement, ByteArray, Bytes32, Wrapper};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use base64::alphabet::Alphabet;
@@ -36,6 +36,8 @@ use commit_verify::{CommitmentId, DigestExt, ReservedBytes, Sha256};
 use strict_encoding::{SerializeError, StrictDeserialize, StrictSerialize, StrictType};
 
 use crate::{impl_serde_baid64, LIB_NAME_RGB_COMMIT};
+
+pub const STATE_DATA_MAX_LEN: usize = confinement::U16;
 
 // We put in the middle the least desirable characters to occur in typical numbers.
 pub const STATE_DATA_BASE32_ALPHABET: &str =
@@ -102,7 +104,9 @@ impl StateData {
     ///
     /// If the size of the serialized value exceeds 0xFFFF bytes.
     pub fn from_serialized(typed_data: &impl StrictSerialize) -> Result<Self, SerializeError> {
-        typed_data.to_strict_serialized::<U16MAX>().map(Self)
+        typed_data
+            .to_strict_serialized::<STATE_DATA_MAX_LEN>()
+            .map(Self)
     }
 
     pub fn from_checked(vec: Vec<u8>) -> Self { Self(SmallBlob::from_checked(vec)) }
@@ -308,6 +312,24 @@ mod test {
         }
         for int in 11..100 {
             StateData::from_str(&(int * 10).to_string()).unwrap_err();
+        }
+    }
+
+    #[test]
+    fn state_data_limits() {
+        #[derive(Clone, Eq, PartialEq, Hash)]
+        #[derive(StrictType, StrictEncode, StrictDecode)]
+        #[strict_type(lib = "Test")]
+        struct MaxData(Box<[u8; STATE_DATA_MAX_LEN]>);
+        impl Default for MaxData {
+            fn default() -> Self { Self(Box::new([0xACu8; STATE_DATA_MAX_LEN])) }
+        }
+        impl StrictSerialize for MaxData {}
+
+        let data = StateData::from_serialized(&MaxData::default()).unwrap();
+        assert_eq!(data.len(), STATE_DATA_MAX_LEN);
+        for byte in data.0 {
+            assert_eq!(byte, 0xAC)
         }
     }
 }
