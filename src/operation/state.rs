@@ -26,9 +26,12 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 use amplify::confinement::{SmallBlob, U16 as U16MAX};
-use amplify::hex::FromHex;
-use amplify::{hex, ByteArray, Bytes32, Wrapper};
-use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
+use amplify::{confinement, ByteArray, Bytes32, Wrapper};
+use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str, BAID64_ALPHABET};
+use base64::alphabet::Alphabet;
+use base64::engine::general_purpose::NO_PAD;
+use base64::engine::GeneralPurpose;
+use base64::Engine;
 use commit_verify::{CommitmentId, DigestExt, ReservedBytes, Sha256};
 use strict_encoding::{SerializeError, StrictDeserialize, StrictSerialize, StrictType};
 
@@ -66,7 +69,7 @@ impl_serde_baid64!(AttachId);
 
 /// Binary state data, serialized using strict type notation from the structured data type.
 #[derive(Wrapper, Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug, From)]
-#[wrapper(Deref, AsSlice, BorrowSlice, Index, RangeOps, Hex)]
+#[wrapper(Deref, AsSlice, BorrowSlice, Index, RangeOps)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
@@ -101,28 +104,40 @@ impl StateData {
     pub fn from_checked(vec: Vec<u8>) -> Self { Self(SmallBlob::from_checked(vec)) }
 
     pub fn as_slice(&self) -> &[u8] { self.0.as_slice() }
+
+    fn to_base64(&self) -> String {
+        let alphabet = Alphabet::new(BAID64_ALPHABET).expect("invalid Baid64 alphabet");
+        let engine = GeneralPurpose::new(&alphabet, NO_PAD);
+        engine.encode(&self)
+    }
+
+    fn from_base64(s: &str) -> Result<Self, StateParseError> {
+        let alphabet = Alphabet::new(BAID64_ALPHABET).expect("invalid Baid64 alphabet");
+        let engine = GeneralPurpose::new(&alphabet, NO_PAD);
+        let data = engine.decode(s)?;
+        Ok(Self(SmallBlob::try_from(data)?))
+    }
 }
 
 impl Display for StateData {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { write!(f, "0x{:X}", self.0) }
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { f.write_str(&self.to_base64()) }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From)]
+#[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum StateParseError {
-    /// state data must start with `0x` prefix.
-    NoPrefix,
-    /// state data invalid hexadecimal encoding - {0}
-    Hex(hex::Error),
+    /// encoded state data exceed maximal length of 0xFFFF bytes.
+    #[from]
+    Len(confinement::Error),
+    /// state data have invalid encoding - {0}
+    #[from]
+    Base64(base64::DecodeError),
 }
 
 impl FromStr for StateData {
     type Err = StateParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s = s.strip_prefix("0x").ok_or(StateParseError::NoPrefix)?;
-        Self::from_hex(s).map_err(StateParseError::Hex)
-    }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_base64(s) }
 }
 
 #[derive(Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug)]
@@ -223,19 +238,13 @@ mod test {
 
     #[test]
     fn state_data_encoding() {
-        const STR: &'static str = "0xE803000000000000";
+        const STR: &'static str = "6AMAAAAAAAA";
         let amount = Amount(1000u64);
         let data = StateData::from_serialized(&amount).unwrap();
         assert_eq!(data.as_slice(), &[0xe8, 0x03, 0, 0, 0, 0, 0, 0]);
         assert_eq!(data.to_string(), STR);
         assert_eq!(StateData::from_str(STR).unwrap(), data);
-        assert_eq!(
-            StateData::from_str(STR.trim_start_matches("0x")).unwrap_err(),
-            StateParseError::NoPrefix
-        );
-        assert_eq!(
-            StateData::from_str("0xE80").unwrap_err(),
-            StateParseError::Hex(hex::Error::OddLengthString(3))
-        );
+        StateData::from_str("0xE80").unwrap_err();
+        StateData::from_str("10").unwrap_err();
     }
 }

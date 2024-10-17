@@ -623,6 +623,7 @@ dependencies = [
  "aluvm",
  "amplify",
  "baid64",
+ "base64",
  "bp-core",
  "chrono",
  "commit_verify",

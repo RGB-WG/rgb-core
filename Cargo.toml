@@ -24,6 +24,7 @@ required-features = ["stl"]
 [dependencies]
 amplify = "~4.7.0"
 baid64 = "~0.2.2"
+base64 = "0.22.1"
 strict_encoding = "~2.7.0"
 strict_types = { version = "~2.7.0", features = ["armor"] }
 aluvm = { version = "~0.11.0-beta.9", features = ["std", "ascii-armor"] }
