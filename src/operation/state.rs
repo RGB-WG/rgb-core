@@ -26,10 +26,11 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 use amplify::confinement::{SmallBlob, U16 as U16MAX};
-use amplify::{ByteArray, Bytes32, Wrapper};
+use amplify::hex::FromHex;
+use amplify::{hex, ByteArray, Bytes32, Wrapper};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use commit_verify::{CommitmentId, DigestExt, ReservedBytes, Sha256};
-use strict_encoding::{StrictDeserialize, StrictSerialize, StrictType};
+use strict_encoding::{SerializeError, StrictDeserialize, StrictSerialize, StrictType};
 
 use crate::{impl_serde_baid64, LIB_NAME_RGB_COMMIT};
 
@@ -65,7 +66,7 @@ impl_serde_baid64!(AttachId);
 
 /// Binary state data, serialized using strict type notation from the structured data type.
 #[derive(Wrapper, Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug, From)]
-#[wrapper(Deref, AsSlice, BorrowSlice, Index, RangeOps)]
+#[wrapper(Deref, AsSlice, BorrowSlice, Index, RangeOps, Hex)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
@@ -79,9 +80,49 @@ impl StrictSerialize for StateData {}
 impl StrictDeserialize for StateData {}
 
 impl StateData {
+    /// Constructs new state data by performing strict serialization of the provided structured
+    /// data type.
+    ///
+    /// The data type must implement [`StrictSerialize`].
+    ///
+    /// # NB
+    ///
+    /// Use the function carefully, since the common pitfall here is to perform double serialization
+    /// of an already serialized data type, like `SmallBlob`. This produces an invalid state object
+    /// which can't be properly parsed later.
+    ///
+    /// # Errors
+    ///
+    /// If the size of the serialized value exceeds 0xFFFF bytes.
+    pub fn from_serialized(typed_data: &impl StrictSerialize) -> Result<Self, SerializeError> {
+        typed_data.to_strict_serialized::<U16MAX>().map(Self)
+    }
+
     pub fn from_checked(vec: Vec<u8>) -> Self { Self(SmallBlob::from_checked(vec)) }
 
     pub fn as_slice(&self) -> &[u8] { self.0.as_slice() }
+}
+
+impl Display for StateData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { write!(f, "0x{:X}", self.0) }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From)]
+#[display(doc_comments)]
+pub enum StateParseError {
+    /// state data must start with `0x` prefix.
+    NoPrefix,
+    /// state data invalid hexadecimal encoding - {0}
+    Hex(hex::Error),
+}
+
+impl FromStr for StateData {
+    type Err = StateParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.strip_prefix("0x").ok_or(StateParseError::NoPrefix)?;
+        Self::from_hex(s).map_err(StateParseError::Hex)
+    }
 }
 
 #[derive(Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug)]
@@ -123,15 +164,12 @@ impl State {
     /// # Panics
     ///
     /// If the size of the serialized value exceeds 0xFFFF bytes.
-    pub fn from_serialized(typed_data: impl StrictSerialize) -> Self {
-        State {
+    pub fn from_serialized(typed_data: &impl StrictSerialize) -> Result<Self, SerializeError> {
+        Ok(State {
             reserved: default!(),
-            data: typed_data
-                .to_strict_serialized::<U16MAX>()
-                .expect("unable to fit in the data")
-                .into(),
+            data: StateData::from_serialized(typed_data)?,
             attach: None,
-        }
+        })
     }
 
     /// Constructs new state object using the provided pre-serialized binary data and attachment
@@ -169,4 +207,35 @@ impl From<Sha256> for StateCommitment {
 
 impl CommitmentId for StateCommitment {
     const TAG: &'static str = "urn:lnp-bp:rgb:state-data#2024-10-13";
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Default, From)]
+    #[display(inner)]
+    #[derive(StrictType, StrictEncode, StrictDecode)]
+    #[strict_type(lib = "Test")]
+    struct Amount(pub u64);
+    impl StrictSerialize for Amount {}
+    impl StrictDeserialize for Amount {}
+
+    #[test]
+    fn state_data_encoding() {
+        const STR: &'static str = "0xE803000000000000";
+        let amount = Amount(1000u64);
+        let data = StateData::from_serialized(&amount).unwrap();
+        assert_eq!(data.as_slice(), &[0xe8, 0x03, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(data.to_string(), STR);
+        assert_eq!(StateData::from_str(STR).unwrap(), data);
+        assert_eq!(
+            StateData::from_str(STR.trim_start_matches("0x")).unwrap_err(),
+            StateParseError::NoPrefix
+        );
+        assert_eq!(
+            StateData::from_str("0xE80").unwrap_err(),
+            StateParseError::Hex(hex::Error::OddLengthString(3))
+        );
+    }
 }
