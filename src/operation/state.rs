@@ -74,9 +74,9 @@ impl Display for AttachId {
 impl_serde_baid64!(AttachId);
 
 /// Binary state data, serialized using strict type notation from the structured data type.
-#[derive(Wrapper, Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug, From)]
+#[derive(Wrapper, Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug, Default, From)]
 #[wrapper(Deref, AsSlice, BorrowSlice, Index, RangeOps)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
     feature = "serde",
@@ -150,8 +150,8 @@ impl FromStr for StateData {
     fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_base64(s) }
 }
 
-#[derive(Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[derive(Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug, Default)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = StateCommitment)]
