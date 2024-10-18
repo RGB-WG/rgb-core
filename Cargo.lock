@@ -5,7 +5,7 @@ version = 3
 [[package]]
 name = "aluvm"
 version = "0.11.0-beta.9"
-source = "git+https://github.com/AluVM/rust-aluvm?branch=develop#24bff9f61570ea26d14e86aa5e127937aa122440"
+source = "git+https://github.com/AluVM/rust-aluvm?branch=develop#1da568be2bb036ae768487990e917cc54b53a690"
 dependencies = [
  "amplify",
  "ascii-armor",
@@ -211,7 +211,7 @@ dependencies = [
 [[package]]
 name = "bp-consensus"
 version = "0.11.0-beta.9"
-source = "git+https://github.com/BP-WG/bp-core?branch=develop#59e41d4dd80fcbb27583d5f32b342873dc917602"
+source = "git+https://github.com/BP-WG/bp-core?branch=develop#0f591b4bcbd16d4bab3c9fe7134b9eaf8d397023"
 dependencies = [
  "amplify",
  "chrono",
@@ -225,7 +225,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.11.0-beta.9"
-source = "git+https://github.com/BP-WG/bp-core?branch=develop#59e41d4dd80fcbb27583d5f32b342873dc917602"
+source = "git+https://github.com/BP-WG/bp-core?branch=develop#0f591b4bcbd16d4bab3c9fe7134b9eaf8d397023"
 dependencies = [
  "amplify",
  "bp-consensus",
@@ -243,7 +243,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.11.0-beta.9"
-source = "git+https://github.com/BP-WG/bp-core?branch=develop#59e41d4dd80fcbb27583d5f32b342873dc917602"
+source = "git+https://github.com/BP-WG/bp-core?branch=develop#0f591b4bcbd16d4bab3c9fe7134b9eaf8d397023"
 dependencies = [
  "amplify",
  "base85",
@@ -257,7 +257,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.11.0-beta.9"
-source = "git+https://github.com/BP-WG/bp-core?branch=develop#59e41d4dd80fcbb27583d5f32b342873dc917602"
+source = "git+https://github.com/BP-WG/bp-core?branch=develop#0f591b4bcbd16d4bab3c9fe7134b9eaf8d397023"
 dependencies = [
  "amplify",
  "baid64",
@@ -507,9 +507,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.159"
+version = "0.2.161"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "561d97a539a36e26a9a5fad1ea11a3039a67714694aaa379433e580854bc3dc5"
+checksum = "8e9489c2807c139ffd9c1794f4af0ebe86a828db53ecdc7fea2111d0fed085d1"
 
 [[package]]
 name = "log"
@@ -571,9 +571,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.87"
+version = "1.0.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3e4daa0dcf6feba26f985457cdf104d4b4256fc5a09547140f3631bb076b19a"
+checksum = "7c3a7fc5db1e57d5a779a352c8cdb57b29aa4c40cc69c3a68a7fedc815fbf2f9"
 dependencies = [
  "unicode-ident",
 ]
@@ -711,9 +711,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.128"
+version = "1.0.129"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ff5456707a1de34e7e37f2a6fd3d3f808c318259cbd01ab6377795054b483d8"
+checksum = "6dbcf9b78a125ee667ae19388837dd12294b858d101fdd393cb9d5501ef09eb2"
 dependencies = [
  "itoa",
  "memchr",
@@ -807,7 +807,7 @@ dependencies = [
 [[package]]
 name = "strict_types"
 version = "2.7.1"
-source = "git+https://github.com/strict-types/strict-types?branch=develop#729a4f86d25dfcea15ed15bbeb1e027473401c58"
+source = "git+https://github.com/strict-types/strict-types?branch=develop#9a2041a9b1988b17608564725d47b39f442e5062"
 dependencies = [
  "amplify",
  "ascii-armor",

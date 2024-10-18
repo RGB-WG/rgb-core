@@ -570,12 +570,32 @@ impl GlobalOrd {
     }
 }
 
+pub enum ImpossibleIter {}
+impl Default for ImpossibleIter {
+    fn default() -> Self { unreachable!() }
+}
+impl Iterator for ImpossibleIter {
+    type Item = State;
+    fn next(&mut self) -> Option<Self::Item> { unreachable!() }
+}
+impl DoubleEndedIterator for ImpossibleIter {
+    fn next_back(&mut self) -> Option<Self::Item> { unreachable!() }
+}
+
 pub trait GlobalStateIter {
     type Data: Borrow<StateData>;
     fn size(&mut self) -> u24;
     fn prev(&mut self) -> Option<(GlobalOrd, Self::Data)>;
     fn last(&mut self) -> Option<(GlobalOrd, Self::Data)>;
     fn reset(&mut self, depth: u24);
+}
+
+impl GlobalStateIter for ImpossibleIter {
+    type Data = StateData;
+    fn size(&mut self) -> u24 { unreachable!() }
+    fn prev(&mut self) -> Option<(GlobalOrd, Self::Data)> { unreachable!() }
+    fn last(&mut self) -> Option<(GlobalOrd, Self::Data)> { unreachable!() }
+    fn reset(&mut self, _: u24) { unreachable!() }
 }
 
 impl<I: GlobalStateIter> GlobalStateIter for &mut I {
