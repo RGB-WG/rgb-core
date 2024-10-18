@@ -114,17 +114,10 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
     }
 
     fn exec(&self, regs: &mut CoreRegs, _site: LibSite, context: &Self::Context<'_>) -> ExecStep {
-        macro_rules! fail {
-            () => {{
-                regs.set_failure();
-                return ExecStep::Stop;
-            }};
-        }
-
         match *self {
             ContractOp::CnC { dst, ty } => {
                 let Some(state_type) = regs.a16(ty).map(GlobalStateType::with) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 let state = RefCell::borrow(&context.contract_state);
                 let cnt = state.global(state_type).map(|mut s| s.size());
@@ -132,7 +125,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             }
             ContractOp::CnG { dst, ty } => {
                 let Some(state_type) = regs.a16(ty).map(GlobalStateType::with) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 let state = context.op_info.global;
                 let cnt = state.get(&state_type).map(|a| a.len_u16());
@@ -140,7 +133,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             }
             ContractOp::CnI { dst, ty } => {
                 let Some(state_type) = regs.a16(ty).map(AssignmentType::with) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 let state = context.op_info.prev_state;
                 let cnt = state.get(&state_type).map(|a| a.len_u16());
@@ -148,7 +141,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             }
             ContractOp::CnO { dst, ty } => {
                 let Some(state_type) = regs.a16(ty).map(AssignmentType::with) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 let state = context.op_info.owned_state;
                 let cnt = state.get(state_type).map(|a| a.len_u16());
@@ -157,73 +150,79 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
 
             ContractOp::LdC { dst, ty, pos } => {
                 let Some(state_type) = regs.a16(ty).map(GlobalStateType::with) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 let Some(index) = regs.a32(pos).and_then(|pos| u24::try_from(pos).ok()) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 let state = RefCell::borrow(&context.contract_state);
                 let Some(mut iter) = state.global(state_type).ok() else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 let Some(state) = iter.nth(index) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 regs.set_s16(dst, state.borrow().as_inner());
             }
 
             ContractOp::LdG { dst, ty, pos } => {
                 let Some(state_type) = regs.a16(ty).map(GlobalStateType::with) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
-                let Some(index) = regs.a16(pos) else { fail!() };
+                let Some(index) = regs.a16(pos) else {
+                    return ExecStep::Fail;
+                };
                 let state = context.op_info.global;
                 let Some(state) = state.get(&state_type).and_then(|a| a.get(index as usize)) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 regs.set_s16(dst, state.as_inner());
             }
             ContractOp::LdI { dst, ty, pos } => {
                 let Some(state_type) = regs.a16(ty).map(AssignmentType::with) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
-                let Some(index) = regs.a16(pos) else { fail!() };
+                let Some(index) = regs.a16(pos) else {
+                    return ExecStep::Fail;
+                };
                 let state = context.op_info.prev_state;
                 let Some(assign) = state.get(&state_type).and_then(|a| a.get(index as usize))
                 else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 regs.set_s16(dst, assign.as_state().data.as_inner());
             }
             ContractOp::LdO { dst, ty, pos } => {
                 let Some(state_type) = regs.a16(ty).map(AssignmentType::with) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
-                let Some(index) = regs.a16(pos) else { fail!() };
+                let Some(index) = regs.a16(pos) else {
+                    return ExecStep::Fail;
+                };
                 let state = context.op_info.owned_state;
                 let Some(assign) = state.get(state_type) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 let Some(assign) = assign.get(index as usize) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 regs.set_s16(dst, assign.as_state().data.as_inner());
             }
 
             ContractOp::LdM { dst, ty } => {
                 let Some(state_type) = regs.a16(ty).map(MetaType::with) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 let state = context.op_info.metadata;
                 let Some(assign) = state.get(&state_type) else {
-                    fail!()
+                    return ExecStep::Fail;
                 };
                 regs.set_s16(dst, assign.as_inner());
             }
 
             // All other future unsupported operations, which must set `st0` to `false`.
-            ContractOp::CnReserved { .. } => fail!(),
-            ContractOp::CtReserved { .. } => fail!(),
+            ContractOp::CnReserved { .. } => return ExecStep::Fail,
+            ContractOp::CtReserved { .. } => return ExecStep::Fail,
         }
         ExecStep::Next
     }

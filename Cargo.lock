@@ -5,7 +5,7 @@ version = 3
 [[package]]
 name = "aluvm"
 version = "0.11.0-beta.9"
-source = "git+https://github.com/AluVM/rust-aluvm?branch=develop#1da568be2bb036ae768487990e917cc54b53a690"
+source = "git+https://github.com/AluVM/rust-aluvm?branch=develop#1f52ba16526a4a948bf91485b8effe0e8571dae2"
 dependencies = [
  "amplify",
  "ascii-armor",
@@ -711,9 +711,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.129"
+version = "1.0.131"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6dbcf9b78a125ee667ae19388837dd12294b858d101fdd393cb9d5501ef09eb2"
+checksum = "67d42a0bd4ac281beff598909bb56a86acaf979b84483e1c79c10dcaf98f8cf3"
 dependencies = [
  "itoa",
  "memchr",
