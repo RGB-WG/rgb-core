@@ -297,7 +297,7 @@ pub enum ContractOp<S: ContractStateAccess> {
     ///
     /// If operation doesn't fail, the value of `st0` remains unaffected (i.e. if it was set to
     /// failed state before the operation, the operation doesn't change that).
-    #[display("ldm     {dst},a16{ty}")]
+    #[display("ld.m    {dst},a16{ty}")]
     LdM {
         /// Index of string register receiving the loaded state data.
         dst: RegS,

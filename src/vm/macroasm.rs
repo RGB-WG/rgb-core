@@ -28,15 +28,14 @@
 /// # Example
 ///
 /// ```
-/// use rgbcore::{assemble, rgbasm};
+/// use rgbcore::{disassemble, rgbasm};
 ///
-/// let asm = rgbasm! {
+/// let lib = rgbasm! {
 ///         ld.g    s16[0],a16[0],a16[1];
 ///         ret;
 /// };
-/// /// Compiled library which can be used by an RGB schema for validation.
-/// let lib = assemble(asm);
-/// println!("{lib}");
+/// // Compiled library which can be used by an RGB schema for validation.
+/// println!("{}", disassemble(&lib));
 /// ```
 ///
 /// [`Lib::assemble`]: aluvm::library::Lib::assemble
@@ -44,10 +43,11 @@
 /// [`RgbIsa`]: crate::vm::RgbIsa
 #[macro_export]
 macro_rules! rgbasm {
-    ($( $tt:tt )+) => {{ {
+    ($( $tt:tt )+) => {{ #[allow(unused_imports)] {
         use $crate::isa_instr;
         use aluvm::{_reg_idx, _reg_idx16};
-        $crate::vm::aluasm_isa! { $crate::vm::RgbIsa<_> => $( $tt )+ }
+        let asm = $crate::vm::aluasm_isa! { $crate::vm::RgbIsa<_> => $( $tt )+ };
+        $crate::assemble(asm)
     } }};
 }
 
@@ -57,25 +57,25 @@ macro_rules! rgbasm {
 macro_rules! isa_instr {
     (cn.c a32[$dst:literal],a16[$ty:literal]) => {{
         $crate::vm::RgbIsa::Contract($crate::vm::ContractOp::CnC {
-            dst: RegS::from($dst),
+            dst: _reg_idx![$dst],
             ty: _reg_idx![$ty],
         })
     }};
     (cn.g a16[$dst:literal],a16[$ty:literal]) => {{
         $crate::vm::RgbIsa::Contract($crate::vm::ContractOp::CnG {
-            dst: RegS::from($dst),
+            dst: _reg_idx![$dst],
             ty: _reg_idx![$ty],
         })
     }};
     (cn.i a16[$dst:literal],a16[$ty:literal]) => {{
         $crate::vm::RgbIsa::Contract($crate::vm::ContractOp::CnI {
-            dst: RegS::from($dst),
+            dst: _reg_idx![$dst],
             ty: _reg_idx![$ty],
         })
     }};
     (cn.o a16[$dst:literal],a16[$ty:literal]) => {{
         $crate::vm::RgbIsa::Contract($crate::vm::ContractOp::CnO {
-            dst: RegS::from($dst),
+            dst: _reg_idx![$dst],
             ty: _reg_idx![$ty],
         })
     }};
@@ -110,7 +110,7 @@ macro_rules! isa_instr {
         $crate::vm::RgbIsa::Contract($crate::vm::ContractOp::LdC {
             dst: RegS::from($dst),
             ty: _reg_idx![$ty],
-            pos: _reg_idx16![$pos],
+            pos: _reg_idx![$pos],
         })
     }};
     (ld.g s16[$dst:literal],a16[$ty:literal],a16[$pos:literal]) => {{
@@ -136,9 +136,9 @@ macro_rules! isa_instr {
     }};
 
     (ld.m s16[$dst:literal],a16[$ty:literal]) => {{
-        $crate::vm::RgbIsa::Contract($crate::vm::ContractOp::LdC {
+        $crate::vm::RgbIsa::Contract($crate::vm::ContractOp::LdM {
             dst: RegS::from($dst),
-            ty: _reg_idx![$ty],
+            ty: _reg_idx16![$ty],
         })
     }};
 

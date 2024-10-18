@@ -38,6 +38,13 @@ pub fn assemble(asm: impl AsRef<[Instr<RgbIsa<CompileOnly>>]>) -> Lib {
     Lib::assemble(asm.as_ref()).expect("invalid script")
 }
 
+pub fn disassemble(lib: &Lib) -> String {
+    let mut desasm = vec![];
+    lib.print_disassemble::<RgbIsa<CompileOnly>>(&mut desasm)
+        .expect("invalid code");
+    String::from_utf8(desasm).unwrap()
+}
+
 /// Operations constituting `RgbIsa` architecture extension.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(inner)]

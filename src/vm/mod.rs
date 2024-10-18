@@ -32,6 +32,7 @@ mod opcodes;
 mod contract;
 mod bytecode;
 mod exec;
+#[cfg(test)]
 mod tests;
 
 pub use aluvm::aluasm_isa;
@@ -41,5 +42,5 @@ pub use contract::{
     XWitnessTx,
 };
 pub(crate) use contract::{OpInfo, VmContext};
-pub use isa::{assemble, CompileOnly, RgbIsa};
+pub use isa::{assemble, disassemble, CompileOnly, RgbIsa};
 pub use opcodes::ContractOp;
