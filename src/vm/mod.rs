@@ -24,20 +24,23 @@
 //!
 //! Concrete virtual machine implementations must be wrapped into this API
 
-pub mod opcodes;
-mod isa;
-mod op_contract;
-mod op_timechain;
 #[macro_use]
 mod macroasm;
+pub mod instr;
+mod isa;
+mod opcodes;
 mod contract;
+mod bytecode;
+mod exec;
+#[cfg(test)]
+mod tests;
 
 pub use aluvm::aluasm_isa;
 pub use contract::{
     ContractStateAccess, ContractStateEvolve, GlobalContractState, GlobalOrd, GlobalStateIter,
-    OpOrd, OrdOpRef, UnknownGlobalStateType, WitnessOrd, WitnessPos, XWitnessId, XWitnessTx,
+    ImpossibleIter, OpOrd, OrdOpRef, UnknownGlobalStateType, WitnessOrd, WitnessPos, XWitnessId,
+    XWitnessTx,
 };
 pub(crate) use contract::{OpInfo, VmContext};
-pub use isa::RgbIsa;
-pub use op_contract::ContractOp;
-pub use op_timechain::TimechainOp;
+pub use isa::{assemble, disassemble, CompileOnly, RgbIsa};
+pub use opcodes::ContractOp;
