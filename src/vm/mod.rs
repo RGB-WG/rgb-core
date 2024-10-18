@@ -26,10 +26,13 @@
 
 #[macro_use]
 mod macroasm;
-pub mod opcodes;
+pub mod instr;
 mod isa;
-mod op_contract;
+mod opcodes;
 mod contract;
+mod bytecode;
+mod exec;
+mod tests;
 
 pub use aluvm::aluasm_isa;
 pub use contract::{
@@ -39,4 +42,4 @@ pub use contract::{
 };
 pub(crate) use contract::{OpInfo, VmContext};
 pub use isa::{assemble, CompileOnly, RgbIsa};
-pub use op_contract::ContractOp;
+pub use opcodes::ContractOp;

@@ -20,97 +20,288 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use aluvm::isa::opcodes::INSTR_ISAE_TO;
+use std::marker::PhantomData;
+
+use aluvm::reg::{Reg16, Reg32, RegS};
 use amplify::num::{u2, u3};
 
-#[allow(unused_imports)] // Needed for docs
-use super::ContractOp;
+use super::ContractStateAccess;
 
-// 64 instructions in total: 4 blocks by 16 instructions minus 0xFFFF instruction
-pub const INSTR_RGBISA_FROM: u8 = 0b1100_0000;
-pub const INSTR_RGBISA_TO: u8 = INSTR_ISAE_TO;
+/// Operations defined under RGB ISA extension (`RGB`).
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+pub enum ContractOp<S: ContractStateAccess> {
+    /// Counts number of global items elements defined by the current operation of the type,
+    /// provided by the second argument, and puts the number to the destination `a32`
+    /// register from the first argument.
+    ///
+    /// If the operation doesn't contain inputs with a given assignment type, sets destination
+    /// index to zero.
+    ///
+    /// # Idempotence
+    ///
+    /// The operation is idempotent.
+    ///
+    /// # Fails
+    ///
+    /// Operation fails by setting `st0` to fail state and terminating the program. This happens
+    /// only if the `ty` index is unset. In this case, the value of the destination register
+    /// remains unchanged.
+    ///
+    /// If operation doesn't fail, the value of `st0` remains unaffected (i.e. if it was set to
+    /// failed state before the operation, the operation doesn't change that).
+    #[display("cn.c    a32{dst},a16{ty}")]
+    CnC {
+        /// Index of an `a32` register receiving count of global state items of the type provided
+        /// in `ty`, contained in the contract global state.
+        dst: Reg32,
+        /// Index of `a16` register containing global state type.
+        ty: Reg32,
+    },
 
-// ================================================================================================
-// Block 1: Contracts (RGB and RGBIC)
-pub const INSTR_CONTRACT_FROM: u8 = INSTR_RGB_CNT;
-pub const INSTR_CONTRACT_TO: u8 = INSTR_RGB_RESERVED_TO;
+    /// Counts number of global items elements defined by the current operation of the type,
+    /// provided by the second argument, and puts the number to the destination `a16`
+    /// register from the first argument.
+    ///
+    /// If the operation doesn't contain inputs with a given assignment type, sets destination
+    /// index to zero.
+    ///
+    /// # Idempotence
+    ///
+    /// The operation is idempotent.
+    ///
+    /// # Fails
+    ///
+    /// Operation fails by setting `st0` to fail state and terminating the program. This happens
+    /// only if the `ty` index is unset. In this case, the value of the destination register
+    /// remains unchanged.
+    ///
+    /// If operation doesn't fail, the value of `st0` remains unaffected (i.e. if it was set to
+    /// failed state before the operation, the operation doesn't change that).
+    #[display("cn.g    a16{dst},a16{ty}")]
+    CnG {
+        /// Index of an `a16` register receiving count of global state items of the type provided
+        /// in `ty`, contained in the current operation.
+        dst: Reg32,
+        /// Index of `a16` register containing global state type.
+        ty: Reg32,
+    },
 
-// ------------------------------------------------------------------------------------------------
-// RGB ISA extension (single-contract instructions)
+    /// Counts number of inputs (closed assignment seals) of the type provided by the second
+    /// argument and puts the number to the destination `a16` register from the first argument.
+    ///
+    /// If the operation doesn't contain inputs with a given assignment type, sets destination
+    /// index to zero.
+    ///
+    /// # Idempotence
+    ///
+    /// The operation is idempotent.
+    ///
+    /// # Fails
+    ///
+    /// Operation fails by setting `st0` to fail state and terminating the program. This happens
+    /// only if the `ty` index is unset. In this case, the value of the destination register
+    /// remains unchanged.
+    ///
+    /// If operation doesn't fail, the value of `st0` remains unaffected (i.e. if it was set to
+    /// failed state before the operation, the operation doesn't change that).
+    #[display("cn.i    a16{dst},a16{ty}")]
+    CnI {
+        /// Index of an `a16` register receiving count of the assignments which seals were closed
+        /// by the current operation.
+        dst: Reg32,
+        /// Index of `a16` register containing assignment type.
+        ty: Reg32,
+    },
 
-/// Instructions counting state items.
-///
-/// # Mnemonics
-/// `cn.i`, `cn.o`, `cn.g`, `cn.c`
-///
-/// # Operations
-/// - [`ContractOp::CnI`]
-/// - [`ContractOp::CnO`]
-/// - [`ContractOp::CnG`]
-/// - [`ContractOp::CnC`]
-pub const INSTR_RGB_CNT: u8 = 0b1100_0000;
-pub const INSTR_RGB_CNT_C: u3 = u3::with(0b_000);
-pub const INSTR_RGB_CNT_G: u3 = u3::with(0b_001);
-pub const INSTR_RGB_CNT_I: u3 = u3::with(0b_010);
-pub const INSTR_RGB_CNT_O: u3 = u3::with(0b_011);
-pub const INSTR_RGB_CNT_R: u3 = u3::with(0b_100);
-pub const INSTR_RGB_CNT_V: u3 = u3::with(0b_101);
-pub const INSTR_RGB_CNT_M: u3 = u3::with(0b_110);
-pub const INSTR_RGB_CNT_EXT: u3 = u3::with(0b_111);
+    /// Counts number of outputs (owned state assignments) of the type provided by the second
+    /// argument and puts the number to the destination `a16` register from the first argument.
+    ///
+    /// If the operation doesn't contain inputs with a given assignment type, sets destination
+    /// index to zero.
+    ///
+    /// # Idempotence
+    ///
+    /// The operation is idempotent.
+    ///
+    /// # Fails
+    ///
+    /// Operation fails by setting `st0` to fail state and terminating the program. This happens
+    /// only if the `ty` index is unset. In this case, the value of the destination register
+    /// remains unchanged.
+    ///
+    /// If operation doesn't fail, the value of `st0` remains unaffected (i.e. if it was set to
+    /// failed state before the operation, the operation doesn't change that).
+    #[display("cn.o    a16{dst},a16{ty}")]
+    CnO {
+        /// Index of an `a16` register receiving assignments count of the type provided in `ty`.
+        dst: Reg32,
+        /// Index of `a16` register containing assignment type.
+        ty: Reg32,
+    },
 
-/// Instructions loading state.
-///
-/// # Mnemonics
-/// `ld.i`, `ld.o`, `ld.g`, `ld.c`
-///
-/// # Operations
-/// - [`ContractOp::LdI`]
-/// - [`ContractOp::LdO`]
-/// - [`ContractOp::LdG`]
-/// - [`ContractOp::LdC`]
+    #[doc(hidden)]
+    /// Reserved command inside the counting operations sub-block.
+    ///
+    /// Currently, always set `st0` to failed state and terminate the program.
+    #[display("cn.{instr}    a16{dst},a16{ty}")]
+    CnReserved {
+        instr: u2,
+        dst: Reg32,
+        ty: Reg32,
+        _phantom: PhantomData<S>,
+    },
 
-pub const INSTR_RGB_LD: u8 = 0b1100_0001;
-pub const INSTR_RGB_LD_C: u2 = u2::with(0b_00);
-pub const INSTR_RGB_LD_G: u2 = u2::with(0b_01);
-pub const INSTR_RGB_LD_I: u2 = u2::with(0b_10);
-pub const INSTR_RGB_LD_O: u2 = u2::with(0b_11);
+    // TODO: implement ct.* operations
+    #[doc(hidden)]
+    /// Reserved for counting type ids.
+    ///
+    /// Currently, always set `st0` to failed state and terminate the program.
+    #[display("ct.{instr}    a16{dst}")]
+    CtReserved { instr: u3, dst: Reg32 },
 
-/// Instruction loading metadata.
-///
-/// Mnemonic: `ld.m`
-///
-/// Operation: [`ContractOp::LdM`].
-pub const INSTR_RGB_LDM: u8 = 0b1100_0010;
+    /// Loads contract global state.
+    ///
+    /// # Idempotence
+    ///
+    /// The operation is idempotent.
+    ///
+    /// # Fails
+    ///
+    /// Operation fails by setting `st0` to fail state and terminating the program. This happens
+    /// in the following cases:
+    /// - `ty` index is unset;
+    /// - `pos` index is unset;
+    /// - the contract doesn't have the provided global state type;
+    /// - the contract global state of the provided type has less than `pos` items.
+    ///
+    /// The value of the destination register in all these cases is not changed.
+    ///
+    /// If operation doesn't fail, the value of `st0` remains unaffected (i.e. if it was set to
+    /// failed state before the operation, the operation doesn't change that).
+    #[display("ld.c    {dst},a16{ty},a32{pos}")]
+    LdC {
+        /// Index of string register receiving the loaded state data.
+        dst: RegS,
+        /// Index of `a16` register containing global state type.
+        ty: Reg32,
+        /// Index of `a32` register containing position inside the list of all global state by the
+        /// given `ty` type.
+        pos: Reg32,
+    },
 
-// ------------------------------------------------------------------------------------------------
-// RGBIC ISA extension (inter-contract operations)
-pub const INSTR_RGB_RESERVED_FROM: u8 = INSTR_RGBIC_RESERVED1;
-pub const INSTR_RGB_RESERVED_TO: u8 = INSTR_RGBIC_RESERVED13;
-pub const INSTR_RGBIC_RESERVED1: u8 = 0b1100_0011;
-pub const INSTR_RGBIC_RESERVED2: u8 = 0b1100_0100;
-pub const INSTR_RGBIC_RESERVED3: u8 = 0b1100_0101;
-pub const INSTR_RGBIC_RESERVED4: u8 = 0b1100_0110;
-pub const INSTR_RGBIC_RESERVED5: u8 = 0b1100_0111;
-pub const INSTR_RGBIC_RESERVED6: u8 = 0b1100_1000;
-pub const INSTR_RGBIC_RESERVED7: u8 = 0b1100_1001;
-pub const INSTR_RGBIC_RESERVED8: u8 = 0b1100_1010;
-pub const INSTR_RGBIC_RESERVED9: u8 = 0b1100_1011;
-pub const INSTR_RGBIC_RESERVED10: u8 = 0b1100_1100;
-pub const INSTR_RGBIC_RESERVED11: u8 = 0b1100_1101;
-pub const INSTR_RGBIC_RESERVED12: u8 = 0b1100_1110;
-pub const INSTR_RGBIC_RESERVED13: u8 = 0b1100_1111;
+    /// Loads global state from the current operation.
+    ///
+    /// # Idempotence
+    ///
+    /// The operation is idempotent.
+    ///
+    /// # Fails
+    ///
+    /// Operation fails by setting `st0` to fail state and terminating the program. This happens
+    /// in the following cases:
+    /// - `ty` index is unset;
+    /// - `pos` index is unset;
+    /// - the operation doesn't have the provided global state type;
+    /// - the operation global state of the provided type has less than `pos` items.
+    ///
+    /// The value of the destination register in all these cases is not changed.
+    ///
+    /// If operation doesn't fail, the value of `st0` remains unaffected (i.e. if it was set to
+    /// failed state before the operation, the operation doesn't change that).
+    #[display("ld.g    {dst},a16{ty},a16{pos}")]
+    LdG {
+        /// Index of string register receiving the loaded state data.
+        dst: RegS,
+        /// Index of `a16` register containing global state type.
+        ty: Reg32,
+        /// Index of `a16` register containing position inside the list of all global state by the
+        /// given `ty` type.
+        pos: Reg32,
+    },
 
-// ================================================================================================
-// Block 2: Timechain (BP)
-pub const INSTR_BP_FROM: u8 = 0b1101_0000;
-pub const INSTR_BP_TO: u8 = 0b1101_1111;
+    /// Loads owned state from an assignment which seal was closed with the current operation
+    /// ("input").
+    ///
+    /// # Idempotence
+    ///
+    /// The operation is idempotent.
+    ///
+    /// # Fails
+    ///
+    /// Operation fails by setting `st0` to fail state and terminating the program. This happens
+    /// in the following cases:
+    /// - `ty` index is unset;
+    /// - `pos` index is unset;
+    /// - none of the operation's inputs has the provided assignment type;
+    /// - there is less than `pos` assignments in operation inputs of the provided type.
+    ///
+    /// The value of the destination register in all these cases is not changed.
+    ///
+    /// If operation doesn't fail, the value of `st0` remains unaffected (i.e. if it was set to
+    /// failed state before the operation, the operation doesn't change that).
+    #[display("ld.i    {dst},a16{ty},a16{pos}")]
+    LdI {
+        /// Index of string register receiving the loaded state data.
+        dst: RegS,
+        /// Index of `a16` register containing assignment type.
+        ty: Reg32,
+        /// Index of `a16` register containing position inside the list of all assignments of the
+        /// `ty` type.
+        pos: Reg32,
+    },
 
-// ================================================================================================
-// Block 3: Lightning (LNP)
-pub const INSTR_LNP_FROM: u8 = 0b1110_0000;
-pub const INSTR_LNP_TO: u8 = 0b1110_1111;
+    /// Loads owned state assigned by the current operation.
+    ///
+    /// # Idempotence
+    ///
+    /// The operation is idempotent.
+    ///
+    /// # Fails
+    ///
+    /// Operation fails by setting `st0` to fail state and terminating the program. This happens
+    /// in the following cases:
+    /// - `ty` index is unset;
+    /// - `pos` index is unset;
+    /// - the operation doesn't have assignments of the provided type;
+    /// - the operation assignments of the provided type has less than `pos` items.
+    ///
+    /// The value of the destination register in all these cases is not changed.
+    ///
+    /// If operation doesn't fail, the value of `st0` remains unaffected (i.e. if it was set to
+    /// failed state before the operation, the operation doesn't change that).
+    #[display("ld.o    {dst},a16{ty},a16{pos}")]
+    LdO {
+        /// Index of string register receiving the loaded state data.
+        dst: RegS,
+        /// Index of `a16` register containing assignment type.
+        ty: Reg32,
+        /// Index of `a16` register containing position inside the list of all assignments of the
+        /// `ty` type.
+        pos: Reg32,
+    },
 
-// ================================================================================================
-// Block 4: Data availability (RGBDA / STORM)
-pub const INSTR_STORM_FROM: u8 = 0b1111_0000;
-pub const INSTR_STORM_TO: u8 = 0b1111_1110;
+    /// Loads operation metadata.
+    ///
+    /// # Idempotence
+    ///
+    /// The operation is idempotent.
+    ///
+    /// # Fails
+    ///
+    /// Operation fails by setting `st0` to fail state and terminating the program. This happens
+    /// in the following cases:
+    /// - `ty` index is unset;
+    /// - the operation doesn't metadata of the provided type.
+    ///
+    /// The value of the destination register in all these cases is not changed.
+    ///
+    /// If operation doesn't fail, the value of `st0` remains unaffected (i.e. if it was set to
+    /// failed state before the operation, the operation doesn't change that).
+    #[display("ldm     {dst},a16{ty}")]
+    LdM {
+        /// Index of string register receiving the loaded state data.
+        dst: RegS,
+        /// Index of `a16` register containing global state type.
+        ty: Reg16,
+    },
+}

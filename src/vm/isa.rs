@@ -22,14 +22,12 @@
 
 use std::borrow::Borrow;
 use std::collections::BTreeSet;
-use std::ops::RangeInclusive;
 
 use aluvm::isa;
-use aluvm::isa::{Bytecode, BytecodeError, ExecStep, Instr, InstructionSet};
-use aluvm::library::{CodeEofError, IsaSeg, Lib, LibSite, Read, Write};
+use aluvm::isa::{ExecStep, Instr, InstructionSet};
+use aluvm::library::{IsaSeg, Lib, LibSite};
 use aluvm::reg::{CoreRegs, Reg};
 
-use super::opcodes::{INSTR_CONTRACT_TO, INSTR_RGBISA_FROM, INSTR_RGBISA_TO};
 use super::{
     ContractOp, ContractStateAccess, GlobalContractState, GlobalStateIter, ImpossibleIter,
     UnknownGlobalStateType, VmContext,
@@ -105,39 +103,5 @@ impl<S: ContractStateAccess> InstructionSet for RgbIsa<S> {
                 ExecStep::Stop
             }
         }
-    }
-}
-
-impl<S: ContractStateAccess> Bytecode for RgbIsa<S> {
-    fn instr_range() -> RangeInclusive<u8> { INSTR_RGBISA_FROM..=INSTR_RGBISA_TO }
-
-    fn instr_byte(&self) -> u8 {
-        match self {
-            RgbIsa::Contract(op) => op.instr_byte(),
-            RgbIsa::Fail(code) => *code,
-        }
-    }
-
-    fn encode_args<W>(&self, writer: &mut W) -> Result<(), BytecodeError>
-    where W: Write {
-        match self {
-            RgbIsa::Contract(op) => op.encode_args(writer),
-            RgbIsa::Fail(_) => Ok(()),
-        }
-    }
-
-    fn decode<R>(reader: &mut R) -> Result<Self, CodeEofError>
-    where
-        Self: Sized,
-        R: Read,
-    {
-        let instr = reader.peek_u8()?;
-        Ok(match instr {
-            instr if ContractOp::<S>::instr_range().contains(&instr) => {
-                RgbIsa::Contract(ContractOp::decode(reader)?)
-            }
-            INSTR_CONTRACT_TO..=INSTR_RGBISA_TO => RgbIsa::Fail(instr),
-            _ => unreachable!(),
-        })
     }
 }
