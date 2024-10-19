@@ -37,10 +37,10 @@ use crate::{
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_COMMIT: &str =
-    "stl:ez6C2mcp-R$E5xSD-Svibf8j-6BOqvf9-p65bBKl-FzWb$aw#trident-rover-tape";
+    "stl:pRLMM7OS-$w8IXpK-!Jl$Sf4-3SrX$vn-OQi9Uzx-USWTXJY#cake-banjo-legend";
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_LOGIC: &str =
-    "stl:LfHcR$Q$-tHON4hL-lwtJ1pT-!gCSP4i-C3fw2FZ-X!HGkwE#leonid-melody-quick";
+    "stl:rBp7sjZK-WyD4iXW-itLfRey-JguuaFA-ACsLvk2-$P6V0ok#rose-match-almanac";
 
 fn _rgb_commit_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB_COMMIT), tiny_bset! {
