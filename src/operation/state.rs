@@ -23,6 +23,7 @@
 use core::fmt::Debug;
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use std::ops::Deref;
 use std::str::FromStr;
 
 use amplify::confinement::SmallBlob;
@@ -74,19 +75,50 @@ impl Display for AttachId {
 impl_serde_baid64!(AttachId);
 
 /// Binary state data, serialized using strict type notation from the structured data type.
-#[derive(Wrapper, Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug, Default, From)]
-#[wrapper(Deref, AsSlice, BorrowSlice, Index, RangeOps)]
+#[derive(Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug, From)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
+    serde(crate = "serde_crate", tag = "type", content = "content")
 )]
-pub struct StateData(SmallBlob);
+pub enum StateData {
+    #[from]
+    #[strict_type(tag = 0x00)]
+    Static(SmallBlob),
+    // TODO: Add computed state - RCP-240327A <https://github.com/RGB-WG/RFC/issues/6>
+}
 
 impl StrictSerialize for StateData {}
 impl StrictDeserialize for StateData {}
+
+impl AsRef<[u8]> for StateData {
+    fn as_ref(&self) -> &[u8] { self.as_static().as_ref() }
+}
+
+impl Default for StateData {
+    fn default() -> Self { Self::Static(default!()) }
+}
+
+impl Deref for StateData {
+    type Target = [u8];
+    fn deref(&self) -> &Self::Target { self.as_slice() }
+}
+
+impl Wrapper for StateData {
+    type Inner = SmallBlob;
+
+    fn from_inner(inner: Self::Inner) -> Self { Self::Static(inner) }
+
+    fn as_inner(&self) -> &Self::Inner { self.as_static() }
+
+    fn into_inner(self) -> Self::Inner {
+        match self {
+            StateData::Static(data) => data,
+        }
+    }
+}
 
 impl StateData {
     /// Constructs new state data by performing strict serialization of the provided structured
@@ -106,12 +138,12 @@ impl StateData {
     pub fn from_serialized(typed_data: &impl StrictSerialize) -> Result<Self, SerializeError> {
         typed_data
             .to_strict_serialized::<STATE_DATA_MAX_LEN>()
-            .map(Self)
+            .map(Self::Static)
     }
 
-    pub fn from_checked(vec: Vec<u8>) -> Self { Self(SmallBlob::from_checked(vec)) }
+    pub fn from_checked(vec: Vec<u8>) -> Self { Self::Static(SmallBlob::from_checked(vec)) }
 
-    pub fn as_slice(&self) -> &[u8] { self.0.as_slice() }
+    pub fn as_slice(&self) -> &[u8] { self.as_static().as_slice() }
 
     fn to_base64(&self) -> String {
         let alphabet =
@@ -125,7 +157,13 @@ impl StateData {
             Alphabet::new(STATE_DATA_BASE32_ALPHABET).expect("invalid state data alphabet");
         let engine = GeneralPurpose::new(&alphabet, NO_PAD);
         let data = engine.decode(s)?;
-        Ok(Self(SmallBlob::try_from(data)?))
+        Ok(Self::Static(SmallBlob::try_from(data)?))
+    }
+
+    pub fn as_static(&self) -> &SmallBlob {
+        match self {
+            StateData::Static(data) => data,
+        }
     }
 }
 
@@ -328,8 +366,8 @@ mod test {
 
         let data = StateData::from_serialized(&MaxData::default()).unwrap();
         assert_eq!(data.len(), STATE_DATA_MAX_LEN);
-        for byte in data.0 {
-            assert_eq!(byte, 0xAC)
+        for byte in data.as_static() {
+            assert_eq!(*byte, 0xAC)
         }
     }
 }

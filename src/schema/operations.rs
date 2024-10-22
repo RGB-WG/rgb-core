@@ -41,6 +41,7 @@ use crate::LIB_NAME_RGB_COMMIT;
 pub struct AssignmentType(u16);
 impl AssignmentType {
     pub const fn with(ty: u16) -> Self { Self(ty) }
+    pub const fn to_u16(&self) -> u16 { self.0 }
     #[inline]
     pub fn to_le_bytes(&self) -> [u8; 2] { self.0.to_le_bytes() }
 }
@@ -58,6 +59,7 @@ impl AssignmentType {
 pub struct ValencyType(u16);
 impl ValencyType {
     pub const fn with(ty: u16) -> Self { Self(ty) }
+    pub const fn to_u16(&self) -> u16 { self.0 }
 }
 
 pub type MetaSchema = TinyOrdSet<MetaType>;

@@ -57,6 +57,7 @@ use crate::{
 pub struct MetaType(u16);
 impl MetaType {
     pub const fn with(ty: u16) -> Self { Self(ty) }
+    pub const fn to_u16(&self) -> u16 { self.0 }
 }
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
@@ -72,6 +73,7 @@ impl MetaType {
 pub struct GlobalStateType(u16);
 impl GlobalStateType {
     pub const fn with(ty: u16) -> Self { Self(ty) }
+    pub const fn to_u16(&self) -> u16 { self.0 }
 }
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
@@ -87,6 +89,7 @@ impl GlobalStateType {
 pub struct ExtensionType(u16);
 impl ExtensionType {
     pub const fn with(ty: u16) -> Self { Self(ty) }
+    pub const fn to_u16(&self) -> u16 { self.0 }
 }
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
@@ -102,6 +105,7 @@ impl ExtensionType {
 pub struct TransitionType(u16);
 impl TransitionType {
     pub const fn with(ty: u16) -> Self { Self(ty) }
+    pub const fn to_u16(&self) -> u16 { self.0 }
 }
 
 impl TransitionType {
