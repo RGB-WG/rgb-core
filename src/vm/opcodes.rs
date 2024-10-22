@@ -30,7 +30,7 @@ use super::ContractStateAccess;
 /// Operations defined under RGB ISA extension (`RGB`).
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum ContractOp<S: ContractStateAccess> {
-    /// Counts number of global items elements defined by the current operation of the type,
+    /// Counts number of global items elements defined by the contract global state of the type,
     /// provided by the second argument, and puts the number to the destination `a32`
     /// register from the first argument.
     ///
