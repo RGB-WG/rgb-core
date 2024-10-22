@@ -30,15 +30,14 @@ use aluvm::reg::{Reg32, RegA};
 use aluvm::Vm;
 use amplify::confinement::Confined;
 use amplify::Wrapper;
-use strict_types::TypeSystem;
 
 use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OrdOpRef, RgbIsa, VmContext};
 use crate::{
-    validation, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal, Extension,
-    GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId,
-    Operation, Opout, OwnedStateSchema, Schema, Transition, TypedAssigns, Valencies,
+    validation, AssignmentType, Assignments, AssignmentsRef, ExposedSeal, Extension, GlobalState,
+    GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId, Operation,
+    Opout, Schema, Transition, TypedAssigns, Valencies,
 };
 
 impl Schema {
@@ -151,9 +150,8 @@ impl Schema {
 
         // Validate type system
         status += self.validate_type_system();
-        status += self.validate_metadata(opid, op.metadata(), metadata_schema, consignment.types());
-        status +=
-            self.validate_global_state(opid, op.globals(), global_schema, consignment.types());
+        status += self.validate_metadata(opid, op.metadata(), metadata_schema);
+        status += self.validate_global_state(opid, op.globals(), global_schema);
         let prev_state = if let OrdOpRef::Transition(transition, ..) = op {
             let prev_state = extract_prev_state(consignment, opid, &transition.inputs, &mut status);
             status += self.validate_prev_state(opid, &prev_state, owned_schema);
@@ -170,10 +168,10 @@ impl Schema {
         }
         status += match op.assignments() {
             AssignmentsRef::Genesis(assignments) => {
-                self.validate_owned_state(opid, assignments, assign_schema, consignment.types())
+                self.validate_owned_state(opid, assignments, assign_schema)
             }
             AssignmentsRef::Graph(assignments) => {
-                self.validate_owned_state(opid, assignments, assign_schema, consignment.types())
+                self.validate_owned_state(opid, assignments, assign_schema)
             }
         };
 
@@ -233,7 +231,6 @@ impl Schema {
         opid: OpId,
         metadata: &Metadata,
         metadata_schema: &MetaSchema,
-        types: &TypeSystem,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
@@ -246,25 +243,6 @@ impl Schema {
                 status.add_failure(validation::Failure::SchemaUnknownMetaType(opid, *type_id));
             });
 
-        for type_id in metadata_schema {
-            let Some(value) = metadata.get(type_id) else {
-                status.add_failure(validation::Failure::SchemaNoMetadata(opid, *type_id));
-                continue;
-            };
-
-            let sem_id = self.meta_types.get(type_id).expect(
-                "if this metadata type were absent, the schema would not be able to pass the \
-                 internal validation and we would not reach this point",
-            );
-
-            if types
-                .strict_deserialize_type(*sem_id, value.as_ref())
-                .is_err()
-            {
-                status.add_failure(validation::Failure::SchemaInvalidMetadata(opid, *sem_id));
-            };
-        }
-
         status
     }
 
@@ -273,7 +251,6 @@ impl Schema {
         opid: OpId,
         global: &GlobalState,
         global_schema: &GlobalSchema,
-        types: &TypeSystem,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
@@ -296,7 +273,7 @@ impl Schema {
                 .unwrap_or_default();
 
             let GlobalStateSchema {
-                sem_id,
+                sem_id: _,
                 max_items,
                 reserved: _,
             } = self.global_types.get(type_id).expect(
@@ -315,18 +292,6 @@ impl Schema {
                 status.add_failure(validation::Failure::SchemaGlobalStateLimit(
                     opid, *type_id, count, *max_items,
                 ));
-            }
-
-            // Validating data types
-            for data in set {
-                if types
-                    .strict_deserialize_type(*sem_id, data.as_ref())
-                    .is_err()
-                {
-                    status.add_failure(validation::Failure::SchemaInvalidGlobalValue(
-                        opid, *type_id, *sem_id,
-                    ));
-                };
             }
         }
 
@@ -396,7 +361,6 @@ impl Schema {
         id: OpId,
         owned_state: &Assignments<Seal>,
         assign_schema: &AssignmentsSchema,
-        types: &TypeSystem,
     ) -> validation::Status {
         let mut status = validation::Status::new();
 
@@ -422,17 +386,6 @@ impl Schema {
                 status.add_failure(validation::Failure::SchemaAssignmentOccurrences(
                     id, *state_id, err,
                 ));
-            }
-
-            let assignment = &self.owned_types.get(state_id).expect(
-                "If the assignment were absent, the schema would not be able to pass the internal \
-                 validation and we would not reach this point",
-            );
-
-            if let Some(assignments) = owned_state.get(state_id) {
-                assignments
-                    .iter()
-                    .for_each(|data| status += assignment.validate(id, *state_id, data, types))
             }
         }
 
@@ -500,27 +453,4 @@ fn extract_prev_state<C: ConsignmentApi>(
     Confined::try_from(assignments)
         .expect("collections is assembled from another collection with the same size requirements")
         .into()
-}
-
-impl OwnedStateSchema {
-    pub fn validate<Seal: ExposedSeal>(
-        &self,
-        opid: OpId,
-        state_type: AssignmentType,
-        assign: &Assign<Seal>,
-        type_system: &TypeSystem,
-    ) -> validation::Status {
-        let mut status = validation::Status::new();
-        if type_system
-            .strict_deserialize_type(self.sem_id, assign.as_state().unverified.as_ref())
-            .is_err()
-        {
-            status.add_failure(validation::Failure::SchemaInvalidOwnedValue(
-                opid,
-                state_type,
-                self.sem_id,
-            ));
-        }
-        status
-    }
 }

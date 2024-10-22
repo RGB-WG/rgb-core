@@ -220,15 +220,7 @@ pub enum Failure {
     SchemaGlobalStateLimit(OpId, schema::GlobalStateType, u16, u24),
     /// required metadata type {1} is not present in the operation {0}.
     SchemaNoMetadata(OpId, schema::MetaType),
-    /// invalid metadata in operation {0} not matching semantic type id {1}.
-    SchemaInvalidMetadata(OpId, SemId),
-    /// invalid global state value in operation {0}, state type #{1} which does
-    /// not match semantic type id {2}.
-    SchemaInvalidGlobalValue(OpId, schema::GlobalStateType, SemId),
-    /// invalid owned state value in operation {0}, state type #{1} which does
-    /// not match semantic type id {2}.
-    SchemaInvalidOwnedValue(OpId, schema::AssignmentType, SemId),
-    /// invalid number of input entries of type {1} in operation {0} - {2}  
+    /// invalid number of input entries of type {1} in operation {0} - {2}
     SchemaInputOccurrences(OpId, schema::AssignmentType, OccurrencesMismatch),
     /// invalid number of assignment entries of type {1} in operation {0} - {2}
     SchemaAssignmentOccurrences(OpId, schema::AssignmentType, OccurrencesMismatch),
