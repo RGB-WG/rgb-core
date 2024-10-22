@@ -39,8 +39,8 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use crate::{
     AssignmentType, Assignments, AssignmentsRef, ContractId, ExposedSeal, Extension, ExtensionType,
     Genesis, GlobalState, GlobalStateType, GraphSeal, Impossible, Inputs, Layer1, Metadata,
-    OpFullType, OpId, OpType, Operation, State, StateData, Transition, TransitionType, TxoSeal,
-    TypedAssigns, Valencies, XChain, XOutpoint, XOutputSeal, LIB_NAME_RGB_LOGIC,
+    OpFullType, OpId, OpType, Operation, State, Transition, TransitionType, TxoSeal, TypedAssigns,
+    UnverifiedState, Valencies, XChain, XOutpoint, XOutputSeal, LIB_NAME_RGB_LOGIC,
 };
 
 pub type XWitnessId = XChain<Txid>;
@@ -583,7 +583,7 @@ impl DoubleEndedIterator for ImpossibleIter {
 }
 
 pub trait GlobalStateIter {
-    type Data: Borrow<StateData>;
+    type Data: Borrow<UnverifiedState>;
     fn size(&mut self) -> u24;
     fn prev(&mut self) -> Option<(GlobalOrd, Self::Data)>;
     fn last(&mut self) -> Option<(GlobalOrd, Self::Data)>;
@@ -591,7 +591,7 @@ pub trait GlobalStateIter {
 }
 
 impl GlobalStateIter for ImpossibleIter {
-    type Data = StateData;
+    type Data = UnverifiedState;
     fn size(&mut self) -> u24 { unreachable!() }
     fn prev(&mut self) -> Option<(GlobalOrd, Self::Data)> { unreachable!() }
     fn last(&mut self) -> Option<(GlobalOrd, Self::Data)> { unreachable!() }
@@ -652,7 +652,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     /// Retrieves global state data located `depth` items back from the most
     /// recent global state value. Ensures that the global state ordering is
     /// consensus-based.
-    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<StateData> + '_> {
+    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<UnverifiedState> + '_> {
         if depth >= self.iter.size() {
             return None;
         }

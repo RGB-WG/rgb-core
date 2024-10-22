@@ -27,7 +27,7 @@ use amplify::confinement::{Confined, NonEmptyVec, TinyOrdMap, U16 as U16MAX};
 use amplify::{confinement, Wrapper};
 use strict_encoding::StrictDumb;
 
-use crate::{schema, StateData, LIB_NAME_RGB_COMMIT};
+use crate::{schema, UnverifiedState, LIB_NAME_RGB_COMMIT};
 
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]
@@ -39,19 +39,21 @@ use crate::{schema, StateData, LIB_NAME_RGB_COMMIT};
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct GlobalValues(NonEmptyVec<StateData, U16MAX>);
+pub struct GlobalValues(NonEmptyVec<UnverifiedState, U16MAX>);
 
 impl StrictDumb for GlobalValues {
-    fn strict_dumb() -> Self { Self(NonEmptyVec::with(StateData::strict_dumb())) }
+    fn strict_dumb() -> Self { Self(NonEmptyVec::with(UnverifiedState::strict_dumb())) }
 }
 
 impl GlobalValues {
-    pub fn with(state: impl Into<StateData>) -> Self { GlobalValues(Confined::with(state.into())) }
+    pub fn with(state: impl Into<UnverifiedState>) -> Self {
+        GlobalValues(Confined::with(state.into()))
+    }
 }
 
 impl IntoIterator for GlobalValues {
-    type Item = StateData;
-    type IntoIter = vec::IntoIter<StateData>;
+    type Item = UnverifiedState;
+    type IntoIter = vec::IntoIter<UnverifiedState>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
 }
@@ -72,7 +74,7 @@ impl GlobalState {
     pub fn add_state(
         &mut self,
         ty: schema::GlobalStateType,
-        state: StateData,
+        state: UnverifiedState,
     ) -> Result<(), confinement::Error> {
         match self.0.get_mut(&ty) {
             Some(vec) => vec.push(state),
@@ -83,7 +85,7 @@ impl GlobalState {
     pub fn extend_state(
         &mut self,
         ty: schema::GlobalStateType,
-        iter: impl IntoIterator<Item = StateData>,
+        iter: impl IntoIterator<Item = UnverifiedState>,
     ) -> Result<(), confinement::Error> {
         match self.0.get_mut(&ty) {
             Some(vec) => vec.extend(iter),

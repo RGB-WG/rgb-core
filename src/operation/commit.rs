@@ -40,7 +40,7 @@ use crate::operation::state::StateCommitment;
 use crate::{
     impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ExposedSeal, Extension,
     ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Operation, Redeemed, SchemaId,
-    SecretSeal, StateData, Transition, TransitionBundle, TransitionType, XChain,
+    SecretSeal, Transition, TransitionBundle, TransitionType, UnverifiedState, XChain,
     LIB_NAME_RGB_COMMIT,
 };
 
@@ -386,7 +386,7 @@ impl<Seal: ExposedSeal> MerkleLeaves for Assignments<Seal> {
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GlobalCommitment {
     pub ty: GlobalStateType,
-    pub state: StateData,
+    pub state: UnverifiedState,
 }
 
 impl CommitEncode for GlobalCommitment {

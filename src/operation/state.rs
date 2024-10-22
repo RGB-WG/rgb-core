@@ -26,7 +26,7 @@ use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 use std::str::FromStr;
 
-use amplify::confinement::SmallBlob;
+use amplify::confinement::{ConfinedVec, SmallBlob};
 use amplify::{confinement, ByteArray, Bytes32, Wrapper};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use base64::alphabet::Alphabet;
@@ -34,7 +34,7 @@ use base64::engine::general_purpose::NO_PAD;
 use base64::engine::GeneralPurpose;
 use base64::Engine;
 use commit_verify::{CommitmentId, DigestExt, ReservedBytes, Sha256};
-use strict_encoding::{SerializeError, StrictDeserialize, StrictSerialize, StrictType};
+use strict_encoding::{SerializeError, StrictDeserialize, StrictDumb, StrictSerialize, StrictType};
 
 use crate::{impl_serde_baid64, LIB_NAME_RGB_COMMIT};
 
@@ -74,6 +74,34 @@ impl Display for AttachId {
 
 impl_serde_baid64!(AttachId);
 
+/// State in a form of a field elements.
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", tag = "type", content = "value")
+)]
+pub enum Fiel {
+    /// M31 field element in little-endian format.
+    #[strict_type(tag = 0x02)]
+    M31(u32),
+    /// Element of a field representable with Less than 64 bits of data in little-endian format.
+    #[strict_type(tag = 0x10)]
+    Le64bit(u64),
+    /// Element of a field representable with Less than 128 bits of data in little-endian format.
+    #[strict_type(tag = 0x11)]
+    Le128Bit(u128),
+}
+
+impl StrictDumb for Fiel {
+    fn strict_dumb() -> Self { Self::M31(0) }
+}
+
+/// State made of field elements.
+pub type VerifiableState = ConfinedVec<Fiel, 0, 4>;
+
 /// Binary state data, serialized using strict type notation from the structured data type.
 #[derive(Clone, PartialOrd, Ord, Eq, PartialEq, Hash, Debug, From)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
@@ -83,30 +111,30 @@ impl_serde_baid64!(AttachId);
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", tag = "type", content = "content")
 )]
-pub enum StateData {
+pub enum UnverifiedState {
     #[from]
     #[strict_type(tag = 0x00)]
     Static(SmallBlob),
     // TODO: Add computed state - RCP-240327A <https://github.com/RGB-WG/RFC/issues/6>
 }
 
-impl StrictSerialize for StateData {}
-impl StrictDeserialize for StateData {}
+impl StrictSerialize for UnverifiedState {}
+impl StrictDeserialize for UnverifiedState {}
 
-impl AsRef<[u8]> for StateData {
+impl AsRef<[u8]> for UnverifiedState {
     fn as_ref(&self) -> &[u8] { self.as_static().as_ref() }
 }
 
-impl Default for StateData {
+impl Default for UnverifiedState {
     fn default() -> Self { Self::Static(default!()) }
 }
 
-impl Deref for StateData {
+impl Deref for UnverifiedState {
     type Target = [u8];
     fn deref(&self) -> &Self::Target { self.as_slice() }
 }
 
-impl Wrapper for StateData {
+impl Wrapper for UnverifiedState {
     type Inner = SmallBlob;
 
     fn from_inner(inner: Self::Inner) -> Self { Self::Static(inner) }
@@ -115,12 +143,12 @@ impl Wrapper for StateData {
 
     fn into_inner(self) -> Self::Inner {
         match self {
-            StateData::Static(data) => data,
+            UnverifiedState::Static(data) => data,
         }
     }
 }
 
-impl StateData {
+impl UnverifiedState {
     /// Constructs new state data by performing strict serialization of the provided structured
     /// data type.
     ///
@@ -162,12 +190,12 @@ impl StateData {
 
     pub fn as_static(&self) -> &SmallBlob {
         match self {
-            StateData::Static(data) => data,
+            UnverifiedState::Static(data) => data,
         }
     }
 }
 
-impl Display for StateData {
+impl Display for UnverifiedState {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { f.write_str(&self.to_base64()) }
 }
@@ -183,7 +211,7 @@ pub enum StateParseError {
     Base64(base64::DecodeError),
 }
 
-impl FromStr for StateData {
+impl FromStr for UnverifiedState {
     type Err = StateParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_base64(s) }
 }
@@ -196,17 +224,19 @@ impl FromStr for StateData {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct State {
     pub reserved: ReservedBytes<1>,
-    pub data: StateData,
+    pub verifiable: VerifiableState,
+    pub unverified: UnverifiedState,
     pub attach: Option<AttachId>,
 }
 
-impl From<StateData> for State {
+impl From<UnverifiedState> for State {
     /// Constructs new state object using the provided pre-serialized binary data. Sets attachment
     /// to `None`.
-    fn from(data: StateData) -> Self {
+    fn from(data: UnverifiedState) -> Self {
         State {
             reserved: default!(),
-            data,
+            verifiable: none!(),
+            unverified: data,
             attach: None,
         }
     }
@@ -230,17 +260,19 @@ impl State {
     pub fn from_serialized(typed_data: &impl StrictSerialize) -> Result<Self, SerializeError> {
         Ok(State {
             reserved: default!(),
-            data: StateData::from_serialized(typed_data)?,
+            verifiable: none!(),
+            unverified: UnverifiedState::from_serialized(typed_data)?,
             attach: None,
         })
     }
 
     /// Constructs new state object using the provided pre-serialized binary data and attachment
     /// information.
-    pub fn with(data: StateData, attach_id: AttachId) -> Self {
+    pub fn with(data: UnverifiedState, attach_id: AttachId) -> Self {
         State {
             reserved: default!(),
-            data,
+            verifiable: none!(),
+            unverified: data,
             attach: Some(attach_id),
         }
     }
@@ -288,11 +320,11 @@ mod test {
     fn state_data_encoding() {
         const STR: &str = "*-l--------";
         let amount = Amount(1000u64);
-        let data = StateData::from_serialized(&amount).unwrap();
+        let data = UnverifiedState::from_serialized(&amount).unwrap();
         assert_eq!(data.as_slice(), &[0xe8, 0x03, 0, 0, 0, 0, 0, 0]);
         assert_eq!(data.to_string(), STR);
-        assert_eq!(StateData::from_str(STR).unwrap(), data);
-        StateData::from_str("U").unwrap_err();
+        assert_eq!(UnverifiedState::from_str(STR).unwrap(), data);
+        UnverifiedState::from_str("U").unwrap_err();
     }
 
     #[test]
@@ -333,7 +365,7 @@ mod test {
             10_000, 20_000, 25_000, 50_000, 100_000, 500_000, 1_000_000,
         ];
         for (idx, val) in VAL.iter().enumerate() {
-            let data = StateData::from_serialized(&Amount(*val)).unwrap();
+            let data = UnverifiedState::from_serialized(&Amount(*val)).unwrap();
             //println!(r#""{data}", // {val}"#);
             assert_eq!(data.to_string(), ENC[idx]);
         }
@@ -343,13 +375,13 @@ mod test {
     #[test]
     fn no_int_encoding() {
         for int in 1..100 {
-            StateData::from_str(&int.to_string()).unwrap_err();
+            UnverifiedState::from_str(&int.to_string()).unwrap_err();
         }
         for int in 1..=10 {
-            StateData::from_str(&(int * 10).to_string()).unwrap_err();
+            UnverifiedState::from_str(&(int * 10).to_string()).unwrap_err();
         }
         for int in 11..100 {
-            StateData::from_str(&(int * 10).to_string()).unwrap_err();
+            UnverifiedState::from_str(&(int * 10).to_string()).unwrap_err();
         }
     }
 
@@ -364,7 +396,7 @@ mod test {
         }
         impl StrictSerialize for MaxData {}
 
-        let data = StateData::from_serialized(&MaxData::default()).unwrap();
+        let data = UnverifiedState::from_serialized(&MaxData::default()).unwrap();
         assert_eq!(data.len(), STATE_DATA_MAX_LEN);
         for byte in data.as_static() {
             assert_eq!(*byte, 0xAC)
