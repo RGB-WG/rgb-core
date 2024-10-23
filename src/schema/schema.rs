@@ -25,7 +25,7 @@ use std::collections::BTreeSet;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use aluvm::library::{LibId, LibSite};
+use aluvm::{LibId, LibSite};
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{ByteArray, Bytes32};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
@@ -83,6 +83,29 @@ impl Display for SchemaId {
 
 impl_serde_baid64!(SchemaId);
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase", tag = "isa")
+)]
+pub enum VmSchema {
+    #[strict_type(tag = 0x01)]
+    AluVm(aluvm::CoreConfig),
+}
+
+impl Default for VmSchema {
+    fn default() -> Self {
+        Self::AluVm(aluvm::CoreConfig {
+            halt: true,
+            complexity_lim: None,
+            field_order: aluvm::gfa::Fq::F1137119,
+        })
+    }
+}
+
 #[derive(Clone, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
@@ -104,8 +127,8 @@ pub struct Schema {
     pub owned_types: TinyOrdMap<AssignmentType, OwnedStateSchema>,
     pub valency_types: TinyOrdSet<ValencyType>,
 
-    // Validation script entry points
-    // NB: To add other VM use `flags`, `ffv` or `reserved` byte.
+    // Validation logic
+    pub vm: VmSchema,
     pub genesis_validator: LibSite,
     pub extension_validators: TinyOrdMap<ExtensionType, LibSite>,
     pub transition_validators: TinyOrdMap<TransitionType, LibSite>,
@@ -131,6 +154,8 @@ impl CommitEncode for Schema {
         e.commit_to_map(&self.global_types);
         e.commit_to_map(&self.owned_types);
         e.commit_to_set(&self.valency_types);
+
+        e.commit_to_serialized(&self.vm);
         e.commit_to_serialized(&self.genesis_validator);
         e.commit_to_map(&self.extension_validators);
         e.commit_to_map(&self.transition_validators);
@@ -170,7 +195,7 @@ impl Schema {
             .into_iter()
             .chain(self.transition_validators.values().copied())
             .chain(self.extension_validators.values().copied())
-            .map(|site| site.lib)
+            .map(|site| site.lib_id)
             .collect()
     }
 }

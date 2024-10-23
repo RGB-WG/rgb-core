@@ -318,6 +318,9 @@ pub struct Genesis {
     pub issuer: Identity,
     pub testnet: bool,
     pub alt_layers1: AltLayer1Set,
+    // TODO: Select hashing algorithm
+    // TODO: Select seal closing method per blockchain
+    // TODO: Select MPC hashing algorithm
     pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,

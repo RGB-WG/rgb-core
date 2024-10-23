@@ -20,7 +20,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use aluvm::isa::opcodes::INSTR_ISAE_TO;
 use amplify::num::{u2, u3};
 
 #[allow(unused_imports)] // Needed for docs

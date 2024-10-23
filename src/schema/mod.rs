@@ -25,7 +25,7 @@ mod types;
 mod schema;
 mod state;
 
-pub use schema::{Schema, SchemaId};
+pub use schema::{Schema, SchemaId, VmSchema};
 pub use state::{FielCount, GlobalStateSchema, OwnedStateSchema, PublicationSchema};
 pub use types::{
     AssignmentType, ExtensionType, GlobalStateType, MetaType, OpFullType, OpType, TransitionType,

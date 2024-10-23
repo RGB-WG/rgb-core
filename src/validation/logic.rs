@@ -24,9 +24,7 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use aluvm::data::Number;
 use aluvm::isa::Instr;
-use aluvm::reg::{Reg32, RegA};
 use aluvm::Vm;
 use amplify::confinement::Confined;
 use amplify::Wrapper;

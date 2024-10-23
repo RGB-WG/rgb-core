@@ -26,7 +26,7 @@
 
 use std::collections::BTreeMap;
 
-use aluvm::library::{Lib, LibId};
+use aluvm::{Lib, LibId};
 use amplify::confinement::Confined;
 use strict_types::TypeSystem;
 

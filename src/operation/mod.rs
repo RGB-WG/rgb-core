@@ -37,7 +37,7 @@ pub use commit::{
     DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
 };
 pub use global::{GlobalState, GlobalValues};
-pub use meta::{MetaValue, Metadata, MetadataError};
+pub use meta::{Metadata, MetadataError};
 pub use operations::{
     Extension, Genesis, Identity, Input, Inputs, Operation, Opout, OpoutParseError, Redeemed,
     Transition, Valencies,

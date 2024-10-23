@@ -220,6 +220,7 @@ impl FromStr for UnverifiedState {
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
+// TODO: Hash unverified and attach state before producing commitment id - required for starks
 #[commit_encode(strategy = strict, id = StateCommitment)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
 pub struct State {
