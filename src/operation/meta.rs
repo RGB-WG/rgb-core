@@ -22,11 +22,11 @@
 
 use std::collections::btree_map;
 
-use amplify::confinement::{SmallBlob, TinyOrdMap};
+use amplify::confinement::TinyOrdMap;
 use amplify::{confinement, Wrapper};
 use commit_verify::StrictHash;
 
-use crate::{schema, LIB_NAME_RGB_COMMIT};
+use crate::{schema, VerifiableState, LIB_NAME_RGB_COMMIT};
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display, Error, From)]
 #[display(doc_comments)]
@@ -37,40 +37,6 @@ pub enum MetadataError {
     /// too many metadata values.
     #[from(confinement::Error)]
     TooManyValues,
-}
-
-#[derive(
-    Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Default, From
-)]
-#[display(LowerHex)]
-#[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
-#[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-pub struct MetaValue(SmallBlob);
-
-#[cfg(feature = "serde")]
-mod _serde {
-    use amplify::hex::FromHex;
-    use serde_crate::de::Error;
-    use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
-
-    use super::*;
-
-    impl Serialize for MetaValue {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer {
-            serializer.serialize_str(&self.to_string())
-        }
-    }
-
-    impl<'de> Deserialize<'de> for MetaValue {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de> {
-            let s = String::deserialize(deserializer)?;
-            Self::from_hex(&s).map_err(D::Error::custom)
-        }
-    }
 }
 
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Default, Debug, From)]
@@ -85,13 +51,13 @@ mod _serde {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct Metadata(TinyOrdMap<schema::MetaType, MetaValue>);
+pub struct Metadata(TinyOrdMap<schema::MetaType, VerifiableState>);
 
 impl Metadata {
     pub fn add_value(
         &mut self,
         ty: schema::MetaType,
-        meta: MetaValue,
+        meta: VerifiableState,
     ) -> Result<(), MetadataError> {
         if self.0.contains_key(&ty) {
             return Err(MetadataError::AlreadyExists(ty));
@@ -102,8 +68,8 @@ impl Metadata {
 }
 
 impl<'a> IntoIterator for &'a Metadata {
-    type Item = (&'a schema::MetaType, &'a MetaValue);
-    type IntoIter = btree_map::Iter<'a, schema::MetaType, MetaValue>;
+    type Item = (&'a schema::MetaType, &'a VerifiableState);
+    type IntoIter = btree_map::Iter<'a, schema::MetaType, VerifiableState>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.iter() }
 }

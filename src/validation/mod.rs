@@ -20,7 +20,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod schema;
 mod logic;
 mod validator;
 mod consignment;
@@ -28,6 +27,6 @@ mod status;
 mod commitments;
 
 pub use commitments::{DbcError, DbcProof, EAnchor};
-pub use consignment::{CheckedConsignment, ConsignmentApi, OpRef, Scripts, CONSIGNMENT_MAX_LIBS};
+pub use consignment::{CheckedApi, ContractApi, OpRef, Scripts, CONSIGNMENT_MAX_LIBS};
 pub use status::{Failure, Info, Status, Validity, Warning};
-pub use validator::{ResolveWitness, Validator, WitnessResolverError};
+pub use validator::Validator;
