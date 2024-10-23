@@ -20,16 +20,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod operations;
+mod types;
 #[allow(clippy::module_inception)]
 mod schema;
 mod state;
-mod occurrences;
 
-pub use occurrences::{Occurrences, OccurrencesMismatch};
-pub use operations::{
-    AssignmentType, AssignmentsSchema, ExtensionSchema, GenesisSchema, GlobalSchema, MetaSchema,
-    OpFullType, OpSchema, OpType, TransitionSchema, ValencySchema, ValencyType,
+pub use schema::{Schema, SchemaId};
+pub use state::{FielCount, GlobalStateSchema, OwnedStateSchema, PublicationSchema};
+pub use types::{
+    AssignmentType, ExtensionType, GlobalStateType, MetaType, OpFullType, OpType, TransitionType,
+    ValencyType,
 };
-pub use schema::{ExtensionType, GlobalStateType, MetaType, Schema, SchemaId, TransitionType};
-pub use state::{GlobalStateSchema, OwnedStateSchema};

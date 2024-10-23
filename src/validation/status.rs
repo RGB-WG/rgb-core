@@ -23,17 +23,11 @@
 use core::ops::AddAssign;
 use std::fmt::{self, Display, Formatter};
 
-use amplify::num::u24;
 use commit_verify::mpc::InvalidProof;
-use strict_types::SemId;
 
 use crate::schema::{self, SchemaId};
-use crate::validation::WitnessResolverError;
 use crate::vm::XWitnessId;
-use crate::{
-    BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, Opout, Vin, XGraphSeal,
-    XOutputSeal,
-};
+use crate::{BundleId, ContractId, Layer1, OpId, Opout, Vin, XGraphSeal, XOutputSeal};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[repr(u8)]
@@ -175,55 +169,6 @@ pub enum Failure {
         /// Actual schema id provided by the consignment.
         actual: SchemaId,
     },
-    /// schema uses reserved type for the blank state transition.
-    SchemaBlankTransitionRedefined,
-
-    /// schema global state #{0} uses semantic data type absent in type library
-    /// ({1}).
-    SchemaGlobalSemIdUnknown(schema::GlobalStateType, SemId),
-    /// schema owned state #{0} uses semantic data type absent in type library
-    /// ({1}).
-    SchemaOwnedSemIdUnknown(schema::AssignmentType, SemId),
-    /// schema metadata #{0} uses semantic data type absent in type library
-    /// ({1}).
-    SchemaMetaSemIdUnknown(schema::MetaType, SemId),
-
-    /// schema for {0} has zero inputs.
-    SchemaOpEmptyInputs(OpFullType),
-    /// schema for {0} references undeclared metadata type {1}.
-    SchemaOpMetaTypeUnknown(OpFullType, schema::MetaType),
-    /// schema for {0} references undeclared global state type {1}.
-    SchemaOpGlobalTypeUnknown(OpFullType, schema::GlobalStateType),
-    /// schema for {0} references undeclared owned state type {1}.
-    SchemaOpAssignmentTypeUnknown(OpFullType, schema::AssignmentType),
-    /// schema for {0} references undeclared valency type {1}.
-    SchemaOpValencyTypeUnknown(OpFullType, schema::ValencyType),
-
-    /// operation {0} uses invalid state extension type {1}.
-    SchemaUnknownExtensionType(OpId, schema::ExtensionType),
-    /// operation {0} uses invalid state transition type {1}.
-    SchemaUnknownTransitionType(OpId, schema::TransitionType),
-    /// operation {0} uses invalid metadata type {1}.
-    SchemaUnknownMetaType(OpId, schema::MetaType),
-    /// operation {0} uses invalid global state type {1}.
-    SchemaUnknownGlobalStateType(OpId, schema::GlobalStateType),
-    /// operation {0} uses invalid assignment type {1}.
-    SchemaUnknownAssignmentType(OpId, schema::AssignmentType),
-    /// operation {0} uses invalid valency type {1}.
-    SchemaUnknownValencyType(OpId, schema::ValencyType),
-
-    /// invalid number of global state entries of type {1} in operation {0} -
-    /// {2}
-    SchemaGlobalStateOccurrences(OpId, schema::GlobalStateType, OccurrencesMismatch),
-    /// number of global state entries of type {1} in operation {0} exceeds
-    /// schema-defined maximum for that global state type ({2} vs {3}).
-    SchemaGlobalStateLimit(OpId, schema::GlobalStateType, u16, u24),
-    /// required metadata type {1} is not present in the operation {0}.
-    SchemaNoMetadata(OpId, schema::MetaType),
-    /// invalid number of input entries of type {1} in operation {0} - {2}
-    SchemaInputOccurrences(OpId, schema::AssignmentType, OccurrencesMismatch),
-    /// invalid number of assignment entries of type {1} in operation {0} - {2}
-    SchemaAssignmentOccurrences(OpId, schema::AssignmentType, OccurrencesMismatch),
 
     // Consignment consistency errors
     /// operation {0} is referenced within the history multiple times. RGB
@@ -237,10 +182,9 @@ pub enum Failure {
     AnchorAbsent(BundleId),
     /// witness id for transition bundle {0} is absent in the consignment.
     WitnessIdAbsent(BundleId),
-    /// bundle {0} public witness {1} is not known to the resolver; validation
-    /// stopped since operations can't be consensus-ordered. The resolver
-    /// responded with error {2}
-    WitnessUnresolved(BundleId, XWitnessId, WitnessResolverError),
+    /// bundle {0} public witness {1} is not known; validation stopped since operations can't be
+    /// consensus-ordered.
+    WitnessUnresolved(BundleId, XWitnessId),
     /// operation {0} is under a different contract {1}.
     ContractMismatch(OpId, ContractId),
 
@@ -268,9 +212,8 @@ pub enum Failure {
     /// seal defined in the history as a part of operation output {0} is
     /// confidential and can't be validated.
     ConfidentialSeal(Opout),
-    /// bundle {0} public witness {1} is not known to the resolver. Resolver
-    /// reported error {2}
-    SealNoPubWitness(BundleId, XWitnessId, WitnessResolverError),
+    /// bundle {0} public witness {1} is not known.
+    SealNoPubWitness(BundleId, XWitnessId),
     /// witness layer 1 {anchor} doesn't match seal definition {seal}.
     SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
     /// seal {1} is defined on {0} which is not in the set of layers allowed

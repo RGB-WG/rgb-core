@@ -31,7 +31,7 @@ use amplify::confinement::Confined;
 use strict_types::TypeSystem;
 
 use super::EAnchor;
-use crate::vm::XWitnessId;
+use crate::vm::{WitnessOrd, XWitnessId, XWitnessTx};
 use crate::{
     AssignmentType, AssignmentsRef, BundleId, ContractId, Extension, ExtensionType, Genesis,
     GlobalState, GraphSeal, Inputs, Metadata, OpFullType, OpId, OpType, Operation, Schema,
@@ -158,13 +158,13 @@ impl<'op> Operation for OpRef<'op> {
     }
 }
 
-pub struct CheckedConsignment<'consignment, C: ConsignmentApi>(&'consignment C);
+pub struct CheckedApi<'consignment, C: ContractApi>(&'consignment C);
 
-impl<'consignment, C: ConsignmentApi> CheckedConsignment<'consignment, C> {
+impl<'consignment, C: ContractApi> CheckedApi<'consignment, C> {
     pub fn new(consignment: &'consignment C) -> Self { Self(consignment) }
 }
 
-impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'consignment, C> {
+impl<'consignment, C: ContractApi> ContractApi for CheckedApi<'consignment, C> {
     fn schema(&self) -> &Schema { self.0.schema() }
 
     fn types(&self) -> &TypeSystem { self.0.types() }
@@ -190,6 +190,19 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
     }
 
     fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId> { self.0.op_witness_id(opid) }
+
+    fn witness_pub(&self, witness_id: XWitnessId) -> Option<XWitnessTx> {
+        let witness = self.0.witness_pub(witness_id)?;
+        let actual_id = witness.witness_id();
+        if actual_id != witness_id {
+            panic!()
+        }
+        Some(witness)
+    }
+
+    fn witness_ord(&self, witness_id: XWitnessId) -> Option<WitnessOrd> {
+        self.0.witness_ord(witness_id)
+    }
 }
 
 /// Trait defining common data access API for all storage-related RGB structures
@@ -199,7 +212,7 @@ impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'con
 /// data within the storage or container. If the methods are called on an
 /// invalid or absent data, the API must always return [`None`] or empty
 /// collections/iterators.
-pub trait ConsignmentApi {
+pub trait ContractApi {
     /// Returns reference to the schema object used by the consignment.
     fn schema(&self) -> &Schema;
 
@@ -228,4 +241,8 @@ pub trait ConsignmentApi {
 
     /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId>;
+
+    fn witness_pub(&self, witness_id: XWitnessId) -> Option<XWitnessTx>;
+
+    fn witness_ord(&self, witness_id: XWitnessId) -> Option<WitnessOrd>;
 }

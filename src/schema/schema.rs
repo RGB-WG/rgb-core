@@ -25,7 +25,7 @@ use std::collections::BTreeSet;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use aluvm::library::LibId;
+use aluvm::library::{LibId, LibSite};
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::{ByteArray, Bytes32};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
@@ -37,82 +37,11 @@ use strict_encoding::{
 };
 use strict_types::SemId;
 
-use super::{
-    AssignmentType, ExtensionSchema, GenesisSchema, OwnedStateSchema, TransitionSchema, ValencyType,
-};
+use super::{AssignmentType, OwnedStateSchema, ValencyType};
 use crate::{
-    impl_serde_baid64, Ffv, GlobalStateSchema, Identity, Occurrences, LIB_NAME_RGB_COMMIT,
+    impl_serde_baid64, ExtensionType, Ffv, FielCount, GlobalStateSchema, GlobalStateType, Identity,
+    MetaType, TransitionType, LIB_NAME_RGB_COMMIT,
 };
-
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
-#[wrapper(FromStr, LowerHex, UpperHex)]
-#[display("0x{0:04X}")]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct MetaType(u16);
-impl MetaType {
-    pub const fn with(ty: u16) -> Self { Self(ty) }
-    pub const fn to_u16(&self) -> u16 { self.0 }
-}
-
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
-#[wrapper(FromStr, LowerHex, UpperHex)]
-#[display("0x{0:04X}")]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct GlobalStateType(u16);
-impl GlobalStateType {
-    pub const fn with(ty: u16) -> Self { Self(ty) }
-    pub const fn to_u16(&self) -> u16 { self.0 }
-}
-
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
-#[wrapper(FromStr, LowerHex, UpperHex)]
-#[display("0x{0:04X}")]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct ExtensionType(u16);
-impl ExtensionType {
-    pub const fn with(ty: u16) -> Self { Self(ty) }
-    pub const fn to_u16(&self) -> u16 { self.0 }
-}
-
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
-#[wrapper(FromStr, LowerHex, UpperHex)]
-#[display("0x{0:04X}")]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct TransitionType(u16);
-impl TransitionType {
-    pub const fn with(ty: u16) -> Self { Self(ty) }
-    pub const fn to_u16(&self) -> u16 { self.0 }
-}
-
-impl TransitionType {
-    pub const BLANK: Self = TransitionType(u16::MAX);
-    /// Easily check if the TransitionType is blank with convention method
-    pub fn is_blank(self) -> bool { self == Self::BLANK }
-}
 
 /// Schema identifier.
 ///
@@ -132,7 +61,7 @@ impl From<Sha256> for SchemaId {
 }
 
 impl CommitmentId for SchemaId {
-    const TAG: &'static str = "urn:lnp-bp:rgb:schema#2024-02-03";
+    const TAG: &'static str = "urn:lnp-bp:rgb:schema#2024-10-23";
 }
 
 impl DisplayBaid64 for SchemaId {
@@ -164,26 +93,32 @@ impl_serde_baid64!(SchemaId);
 )]
 pub struct Schema {
     pub ffv: Ffv,
-    pub flags: ReservedBytes<1, 0>,
+    pub flags: ReservedBytes<1>,
 
     pub name: TypeName,
     pub timestamp: i64,
     pub developer: Identity,
 
-    pub meta_types: TinyOrdMap<MetaType, SemId>,
+    pub meta_types: TinyOrdMap<MetaType, FielCount>,
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
     pub owned_types: TinyOrdMap<AssignmentType, OwnedStateSchema>,
     pub valency_types: TinyOrdSet<ValencyType>,
-    pub genesis: GenesisSchema,
-    pub extensions: TinyOrdMap<ExtensionType, ExtensionSchema>,
-    pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
 
-    pub reserved: ReservedBytes<8, 0>,
+    // Validation script entry points
+    // NB: To add other VM use `flags`, `ffv` or `reserved` byte.
+    pub genesis_validator: LibSite,
+    pub extension_validators: TinyOrdMap<ExtensionType, LibSite>,
+    pub transition_validators: TinyOrdMap<TransitionType, LibSite>,
+    pub default_transition_validator: LibSite,
+    pub default_extension_validator: LibSite,
+
+    pub reserved: ReservedBytes<8>,
 }
 
 impl CommitEncode for Schema {
     type CommitmentId = SchemaId;
 
+    // TODO: We need to use merklization everywhere in order to simplify future commitments
     fn commit_encode(&self, e: &mut CommitEngine) {
         e.commit_to_serialized(&self.ffv);
         e.commit_to_serialized(&self.flags);
@@ -196,9 +131,9 @@ impl CommitEncode for Schema {
         e.commit_to_map(&self.global_types);
         e.commit_to_map(&self.owned_types);
         e.commit_to_set(&self.valency_types);
-        e.commit_to_serialized(&self.genesis);
-        e.commit_to_map(&self.extensions);
-        e.commit_to_map(&self.transitions);
+        e.commit_to_serialized(&self.genesis_validator);
+        e.commit_to_map(&self.extension_validators);
+        e.commit_to_map(&self.transition_validators);
 
         e.commit_to_serialized(&self.reserved);
     }
@@ -223,31 +158,18 @@ impl Schema {
     #[inline]
     pub fn schema_id(&self) -> SchemaId { self.commit_id() }
 
-    pub fn blank_transition(&self) -> TransitionSchema {
-        let mut schema = TransitionSchema::default();
-        for id in self.owned_types.keys() {
-            schema.inputs.insert(*id, Occurrences::NoneOrMore).ok();
-            schema.assignments.insert(*id, Occurrences::NoneOrMore).ok();
-        }
-        schema
-    }
-
     pub fn types(&self) -> BTreeSet<SemId> {
-        self.meta_types
+        self.global_types
             .values()
-            .copied()
-            .chain(self.global_types.values().map(|i| i.sem_id))
-            .chain(self.owned_types.values().map(|s| s.sem_id))
+            .filter_map(|i| i.sem_id)
             .collect()
     }
 
     pub fn libs(&self) -> BTreeSet<LibId> {
-        self.genesis
-            .validator
-            .iter()
-            .copied()
-            .chain(self.transitions.values().filter_map(|i| i.validator))
-            .chain(self.extensions.values().filter_map(|i| i.validator))
+        [self.genesis_validator]
+            .into_iter()
+            .chain(self.transition_validators.values().copied())
+            .chain(self.extension_validators.values().copied())
             .map(|site| site.lib)
             .collect()
     }

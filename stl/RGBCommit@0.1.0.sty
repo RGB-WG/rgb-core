@@ -1,5 +1,5 @@
 {-
-  Id: stl:pRLMM7OS-$w8IXpK-!Jl$Sf4-3SrX$vn-OQi9Uzx-USWTXJY#cake-banjo-legend
+  Id: stl:7pVCkJVx-to9W$lu-uBNBwdr-ftezpr1-nA4sohY-VZGFoYM#mile-answer-karl
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -35,6 +35,7 @@ import CommitVerify#miller-pancake-elastic
 
 import Std#ralph-blue-lucky
   use AsciiPrintable#ultra-sunset-format
+  use U3#burma-travel-diet
   use Bool#oxygen-complex-duet
   use AlphaNumLodash#percent-bingo-caesar
   use AlphaCapsLodash#duet-hammer-labor
@@ -103,19 +104,19 @@ data Extension         : ffv Ffv
                        , validator CommitVerify.ReservedBytes1
                        , witness CommitVerify.ReservedBytes2
 
-@mnemonic(delta-elastic-germany)
-data ExtensionSchema   : metadata {MetaType ^ ..0xff}
-                       , globals {GlobalStateType -> ^ ..0xff Occurrences}
-                       , redeems {ValencyType ^ ..0xff}
-                       , assignments {AssignmentType -> ^ ..0xff Occurrences}
-                       , valencies {ValencyType ^ ..0xff}
-                       , validator AluVM.LibSite?
-
 @mnemonic(apropos-scoop-viva)
 data ExtensionType     : U16
 
 @mnemonic(pigment-career-hippie)
 data Ffv               : U16
+
+@mnemonic(baggage-decade-waiter)
+data Fiel              : m31#2 U32
+                       | le64bit#16 U64
+                       | le128Bit U128
+
+@mnemonic(ivan-epoxy-macro)
+data FielCount         : Std.U3
 
 @mnemonic(reptile-life-sunday)
 data Genesis           : ffv Ffv
@@ -131,26 +132,21 @@ data Genesis           : ffv Ffv
                        , valencies Valencies
                        , validator CommitVerify.ReservedBytes1
 
-@mnemonic(concept-gloria-shock)
-data GenesisSchema     : metadata {MetaType ^ ..0xff}
-                       , globals {GlobalStateType -> ^ ..0xff Occurrences}
-                       , assignments {AssignmentType -> ^ ..0xff Occurrences}
-                       , valencies {ValencyType ^ ..0xff}
-                       , validator AluVM.LibSite?
-
 @mnemonic(initial-malta-sierra)
 data GlobalState       : {GlobalStateType -> ^ ..0xff GlobalValues}
 
-@mnemonic(silk-college-august)
+@mnemonic(gossip-stick-yogurt)
 data GlobalStateSchema : reserved CommitVerify.ReservedBytes1
-                       , semId StrictTypes.SemId
-                       , maxItems U24
+                       , fielCount FielCount?
+                       , semId StrictTypes.SemId?
+                       , attach Std.Bool?
+                       , publication PublicationSchema
 
 @mnemonic(yoga-quick-jasmine)
 data GlobalStateType   : U16
 
-@mnemonic(trinity-jaguar-michael)
-data GlobalValues      : [StateData ^ 1..]
+@mnemonic(chant-plaza-voice)
+data GlobalValues      : [UnverifiedState ^ 1..]
 
 @mnemonic(smart-pioneer-nominal)
 data Identity          : Std.AsciiPrintable, [Std.AsciiPrintable ^ ..0xfff]
@@ -173,9 +169,6 @@ data MetaValue         : [Byte]
 @mnemonic(retro-mozart-formal)
 data Metadata          : {MetaType -> ^ ..0xff MetaValue}
 
-@mnemonic(source-olga-mirage)
-data Occurrences       : min U16, max U16
-
 @mnemonic(survive-citizen-harris)
 data OpCommitment      : ffv Ffv
                        , nonce U64
@@ -197,37 +190,41 @@ data Opout             : op OpId
                        , ty AssignmentType
                        , no U16
 
-@mnemonic(cover-shampoo-weather)
-data OwnedStateSchema  : reserved CommitVerify.ReservedBytes1, semId StrictTypes.SemId
+@mnemonic(pacific-depend-vision)
+data OwnedStateSchema  : reserved CommitVerify.ReservedBytes1, fielCount FielCount?
+
+@mnemonic(hobby-cola-betty)
+data PublicationSchema : local ()
+                       | published depth U24
 
 @mnemonic(anita-vega-pirate)
 data Redeemed          : {ValencyType -> ^ ..0xff OpId}
 
-@mnemonic(corona-igloo-sierra)
+@mnemonic(strange-quality-menu)
 data Schema            : ffv Ffv
                        , flags CommitVerify.ReservedBytes1
                        , name StrictTypes.TypeName
                        , timestamp I64
                        , developer Identity
-                       , metaTypes {MetaType -> ^ ..0xff StrictTypes.SemId}
+                       , metaTypes {MetaType -> ^ ..0xff FielCount}
                        , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
                        , ownedTypes {AssignmentType -> ^ ..0xff OwnedStateSchema}
                        , valencyTypes {ValencyType ^ ..0xff}
-                       , genesis GenesisSchema
-                       , extensions {ExtensionType -> ^ ..0xff ExtensionSchema}
-                       , transitions {TransitionType -> ^ ..0xff TransitionSchema}
+                       , genesisValidator AluVM.LibSite
+                       , extensionValidators {ExtensionType -> ^ ..0xff AluVM.LibSite}
+                       , transitionValidators {TransitionType -> ^ ..0xff AluVM.LibSite}
+                       , defaultTransitionValidator AluVM.LibSite
+                       , defaultExtensionValidator AluVM.LibSite
                        , reserved CommitVerify.ReservedBytes8
 
 @mnemonic(ramirez-patron-simon)
 data SchemaId          : [Byte ^ 32]
 
-@mnemonic(logo-plato-shadow)
+@mnemonic(fabric-million-cobalt)
 data State             : reserved CommitVerify.ReservedBytes1
-                       , data StateData
+                       , verifiable [Fiel ^ ..0x4]
+                       , unverified UnverifiedState
                        , attach AttachId?
-
-@mnemonic(pasta-pardon-hazard)
-data StateData         : static [Byte] | (|)
 
 @mnemonic(michael-exact-eric)
 data Transition        : ffv Ffv
@@ -247,14 +244,6 @@ data TransitionBundle  : closeMethod BPCore.Method
                        , inputMap InputMap
                        , knownTransitions {OpId -> ^ 1.. Transition}
 
-@mnemonic(pirate-lithium-side)
-data TransitionSchema  : metadata {MetaType ^ ..0xff}
-                       , globals {GlobalStateType -> ^ ..0xff Occurrences}
-                       , inputs {AssignmentType -> ^ ..0xff Occurrences}
-                       , assignments {AssignmentType -> ^ ..0xff Occurrences}
-                       , valencies {ValencyType ^ ..0xff}
-                       , validator AluVM.LibSite?
-
 @mnemonic(picture-reflex-brigade)
 data TransitionType    : U16
 
@@ -268,6 +257,9 @@ data TypedAssignsBlindSealTxPtr : [AssignBlindSealTxPtr ^ 1..]
 
 @mnemonic(anita-galaxy-orca)
 data TypedAssignsBlindSealTxid : [AssignBlindSealTxid ^ 1..]
+
+@mnemonic(aztec-saga-isabel)
+data UnverifiedState   : static [Byte]
 
 @mnemonic(shock-jester-orion)
 data Valencies         : {ValencyType ^ ..0xff}

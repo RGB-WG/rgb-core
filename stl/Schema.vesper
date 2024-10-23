@@ -7,15 +7,15 @@
 
 Schema vesper lexicon=types+commitments
 
-SchemaId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:schema#2024-02-03
+SchemaId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:schema#2024-10-23
   Ffv serialized
   ReservedBytes1 serialized
   TypeName serialized
   I64 serialized
   Identity serialized
-  SemId map len=0..MAX8
+  FielCount map len=0..MAX8
     MetaType mapKey
-    SemId mapValue
+    FielCount mapValue
   GlobalStateSchema map len=0..MAX8
     GlobalStateType mapKey
     GlobalStateSchema mapValue
@@ -24,13 +24,13 @@ SchemaId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:schema#2024-02-03
     OwnedStateSchema mapValue
   ValencyType set len=0..MAX8
     ValencyType element
-  GenesisSchema serialized
-  ExtensionSchema map len=0..MAX8
+  LibSite serialized
+  LibSite map len=0..MAX8
     ExtensionType mapKey
-    ExtensionSchema mapValue
-  TransitionSchema map len=0..MAX8
+    LibSite mapValue
+  LibSite map len=0..MAX8
     TransitionType mapKey
-    TransitionSchema mapValue
+    LibSite mapValue
   ReservedBytes8 serialized
 
 Schema rec
@@ -41,83 +41,51 @@ Schema rec
   developer ascii aka=Identity first=AsciiPrintable rest=AsciiPrintable len=1..4096
   metaTypes map len=0..MAX8
     key is U16 aka=MetaType
-    value bytes len=32 aka=SemId
+    value enum {
+      U3 aka=FielCount _0=0 _1=1 _2=2 _3=3 _4=4 _5=5 _6=6
+      _7=7
+    }
   globalTypes map len=0..MAX8
     key is U16 aka=GlobalStateType
     value rec GlobalStateSchema
       reserved bytes len=1 aka=ReservedBytes1
-      semId bytes len=32 aka=SemId
-      maxItems is U24
+        some enum {
+          U3 option wrapped aka=FielCount _0=0 _1=1 _2=2 _3=3 _4=4
+          _5=5 _6=6 _7=7 tag=1
+        }
+        some bytes len=32 option wrapped aka=SemId tag=1
+        some enum Bool option wrapped false=0 true=1 tag=1
+      publication union PublicationSchema
+        local is Unit tag=0
+        published rec tag=1
+          depth is U24
   ownedTypes map len=0..MAX8
     key is U16 aka=AssignmentType
     value rec OwnedStateSchema
       reserved bytes len=1 aka=ReservedBytes1
-      semId bytes len=32 aka=SemId
+        some enum {
+          U3 option wrapped aka=FielCount _0=0 _1=1 _2=2 _3=3 _4=4
+          _5=5 _6=6 _7=7 tag=1
+        }
   valencyTypes set len=0..MAX8
     element is U16 aka=ValencyType
-  genesis rec GenesisSchema
-    metadata set len=0..MAX8
-      element is U16 aka=MetaType
-    globals map len=0..MAX8
-      key is U16 aka=GlobalStateType
-      value rec Occurrences
-        min is U16
-        max is U16
-    assignments map len=0..MAX8
-      key is U16 aka=AssignmentType
-      value rec Occurrences
-        min is U16
-        max is U16
-    valencies set len=0..MAX8
-      element is U16 aka=ValencyType
-      some rec LibSite option wrapped tag=1
-        lib bytes len=32 aka=LibId
-        pos is U16
-  extensions map len=0..MAX8
+  genesisValidator rec LibSite
+    lib bytes len=32 aka=LibId
+    pos is U16
+  extensionValidators map len=0..MAX8
     key is U16 aka=ExtensionType
-    value rec ExtensionSchema
-      metadata set len=0..MAX8
-        element is U16 aka=MetaType
-      globals map len=0..MAX8
-        key is U16 aka=GlobalStateType
-        value rec Occurrences
-          min is U16
-          max is U16
-      redeems set len=0..MAX8
-        element is U16 aka=ValencyType
-      assignments map len=0..MAX8
-        key is U16 aka=AssignmentType
-        value rec Occurrences
-          min is U16
-          max is U16
-      valencies set len=0..MAX8
-        element is U16 aka=ValencyType
-        some rec LibSite option wrapped tag=1
-          lib bytes len=32 aka=LibId
-          pos is U16
-  transitions map len=0..MAX8
+    value rec LibSite
+      lib bytes len=32 aka=LibId
+      pos is U16
+  transitionValidators map len=0..MAX8
     key is U16 aka=TransitionType
-    value rec TransitionSchema
-      metadata set len=0..MAX8
-        element is U16 aka=MetaType
-      globals map len=0..MAX8
-        key is U16 aka=GlobalStateType
-        value rec Occurrences
-          min is U16
-          max is U16
-      inputs map len=0..MAX8
-        key is U16 aka=AssignmentType
-        value rec Occurrences
-          min is U16
-          max is U16
-      assignments map len=0..MAX8
-        key is U16 aka=AssignmentType
-        value rec Occurrences
-          min is U16
-          max is U16
-      valencies set len=0..MAX8
-        element is U16 aka=ValencyType
-        some rec LibSite option wrapped tag=1
-          lib bytes len=32 aka=LibId
-          pos is U16
+    value rec LibSite
+      lib bytes len=32 aka=LibId
+      pos is U16
+  defaultTransitionValidator rec LibSite
+    lib bytes len=32 aka=LibId
+    pos is U16
+  defaultExtensionValidator rec LibSite
+    lib bytes len=32 aka=LibId
+    pos is U16
 
