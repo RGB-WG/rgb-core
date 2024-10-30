@@ -26,7 +26,7 @@
 #[macro_use]
 extern crate amplify;
 #[macro_use]
-extern crate strict_encoding;
+extern crate strict_types;
 #[macro_use]
 extern crate commit_verify;
 
@@ -42,12 +42,14 @@ pub mod validation;
 pub mod vm;
 #[cfg(feature = "stl")]
 pub mod stl;
+pub mod client_side_validation;
+mod contract;
 
 pub mod prelude {
     pub use commit_verify::ReservedBytes;
     pub use operation::*;
     pub use schema::*;
-    pub use vm::{assemble, disassemble, XWitnessId};
+    pub use vm::{assemble, disassemble};
 
     #[cfg(feature = "stl")]
     pub use super::stl;

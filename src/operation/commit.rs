@@ -39,8 +39,8 @@ use strict_encoding::StrictDumb;
 use crate::operation::state::StateCommitment;
 use crate::{
     impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ExposedSeal, Extension,
-    ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Operation, Redeemed, SchemaId,
-    SecretSeal, State, Transition, TransitionBundle, TransitionType, XChain, LIB_NAME_RGB_COMMIT,
+    ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Layer1, Operation, Redeemed,
+    SchemaId, SecretSeal, State, Transition, TransitionBundle, TransitionType, LIB_NAME_RGB_COMMIT,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -187,7 +187,7 @@ impl AssignmentIndex {
 #[commit_encode(strategy = strict, id = DiscloseHash)]
 pub struct OpDisclose {
     pub id: OpId,
-    pub seals: MediumOrdMap<AssignmentIndex, XChain<SecretSeal>>,
+    pub seals: MediumOrdMap<AssignmentIndex, SecretSeal>,
     pub state: MediumOrdMap<AssignmentIndex, StateCommitment>,
 }
 
@@ -233,8 +233,7 @@ pub struct BaseCommitment {
     pub schema_id: SchemaId,
     pub timestamp: i64,
     pub issuer: StrictHash,
-    pub testnet: bool,
-    pub alt_layers1: StrictHash,
+    pub layer1: Layer1,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -266,7 +265,6 @@ pub struct OpCommitment {
     pub assignments: MerkleHash,
     pub redeemed: StrictHash,
     pub valencies: StrictHash,
-    pub witness: MerkleHash,
     pub validator: StrictHash,
 }
 
@@ -276,8 +274,7 @@ impl Genesis {
             flags: self.flags,
             schema_id: self.schema_id,
             timestamp: self.timestamp,
-            testnet: self.testnet,
-            alt_layers1: self.alt_layers1.commit_id(),
+            layer1: self.layer1,
             issuer: self.issuer.commit_id(),
         };
         OpCommitment {
@@ -338,7 +335,7 @@ impl Extension {
 pub struct AssignmentCommitment {
     pub ty: AssignmentType,
     pub state: StateCommitment,
-    pub seal: XChain<SecretSeal>,
+    pub seal: SecretSeal,
     pub lock: ReservedBytes<2, 0>,
 }
 

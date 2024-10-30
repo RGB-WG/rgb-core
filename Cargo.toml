@@ -25,26 +25,21 @@ required-features = ["stl"]
 amplify = "~4.7.0"
 baid64 = "~0.2.2"
 base64 = "0.22.1"
-strict_encoding = "~2.7.0"
-strict_types = { version = "~2.7.1", features = ["armor"] }
+strict_types = "~2.7.1" # TODO: Make strict types optional
 aluvm = { version = "~0.12.0-nightly", features = ["armor", "zk-aluvm"] }
 commit_verify = { version = "~0.11.0-beta.9", features = ["derive"] }
 single_use_seals = "~0.11.0-beta.9"
-bp-core = { version = "~0.11.0-beta.9" }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
-chrono = "0.4.38"
 
 [features]
 default = []
 all = ["stl", "serde"]
-stl = ["commit_verify/stl", "bp-core/stl", "aluvm/stl"]
+stl = ["commit_verify/stl", "aluvm/stl", "strict_types/armor"]
 serde = [
     "serde_crate",
     "amplify/serde",
-    "strict_encoding/serde",
     "strict_types/serde",
     "commit_verify/serde",
-    "bp-core/serde",
     "aluvm/serde",
 ]
 
@@ -64,7 +59,3 @@ commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", bran
 single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "develop" }
 strict_types = { git = "https://github.com/strict-types/strict-types", branch = "develop" }
 aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "refactor" }
-bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }
-bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }
-bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }
-bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }

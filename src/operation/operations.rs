@@ -32,14 +32,14 @@ use commit_verify::{
     CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, ReservedBytes,
     StrictHash,
 };
-use strict_encoding::stl::AsciiPrintable;
-use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize};
+use strict_types::stl::AsciiPrintable;
+use strict_types::{RString, StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    AltLayer1Set, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ContractId,
-    DiscloseHash, Ffv, GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose, OpId, SecretSeal,
-    StateCommitment, TypedAssigns, XChain, LIB_NAME_RGB_COMMIT,
+    AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ContractId, DiscloseHash, Ffv,
+    GenesisSeal, GlobalState, GraphSeal, Layer1, Metadata, OpDisclose, OpId, SecretSeal,
+    StateCommitment, TypedAssigns, LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -176,6 +176,10 @@ impl MerkleLeaves for Inputs {
 #[display("{prev_out}")]
 pub struct Input {
     pub prev_out: Opout,
+    // reserved for fallback
+    #[cfg_attr(feature = "serde", serde(skip))]
+    fallback: ReservedBytes<1>,
+    // reserved for witness
     #[cfg_attr(feature = "serde", serde(skip))]
     reserved: ReservedBytes<2>,
 }
@@ -184,6 +188,7 @@ impl Input {
     pub fn with(prev_out: Opout) -> Input {
         Input {
             prev_out,
+            fallback: default!(),
             reserved: default!(),
         }
     }
@@ -243,12 +248,12 @@ pub trait Operation {
 
     /// Provides summary about parts of the operation which are revealed.
     fn disclose(&self) -> OpDisclose {
-        let mut seals: BTreeMap<AssignmentIndex, XChain<SecretSeal>> = bmap!();
+        let mut seals: BTreeMap<AssignmentIndex, SecretSeal> = bmap!();
         let mut state: BTreeMap<AssignmentIndex, StateCommitment> = bmap!();
         for (ty, assigns) in self.assignments().to_graph_seals() {
             for (index, assignment) in assigns.iter().enumerate() {
                 if let Some(seal) = assignment.revealed_seal() {
-                    seals.insert(AssignmentIndex::new(ty, index as u16), seal.to_secret_seal());
+                    seals.insert(AssignmentIndex::new(ty, index as u16), seal.conceal());
                 }
                 state.insert(
                     AssignmentIndex::new(ty, index as u16),
@@ -316,8 +321,7 @@ pub struct Genesis {
     pub flags: ReservedBytes<1, 0>,
     pub timestamp: i64,
     pub issuer: Identity,
-    pub testnet: bool,
-    pub alt_layers1: AltLayer1Set,
+    pub layer1: Layer1,
     // TODO: Select hashing algorithm
     // TODO: Select seal closing method per blockchain
     // TODO: Select MPC hashing algorithm
@@ -350,7 +354,6 @@ pub struct Extension {
     pub redeemed: Redeemed,
     pub valencies: Valencies,
     pub validator: ReservedBytes<1, 0>,
-    pub witness: ReservedBytes<2, 0>,
 }
 
 impl StrictSerialize for Extension {}
@@ -383,7 +386,6 @@ pub struct Transition {
     pub assignments: Assignments<GraphSeal>,
     pub valencies: Valencies,
     pub validator: ReservedBytes<1, 0>,
-    pub witness: ReservedBytes<2, 0>,
 }
 
 impl StrictSerialize for Transition {}
