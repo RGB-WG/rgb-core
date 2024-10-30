@@ -29,27 +29,20 @@ use std::vec;
 
 use amplify::confinement::{Confined, NonEmptyVec, TinyOrdMap, U16 as U16MAX};
 use commit_verify::{Conceal, ReservedBytes};
-use strict_encoding::{StrictDumb, StrictEncode, StrictType};
+use strict_types::{StrictDumb, StrictEncode, StrictType};
 
-use crate::{
-    AssignmentType, ExposedSeal, GenesisSeal, GraphSeal, SecretSeal, State, XChain,
-    LIB_NAME_RGB_COMMIT,
-};
+use crate::{AssignmentType, ExposedSeal, GenesisSeal, GraphSeal, State, LIB_NAME_RGB_COMMIT};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 /// the requested data are not present.
 pub struct ItemAbsent;
 
-/// State data are assigned to a seal definition, which means that they are
-/// owned by a person controlling spending of the seal UTXO, unless the seal
-/// is closed, indicating that a transfer of ownership had taken place
-#[derive(Clone, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(
     lib = LIB_NAME_RGB_COMMIT,
     tags = custom,
-    dumb = { Self::Confidential { seal: strict_dumb!(), state: strict_dumb!(), lock: default!() } }
+    dumb = Self::Confidential(strict_dumb!())
 )]
 #[cfg_attr(
     feature = "serde",
@@ -61,19 +54,33 @@ pub struct ItemAbsent;
         bound = "Seal: serde::Serialize + serde::de::DeserializeOwned"
     )
 )]
-pub enum Assign<Seal: ExposedSeal> {
+pub enum SealEither<Seal> {
     #[strict_type(tag = 0x00)]
-    Confidential {
-        seal: XChain<SecretSeal>,
-        state: State,
-        lock: ReservedBytes<2, 0>,
-    },
+    Confidential(SecretSeal),
     #[strict_type(tag = 0x01)]
-    Revealed {
-        seal: XChain<Seal>,
-        state: State,
-        lock: ReservedBytes<2, 0>,
-    },
+    Revealed(Seal),
+}
+
+/// State data are assigned to a seal definition, which means that they are
+/// owned by a person controlling spending of the seal UTXO, unless the seal
+/// is closed, indicating that a transfer of ownership had taken place
+#[derive(Clone, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(
+        crate = "serde_crate",
+        rename_all = "camelCase",
+        bound = "Seal: serde::Serialize + serde::de::DeserializeOwned"
+    )
+)]
+pub struct Assign<Seal: ExposedSeal> {
+    pub seal: SealEither<Seal>,
+    pub state: State,
+    lock: ReservedBytes<2>,
+    fallback: ReservedBytes<1>,
 }
 
 // Consensus-critical!
@@ -101,33 +108,38 @@ impl<Seal: ExposedSeal> PartialEq for Assign<Seal> {
 impl<Seal: ExposedSeal> Eq for Assign<Seal> {}
 
 impl<Seal: ExposedSeal> Assign<Seal> {
-    pub fn revealed(seal: XChain<Seal>, state: State) -> Self {
+    pub fn revealed(seal: Seal, state: State) -> Self {
         Assign::Revealed {
             seal,
             state,
             lock: default!(),
+            fallback: default!(),
         }
     }
 
-    pub fn with_seal_replaced(assignment: &Self, seal: XChain<Seal>) -> Self {
+    pub fn with_seal_replaced(assignment: &Self, seal: Seal) -> Self {
         match assignment {
             Assign::Confidential {
                 seal: _,
                 state,
                 lock,
+                fallback,
             } => Assign::Confidential {
                 seal: seal.conceal(),
                 state: state.clone(),
                 lock: *lock,
+                fallback: *fallback,
             },
             Assign::Revealed {
                 seal: _,
                 state,
                 lock,
+                fallback,
             } => Assign::Revealed {
                 seal,
                 state: state.clone(),
                 lock: *lock,
+                fallback: *fallback,
             },
         }
     }
@@ -150,14 +162,14 @@ impl<Seal: ExposedSeal> Assign<Seal> {
         }
     }
 
-    pub fn to_confidential_seal(&self) -> XChain<SecretSeal> {
+    pub fn to_confidential_seal(&self) -> SecretSeal {
         match self {
             Assign::Revealed { seal, .. } => seal.conceal(),
             Assign::Confidential { seal, .. } => *seal,
         }
     }
 
-    pub fn revealed_seal(&self) -> Option<XChain<Seal>> {
+    pub fn revealed_seal(&self) -> Option<Seal> {
         match self {
             Assign::Revealed { seal, .. } => Some(*seal),
             Assign::Confidential { .. } => None,
@@ -173,10 +185,16 @@ where Self: Clone
     fn conceal(&self) -> Self::Concealed {
         match self {
             Assign::Confidential { .. } => self.clone(),
-            Assign::Revealed { seal, state, lock } => Self::Confidential {
+            Assign::Revealed {
+                seal,
+                state,
+                lock,
+                fallback,
+            } => Self::Confidential {
                 seal: seal.conceal(),
                 state: state.clone(),
                 lock: *lock,
+                fallback: *fallback,
             },
         }
     }
@@ -185,15 +203,27 @@ where Self: Clone
 impl Assign<GenesisSeal> {
     pub fn transmute_seals(&self) -> Assign<GraphSeal> {
         match self {
-            Assign::Confidential { seal, state, lock } => Assign::Confidential {
+            Assign::Confidential {
+                seal,
+                state,
+                lock,
+                fallback,
+            } => Assign::Confidential {
                 seal: *seal,
                 state: state.clone(),
                 lock: *lock,
+                fallback: *fallback,
             },
-            Assign::Revealed { seal, state, lock } => Assign::Revealed {
+            Assign::Revealed {
+                seal,
+                state,
+                lock,
+                fallback,
+            } => Assign::Revealed {
                 seal: seal.transmutate(),
                 state: state.clone(),
                 lock: *lock,
+                fallback: *fallback,
             },
         }
     }
@@ -242,14 +272,20 @@ impl<Seal: ExposedSeal> IntoIterator for TypedAssigns<Seal> {
 impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     pub fn with(item: Assign<Seal>) -> Self { Self(NonEmptyVec::with(item)) }
 
-    pub fn reveal_seal(&mut self, revealed: XChain<Seal>) {
+    pub fn reveal_seal(&mut self, revealed: Seal) {
         for assign in self.iter_mut() {
             match assign {
-                Assign::Confidential { seal, state, lock } if *seal == revealed.conceal() => {
+                Assign::Confidential {
+                    seal,
+                    state,
+                    lock,
+                    fallback,
+                } if *seal == revealed.conceal() => {
                     *assign = Assign::Revealed {
                         seal: revealed,
                         state: state.clone(),
                         lock: *lock,
+                        fallback: *fallback,
                     }
                 }
                 Assign::Confidential { .. } | Assign::Revealed { .. } => {}
@@ -260,7 +296,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     /// If seal definition does not exist, returns [`ItemAbsent`]. If the
     /// seal is confidential, returns `Ok(None)`; otherwise returns revealed
     /// seal data packed as `Ok(Some(`[`Seal`]`))`
-    pub fn revealed_seal_at(&self, index: u16) -> Result<Option<XChain<Seal>>, ItemAbsent> {
+    pub fn revealed_seal_at(&self, index: u16) -> Result<Option<Seal>, ItemAbsent> {
         Ok(self
             .0
             .get(index as usize)
@@ -279,7 +315,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         Ok(self.0.release().remove(index as usize).into_state())
     }
 
-    pub fn confidential_seals(&self) -> Vec<XChain<SecretSeal>> {
+    pub fn confidential_seals(&self) -> Vec<SecretSeal> {
         self.0
             .iter()
             .map(Assign::<Seal>::to_confidential_seal)

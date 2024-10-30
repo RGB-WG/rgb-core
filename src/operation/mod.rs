@@ -37,20 +37,14 @@ pub use commit::{
     DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
 };
 pub use global::{GlobalState, GlobalValues};
-pub use meta::{MetaValue, Metadata, MetadataError};
+pub use meta::{Metadata, MetadataError};
 pub use operations::{
     Extension, Genesis, Identity, Input, Inputs, Operation, Opout, OpoutParseError, Redeemed,
     Transition, Valencies,
 };
-pub use seal::{
-    ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, XGenesisSeal, XGraphSeal,
-    XOutputSeal,
-};
+pub use seal::{ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal};
 pub use state::{
-    AttachId, State, StateCommitment, StateData, StateParseError, STATE_DATA_BASE32_ALPHABET,
-    STATE_DATA_MAX_LEN,
+    AttachId, Fiel, State, StateCommitment, StateParseError, UnverifiedState, VerifiableState,
+    STATE_DATA_BASE32_ALPHABET, STATE_DATA_MAX_LEN,
 };
-pub use xchain::{
-    AltLayer1, AltLayer1Set, Impossible, Layer1, XChain, XChainParseError, XOutpoint,
-    XCHAIN_BITCOIN_PREFIX, XCHAIN_LIQUID_PREFIX,
-};
+pub use xchain::Layer1;

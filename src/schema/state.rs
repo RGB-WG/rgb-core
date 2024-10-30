@@ -20,13 +20,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use amplify::num::u24;
+use amplify::num::{u24, u3};
 use commit_verify::ReservedBytes;
 use strict_types::SemId;
 
 use crate::LIB_NAME_RGB_COMMIT;
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+/// Number of field elements, from 1 to 8. Can't be zero.
+// TODO: Use NonZeroU3 when available.
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct FielCount(u3);
+
+/// NB: Schema can't check presence of structured state data and attachments for the owned state,
+/// since this state is omitted from the history after compression, and the check can't be
+/// arithmetized. Thus, while owned state may have a structured data and an attachment, they are
+/// opaque for the RGB consensus validation.
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
@@ -35,17 +51,40 @@ use crate::LIB_NAME_RGB_COMMIT;
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct OwnedStateSchema {
+    /// Reserved for the future versions
     pub reserved: ReservedBytes<1>,
-    pub sem_id: SemId,
+
+    /// Presence and number of field elements.
+    pub fiel_count: Option<FielCount>,
 }
 
-impl From<SemId> for OwnedStateSchema {
-    fn from(sem_id: SemId) -> Self {
-        Self {
-            reserved: none!(),
-            sem_id,
-        }
-    }
+/// Indicates whether a state should be included into the contract history.
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase", tag = "type")
+)]
+pub enum PublicationSchema {
+    /// The state is local to the operation subgraph between owned state and genesis.
+    #[strict_type(tag = 0x00, dumb)]
+    Local,
+
+    /// The state structured data and attachment must be always included in the contract history
+    /// even when are not part of the ancestor operations; and they must persist even when the
+    /// history is compressed.
+    #[strict_type(tag = 0x01)]
+    Published {
+        /// Maximal number of elements of this global state which are kept as a part of the
+        /// contract state.
+        depth: u24,
+    },
+}
+
+impl PublicationSchema {
+    pub fn is_published(self) -> bool { matches!(self, Self::Published { .. }) }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -57,25 +96,29 @@ impl From<SemId> for OwnedStateSchema {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct GlobalStateSchema {
+    /// Reserved for the future versions
     pub reserved: ReservedBytes<1>,
-    pub sem_id: SemId,
-    pub max_items: u24,
+
+    /// Presence and number of field elements.
+    pub fiel_count: Option<FielCount>,
+
+    /// Semantic type id for the structured unverifiable part of the state, if such is present.
+    pub sem_id: Option<SemId>,
+
+    /// Indicates whether the state should - or must include an attachment.
+    pub attach: Option<bool>,
+
+    /// Indicates whether a state should be included into the contract history.
+    pub publication: PublicationSchema,
 }
 
 impl GlobalStateSchema {
-    pub fn once(sem_id: SemId) -> Self {
-        GlobalStateSchema {
-            reserved: default!(),
-            sem_id,
-            max_items: u24::ONE,
-        }
-    }
+    pub fn is_published(&self) -> bool { self.publication.is_published() }
 
-    pub fn many(sem_id: SemId) -> Self {
-        GlobalStateSchema {
-            reserved: default!(),
-            sem_id,
-            max_items: u24::MAX,
-        }
+    /// All global state which is either public, or contains unverifiable data (structured state or
+    /// attachments) can't be ommitted from the history on compression, and thus preserved in its
+    /// explicit form.
+    pub fn is_preserved(&self) -> bool {
+        self.publication.is_published() || self.sem_id.is_some() || self.attach.is_some()
     }
 }

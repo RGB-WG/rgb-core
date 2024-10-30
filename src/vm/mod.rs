@@ -29,18 +29,16 @@ mod macroasm;
 pub mod instr;
 mod isa;
 mod opcodes;
-mod contract;
+mod ordering;
 mod bytecode;
 mod exec;
 #[cfg(test)]
 mod tests;
 
-pub use aluvm::aluasm_isa;
-pub use contract::{
-    ContractStateAccess, ContractStateEvolve, GlobalContractState, GlobalOrd, GlobalStateIter,
-    ImpossibleIter, OpOrd, OrdOpRef, UnknownGlobalStateType, WitnessOrd, WitnessPos, XWitnessId,
-    XWitnessTx,
-};
-pub(crate) use contract::{OpInfo, VmContext};
 pub use isa::{assemble, disassemble, CompileOnly, RgbIsa};
 pub use opcodes::ContractOp;
+pub use ordering::{
+    ContractStateAccess, GlobalContractState, GlobalOrd, GlobalStateIter, ImpossibleIter, OpOrd,
+    UnknownGlobalStateType, WitnessOrd,
+};
+pub(crate) use ordering::{OpInfo, VmContext};

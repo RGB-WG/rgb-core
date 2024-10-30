@@ -190,7 +190,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 else {
                     return ExecStep::Fail;
                 };
-                regs.set_s16(dst, assign.as_state().data.as_inner());
+                regs.set_s16(dst, assign.as_state().unverified.as_inner());
             }
             ContractOp::LdO { dst, ty, pos } => {
                 let Some(state_type) = regs.a16(ty).map(AssignmentType::with) else {
@@ -206,7 +206,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 let Some(assign) = assign.get(index as usize) else {
                     return ExecStep::Fail;
                 };
-                regs.set_s16(dst, assign.as_state().data.as_inner());
+                regs.set_s16(dst, assign.as_state().unverified.as_inner());
             }
 
             ContractOp::LdM { dst, ty } => {
