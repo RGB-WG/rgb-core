@@ -42,12 +42,7 @@ pub const XCHAIN_LIQUID_PREFIX: &str = "lq";
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(lowercase)]
-#[derive(
-    strict_encoding::StrictType,
-    StrictDumb,
-    strict_encoding::StrictEncode,
-    strict_encoding::StrictDecode
-)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
 #[cfg_attr(
     feature = "serde",
