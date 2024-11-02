@@ -13,13 +13,13 @@ use std::error::Error;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use aluvm::Lib;
-use amplify::confinement::{MediumOrdMap, SmallDeque, TinyOrdMap, TinyOrdSet};
+use aluvm::{Lib, LibId};
+use amplify::confinement::{MediumOrdMap, NonEmptyOrdMap, SmallDeque, TinyOrdMap};
 use single_use_seals::SealWitness;
 
 use crate::{
     Assign, Assignments, ContractId, Extension, Genesis, GlobalState, GlobalStateType, OpId, Opout, RgbSeal, RgbVm,
-    Schema, SchemaId, Transition, VerifiableState, VmError, VmSchema, LIB_NAME_RGB_LOGIC,
+    Schema, SchemaId, Transition, VerifiableState, VmError, VmSchema, LIB_NAME_RGB_LOGIC, SCHEMA_LIBS_MAX_COUNT,
 };
 
 pub trait RgbWitness<Seal>: SealWitness<Seal, Message = (ContractId, OpId)> + Ord + Debug {
@@ -53,7 +53,7 @@ pub enum ValidationError<E: Error> {
 pub trait ContractRepository<Seal: RgbSeal, Witness: RgbWitness<Seal>> {
     fn transitions(&self) -> impl Iterator<Item = (impl Borrow<Witness>, impl Borrow<Transition<Seal>>)>;
     fn extension(&self, opid: OpId) -> Option<impl Borrow<Extension<Seal>>>;
-    fn libs(&self) -> impl Borrow<TinyOrdSet<Lib>>;
+    fn libs(&self) -> impl Borrow<NonEmptyOrdMap<LibId, Lib, SCHEMA_LIBS_MAX_COUNT>>;
 }
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -109,9 +109,12 @@ impl<Seal: RgbSeal, Witness: RgbWitness<Seal>> VerifiedContractState<Seal, Witne
     }
 
     /// Constructs initial contract state out of genesis data.
-    pub fn new(genesis: &Genesis<Seal>, libs: &TinyOrdSet<Lib>) -> Result<Self, ValidationError<Witness::Error>> {
+    pub fn new(
+        genesis: &Genesis<Seal>,
+        libs: &NonEmptyOrdMap<LibId, Lib, SCHEMA_LIBS_MAX_COUNT>,
+    ) -> Result<Self, ValidationError<Witness::Error>> {
         let mut me = Self::new_inner(genesis);
-        let mut vm = me.vm(&genesis.schema, libs);
+        let mut vm = me.vm(&genesis.schema, libs)?;
         me.validate_genesis(&mut vm, genesis)?;
         Ok(me)
     }
@@ -122,7 +125,7 @@ impl<Seal: RgbSeal, Witness: RgbWitness<Seal>> VerifiedContractState<Seal, Witne
         repo: &impl ContractRepository<Seal, Witness>,
     ) -> Result<Self, ValidationError<Witness::Error>> {
         let mut me = Self::new_inner(genesis);
-        let mut vm = me.vm(&genesis.schema, repo.libs().borrow());
+        let mut vm = me.vm(&genesis.schema, repo.libs().borrow())?;
         me.validate_genesis(&mut vm, genesis)?;
         me.validate_history(vm, repo)?;
         Ok(me)
@@ -141,14 +144,14 @@ impl<Seal: RgbSeal, Witness: RgbWitness<Seal>> VerifiedContractState<Seal, Witne
     ) -> Result<(), ValidationError<Witness::Error>> {
         assert_eq!(self.schema_id, schema.schema_id(), "invalid schema for the contract {}", self.contract_id);
 
-        let vm = self.vm(schema, repo.libs().borrow());
+        let vm = self.vm(schema, repo.libs().borrow())?;
         self.validate_history(vm, repo)?;
         Ok(())
     }
 
-    fn vm(&self, schema: &Schema, libs: &TinyOrdSet<Lib>) -> RgbVm {
+    fn vm(&self, schema: &Schema, libs: &NonEmptyOrdMap<LibId, Lib, SCHEMA_LIBS_MAX_COUNT>) -> Result<RgbVm, VmError> {
         match &schema.vm {
-            VmSchema::AluVm(isa, config) => RgbVm::with(isa, *config, schema.validators.clone(), libs),
+            VmSchema::AluVm(isa, isae, config) => RgbVm::with(isa, isae, *config, &schema.validators, libs),
         }
     }
 

@@ -30,6 +30,7 @@ GenesisSeal rec
         reserved bytes len=4 aka=ReservedBytes4
     vm union VmSchema
       aluVm tuple tag=0
+        _ ascii aka=IsaId first=AlphaCapsNum rest=AlphaCapsNum len=1..16
         _ set len=0..MAX8
           element ascii aka=IsaId first=AlphaCapsNum rest=AlphaCapsNum len=1..16
         CoreConfig rec

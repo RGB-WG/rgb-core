@@ -8,13 +8,14 @@
 // Copyright (C) 2019-2024 LNP/BP Standards Association. All rights reserved.
 // Copyright (C) 2019-2024 Dr Maxim Orlovsky. All rights reserved.
 
-use aluvm::{IsaId, LibId, LibSite};
+use aluvm::isa::ISA_GFA128;
+use aluvm::{IsaId, LibId, LibSite, ISA_ALU128};
 use amplify::confinement::{NonEmptyOrdSet, TinyOrdMap, TinyOrdSet};
 use commit_verify::{CommitEncode, CommitId, ReservedBytes};
 use strict_encoding::{StrictDeserialize, StrictSerialize, TypeName};
 use strict_types::SemId;
 
-use crate::{ExtensionType, Ffv, GlobalStateType, Identity, SchemaId, TransitionType, LIB_NAME_RGB_COMMIT};
+use crate::{ExtensionType, Ffv, GlobalStateType, Identity, SchemaId, TransitionType, ISA_RGB1, LIB_NAME_RGB_COMMIT};
 
 pub const SCHEMA_LIBS_MAX_COUNT: usize = 0xFF * 3 + 3;
 
@@ -129,16 +130,21 @@ impl GlobalStateSchema {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(rename_all = "camelCase", untagged))]
 pub enum VmSchema {
     #[strict_type(tag = 0x01)]
-    AluVm(TinyOrdSet<IsaId>, aluvm::CoreConfig),
+    AluVm(IsaId, TinyOrdSet<IsaId>, aluvm::CoreConfig),
 }
 
 impl Default for VmSchema {
     fn default() -> Self {
-        Self::AluVm(none!(), aluvm::CoreConfig {
-            halt: true,
-            complexity_lim: None,
-            field_order: aluvm::gfa::Fq::F1137119,
-        })
+        // TODO: Use ISA constants
+        Self::AluVm(
+            IsaId::from(ISA_ALU128),
+            tiny_bset![IsaId::from(ISA_GFA128), IsaId::from(ISA_RGB1)],
+            aluvm::CoreConfig {
+                halt: true,
+                complexity_lim: None,
+                field_order: aluvm::gfa::Fq::F1137119,
+            },
+        )
     }
 }
 

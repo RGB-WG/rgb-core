@@ -1,5 +1,5 @@
 {-
-  Id: stl:xUbOLDKE-fdwcpqk-Dsx2Kuc-gTeaHnF-GBQ4HNC-G7fwA8k#salt-polka-roger
+  Id: stl:FXOB86iA-hCXBKOy-mW4W2yD-P!ohCRn-LjKDHjc-9NTAza8#camel-maze-paprika
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -195,7 +195,7 @@ data VerifiableState   : le32bit#16 FieldArrayu32
                        | le64bit FieldArrayu64
                        | le128Bit FieldArrayu128
 
-@mnemonic(user-poker-oregano)
-data VmSchema          : aluVm#1 ({AluVM.IsaId ^ ..0xff}, AluVM.CoreConfig) | (|)
+@mnemonic(gossip-exit-marina)
+data VmSchema          : aluVm#1 (AluVM.IsaId, {AluVM.IsaId ^ ..0xff}, AluVM.CoreConfig) | (|)
 
 

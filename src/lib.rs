@@ -29,6 +29,7 @@ mod operations;
 mod commit;
 #[macro_use]
 mod vm;
+mod isa;
 mod validation;
 
 #[cfg(feature = "stl")]
@@ -36,17 +37,19 @@ pub mod stl;
 
 pub use commit::{ContractId, OpId, SchemaId};
 pub use commit_verify::ReservedBytes;
+pub use isa::{RgbInstr, ISA_RGB1};
 pub use operations::{
     Extension, ExtensionType, Genesis, GenesisHeader, Identity, Input, Inputs, Opout, Transition, TransitionType,
 };
-pub use schema::{Schema, Validators, VmSchema};
+pub use schema::{Schema, Validators, VmSchema, SCHEMA_LIBS_MAX_COUNT};
 pub use seal::RgbSeal;
 pub use state::{
     Assign, AssignmentType, Assignments, AttachId, GlobalState, GlobalStateType, GlobalValues, MetaType, Metadata,
-    MetadataError, State, TypedAssigns, UnverifiedState, VerifiableState, STATE_DATA_MAX_LEN,
+    MetadataError, State, TypedAssigns, UnverifiedState, VerifiableState, GLOBAL_STATE_MAX_ITEMS, STATE_DATA_MAX_LEN,
+    TYPED_ASSIGNMENTS_MAX_ITEMS,
 };
 pub use validation::{ContractRepository, GlobalRef, RgbWitness, ValidationError, VerifiedContractState};
-pub use vm::{RgbVm, VmError};
+pub use vm::{RgbVm, VmContext, VmError};
 
 pub const LIB_NAME_RGB_COMMIT: &str = "RGBCommit";
 pub const LIB_NAME_RGB_LOGIC: &str = "RGBLogic";
