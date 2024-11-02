@@ -1,5 +1,5 @@
 {-
-  Id: stl:uIWSFM4g-fc20tku-5jM9yK7-yNiSbHe-QMoaD3k-7YZY2wI#ivan-erosion-warning
+  Id: stl:mopdo7BP-rpst3vP-cQE95EO-jWV9oHx-tl1O7Kf-7k11MjU#reunion-andrea-stereo
   Name: RGBLogic
   Version: 0.1.0
   Description: Consensus logic layer for RGB smart contracts
@@ -11,54 +11,34 @@
 @context
 typelib RGBLogic
 
-import BPCore#austin-story-retro
-  use TapretNodePartner#roger-member-educate
-  use TapretProof#marco-border-sample
-  use TapretPathProof#kiwi-mirror-paris
-  use TapretRightBranch#miracle-patriot-touch
-  use OpretProof#good-village-flex
+import CommitVerify#escort-between-doctor
+  use ReservedBytes1#origin-roger-relax
+  use ReservedBytes2#florida-libra-circus
 
-import RGBCommit#mile-answer-karl
-  use TransitionType#picture-reflex-brigade
-  use ExtensionType#apropos-scoop-viva
-  use Layer1#camilla-basket-justin
+import RGBCommit#salt-polka-roger
+  use GlobalStateType#script-pasta-detail
+  use VerifiableState#cobalt-relax-target
+  use FieldArrayu64#gold-hawaii-gregory
+  use FieldArrayu128#stamp-plastic-hope
+  use FieldArrayu32#spark-balloon-result
+  use SchemaId#ramirez-patron-simon
   use OpId#picnic-single-gloria
-
-import Bitcoin#signal-color-cipher
-  use ScriptBytes#equator-cockpit-gong
-  use TapNodeHash#paprika-amanda-hunter
-  use LeafScript#bison-doctor-oscar
-  use InternalPk#habitat-paprika-oliver
-  use LeafVer#benefit-carbon-africa
-  use XOnlyPk#clever-swim-carpet
+  use ContractId#uniform-welcome-papa
+  use Opout#vortex-lopez-parking
+  use AssignmentType#pilot-finland-betty
+  use AssignSeal#origin-soviet-scholar
 
 
-@mnemonic(needle-change-forest)
-data DbcProof          : tapret#1 BPCore.TapretProof
-                       | opret BPCore.OpretProof
+@mnemonic(solo-vital-deluxe)
+data GlobalRef         : opid RGBCommit.OpId
+                       , pos U16
+                       , state RGBCommit.VerifiableState
 
-@mnemonic(east-sunset-extra)
-data GlobalOrd         : opOrd OpOrd, idx U16
-
-@mnemonic(combat-henry-flood)
-data OpOrd             : genesis ()
-                       | extension (witness WitnessOrd
-                       , ty RGBCommit.ExtensionType
-                       , nonce U64
-                       , opid RGBCommit.OpId)
-                       | transition#255 (witness WitnessOrd
-                       , ty RGBCommit.TransitionType
-                       , nonce U64
-                       , opid RGBCommit.OpId)
-
-@mnemonic(orange-john-cyclone)
-data WitnessOrd        : archived ()
-                       | mined WitnessPos
-                       | tentative ()
-
-@mnemonic(cliff-enrico-nominal)
-data WitnessPos        : layer1 RGBCommit.Layer1
-                       , height U32
-                       , timestamp I64
+@mnemonic(song-nectar-trivial)
+data VerifiedContractStateSealWitness : contractId RGBCommit.ContractId
+                       , schemaId RGBCommit.SchemaId
+                       , globalLimits {RGBCommit.GlobalStateType -> ^ ..0xff U16}
+                       , global {RGBCommit.GlobalStateType -> ^ ..0xff [GlobalRef]}
+                       , unspent {RGBCommit.Opout -> ^ ..0xffffff RGBCommit.AssignSeal}
 
 

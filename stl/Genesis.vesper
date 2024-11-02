@@ -1,34 +1,71 @@
 {-
-  Description: RGB Transition
+  Description: RGB Genesis
   Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
   Copyright (C) 2024 LNP/BP Standards Association. All rights reserved.
   License: Apache-2.0
 -}
 
-Bundles vesper lexicon=types+commitments
+Schema vesper lexicon=types+commitments
 
 OpId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:operation#2024-02-03
-  Ffv serialized
-  ContractId serialized
-  TransitionType serialized
-  Input merklized
+  SchemaId serialized
+  GenesisHeader serialized
   MetaCommitment merklized
   GlobalCommitment merklized
   AssignmentCommitment merklized
   ReservedBytes4 serialized
 
-TransitionSeal rec
-  ffv is U16 aka=Ffv
-  contractId bytes len=32 aka=ContractId
-  transitionType is U8 aka=TransitionType
-  inputs set len=1..MAX16 aka=Inputs
-    Input rec
-      prevOut rec Opout
-        op bytes len=32 aka=OpId
-        ty is U8 aka=AssignmentType
-        no is U16
-      fallback bytes len=1 aka=ReservedBytes1
-      reserved bytes len=2 aka=ReservedBytes2
+GenesisSeal rec
+  schema rec Schema
+    ffv is U16 aka=Ffv
+    flags bytes len=1 aka=ReservedBytes1
+    name ascii aka=TypeName first=AlphaCapsLodash rest=AlphaNumLodash len=1..100
+    timestamp is I64
+    developer ascii aka=Identity first=AsciiPrintable rest=AsciiPrintable len=1..4096
+    global map len=0..MAX8
+      key is U8 aka=GlobalStateType
+      value rec GlobalStateSchema
+        maxLen is U16
+          some bytes len=32 option wrapped aka=SemId tag=1
+        reserved bytes len=4 aka=ReservedBytes4
+    vm union VmSchema
+      aluVm tuple tag=0
+        _ set len=0..MAX8
+          element ascii aka=IsaId first=AlphaCapsNum rest=AlphaCapsNum len=1..16
+        CoreConfig rec
+          halt enum Bool false=0 true=1
+            some is U64 option wrapped tag=1
+          fieldOrder union Fq
+            m31 is Unit tag=0
+            f1137119 is Unit tag=1
+            f1289 is Unit tag=2
+            other is U128 wrapped tag=3
+    validators rec Validators
+      genesisValidator rec LibSite
+        libId bytes len=32 aka=LibId
+        offset is U16
+      extensionValidators map len=0..MAX8
+        key is U8 aka=ExtensionType
+        value rec LibSite
+          libId bytes len=32 aka=LibId
+          offset is U16
+      transitionValidators map len=0..MAX8
+        key is U8 aka=TransitionType
+        value rec LibSite
+          libId bytes len=32 aka=LibId
+          offset is U16
+      defaultTransitionValidator rec LibSite
+        libId bytes len=32 aka=LibId
+        offset is U16
+      defaultExtensionValidator rec LibSite
+        libId bytes len=32 aka=LibId
+        offset is U16
+  header rec GenesisHeader
+    ffv is U16 aka=Ffv
+    flags bytes len=1 aka=ReservedBytes1
+    timestamp is I64
+    issuer ascii aka=Identity first=AsciiPrintable rest=AsciiPrintable len=1..4096
+    layer1 enum Layer1 bitcoin=0 liquid=1 bitcoinTest=240 liquidTest=241
   metadata map len=0..MAX8 aka=Metadata
     key is U8 aka=MetaType
     value union VerifiableState

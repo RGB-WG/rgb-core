@@ -7,21 +7,10 @@
 //
 // Copyright (C) 2019-2024 LNP/BP Standards Association. All rights reserved.
 // Copyright (C) 2019-2024 Dr Maxim Orlovsky. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
-#![allow(unused_braces)] // Rust compiler can't properly parse derivation macros
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+
+extern crate core;
 
 #[macro_use]
 extern crate amplify;
@@ -32,44 +21,82 @@ extern crate commit_verify;
 
 #[cfg(feature = "serde")]
 #[macro_use]
-extern crate serde_crate as serde;
-extern crate core;
+extern crate serde;
 
-mod operation;
-pub mod schema;
-pub mod validation;
+mod schema;
+mod state;
+mod operations;
+mod commit;
 #[macro_use]
-pub mod vm;
+mod vm;
+mod validation;
+
 #[cfg(feature = "stl")]
 pub mod stl;
 
-pub mod prelude {
-    pub use commit_verify::ReservedBytes;
-    pub use operation::*;
-    pub use schema::*;
-    pub use vm::{assemble, disassemble, XWitnessId};
-
-    #[cfg(feature = "stl")]
-    pub use super::stl;
-    use super::*;
-    pub use super::{schema, validation, vm};
-}
-
-pub use prelude::*;
+pub use commit::{ContractId, OpId, SchemaId};
+pub use commit_verify::ReservedBytes;
+pub use operations::{
+    Extension, ExtensionType, Genesis, GenesisHeader, Identity, Input, Inputs, Opout, Transition, TransitionType,
+};
+pub use schema::{Schema, Validators, VmSchema};
+pub use seal::RgbSeal;
+pub use state::{
+    Assign, AssignmentType, Assignments, AttachId, GlobalState, GlobalStateType, GlobalValues, MetaType, Metadata,
+    MetadataError, State, TypedAssigns, UnverifiedState, VerifiableState, STATE_DATA_MAX_LEN,
+};
+pub use validation::{ContractRepository, GlobalRef, RgbWitness, ValidationError, VerifiedContractState};
+pub use vm::{RgbVm, VmError};
 
 pub const LIB_NAME_RGB_COMMIT: &str = "RGBCommit";
 pub const LIB_NAME_RGB_LOGIC: &str = "RGBLogic";
+
+pub const BITCOIN_PREFIX: &str = "bc";
+pub const LIQUID_PREFIX: &str = "lq";
+pub const BITCOIN_TEST_PREFIX: &str = "tb";
+pub const LIQUID_TEST_PREFIX: &str = "tl";
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[display(lowercase)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(rename_all = "camelCase"))]
+#[repr(u8)]
+pub enum Layer1 {
+    #[strict_type(dumb)]
+    Bitcoin = 0,
+    Liquid = 1,
+
+    BitcoinTest = 0xF0,
+    LiquidTest = 0xF1,
+}
+
+mod seal {
+    use std::fmt::{Debug, Display};
+
+    use amplify::Bytes32;
+    use commit_verify::CommitEncode;
+    use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
+
+    pub trait RgbSeal:
+        Copy
+        + Ord
+        + Debug
+        + Display
+        + StrictEncode
+        + StrictDecode
+        + StrictDumb
+        + CommitEncode<CommitmentId: Into<Bytes32>>
+    {
+    }
+}
 
 /// Fast-forward version code
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display)]
 #[display("RGB/1.{0}")]
 #[derive(StrictType, StrictEncode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(rename_all = "camelCase"))]
 pub struct Ffv(u16);
 
 mod _ffv {
@@ -82,9 +109,9 @@ mod _ffv {
             let ffv = reader.read_tuple(|r| r.read_field().map(Self))?;
             if ffv != Ffv::default() {
                 Err(DecodeError::DataIntegrityError(format!(
-                    "unsupported fast-forward version code belonging to a future RGB version. \
-                     Please update your software, or, if the problem persists, contact your \
-                     vendor providing the following version information: {ffv}"
+                    "unsupported fast-forward version code belonging to a future RGB version. Please update your \
+                     software, or, if the problem persists, contact your vendor providing the following version \
+                     information: {ffv}"
                 )))
             } else {
                 Ok(ffv)
@@ -99,8 +126,8 @@ macro_rules! impl_serde_baid64 {
         #[cfg(feature = "serde")]
         mod _serde {
             use amplify::ByteArray;
-            use serde_crate::de::Error;
-            use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
+            use serde::de::Error;
+            use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
             use super::*;
 
@@ -130,6 +157,3 @@ macro_rules! impl_serde_baid64 {
         }
     };
 }
-
-// TODO: Validate strict type data
-// TODO: Add parsed global and structured state to the ContractState

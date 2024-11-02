@@ -7,71 +7,79 @@
 //
 // Copyright (C) 2019-2024 LNP/BP Standards Association. All rights reserved.
 // Copyright (C) 2019-2024 Dr Maxim Orlovsky. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+
+use std::convert::Infallible;
 
 pub use aluvm::stl::aluvm_stl;
-pub use bp::bc::stl::bp_tx_stl;
-pub use bp::stl::bp_core_stl;
+use amplify::Bytes32;
 use commit_verify::stl::commit_verify_stl;
+use commit_verify::StrictHash;
+use single_use_seals::SealWitness;
+use strict_encoding::{StrictProduct, StrictTuple, StrictType, TypeName};
 use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
 
-use crate::validation::DbcProof;
-use crate::vm::{GlobalOrd, XWitnessId};
 use crate::{
-    Extension, Genesis, OpCommitment, Schema, TransitionBundle, LIB_NAME_RGB_COMMIT,
-    LIB_NAME_RGB_LOGIC,
+    ContractId, Extension, Genesis, OpId, RgbSeal, RgbWitness, Transition, ValidationError, VerifiedContractState,
+    LIB_NAME_RGB_COMMIT, LIB_NAME_RGB_LOGIC,
 };
 
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_COMMIT: &str =
-    "stl:7pVCkJVx-to9W$lu-uBNBwdr-ftezpr1-nA4sohY-VZGFoYM#mile-answer-karl";
+pub const LIB_ID_RGB_COMMIT: &str = "stl:xUbOLDKE-fdwcpqk-Dsx2Kuc-gTeaHnF-GBQ4HNC-G7fwA8k#salt-polka-roger";
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_LOGIC: &str =
-    "stl:uIWSFM4g-fc20tku-5jM9yK7-yNiSbHe-QMoaD3k-7YZY2wI#ivan-erosion-warning";
+pub const LIB_ID_RGB_LOGIC: &str = "stl:mopdo7BP-rpst3vP-cQE95EO-jWV9oHx-tl1O7Kf-7k11MjU#reunion-andrea-stereo";
 
-fn _rgb_commit_stl() -> Result<TypeLib, CompileError> {
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+#[wrapper(AsSlice, Display, FromStr, Hex)]
+#[derive(StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = StrictHash)]
+pub struct Seal(Bytes32);
+impl RgbSeal for Seal {}
+impl StrictType for Seal {
+    const STRICT_LIB_NAME: &'static str = LIB_NAME_RGB_COMMIT;
+    fn strict_name() -> Option<TypeName> { None }
+}
+impl StrictProduct for Seal {}
+impl StrictTuple for Seal {
+    const FIELD_COUNT: u8 = 1;
+}
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+pub struct Witness(ContractId, OpId);
+impl SealWitness<Seal> for Witness {
+    type Message = (ContractId, OpId);
+    type Error = ValidationError<Infallible>;
+    fn verify_seal(&self, _seal: &Seal, _msg: &Self::Message) -> Result<(), Self::Error> { Ok(()) }
+}
+impl RgbWitness<Seal> for Witness {
+    fn order(&self) -> impl Ord { 0 }
+}
+
+fn _rgb_commit_stl<Seal: RgbSeal>() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB_COMMIT), tiny_bset! {
         std_stl().to_dependency(),
         strict_types_stl().to_dependency(),
         commit_verify_stl().to_dependency(),
-        bp_tx_stl().to_dependency(),
-        bp_core_stl().to_dependency(),
         aluvm_stl().to_dependency()
     })
-    .transpile::<Schema>()
-    .transpile::<Genesis>()
-    .transpile::<XWitnessId>()
-    .transpile::<TransitionBundle>()
-    .transpile::<Extension>()
-    .transpile::<OpCommitment>()
+    .transpile::<Genesis<Seal>>()
+    .transpile::<Extension<Seal>>()
+    .transpile::<Transition<Seal>>()
     .compile()
 }
 
-fn _rgb_logic_stl() -> Result<TypeLib, CompileError> {
+fn _rgb_logic_stl<Seal: RgbSeal, W: RgbWitness<Seal>>() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB_LOGIC), tiny_bset! {
         std_stl().to_dependency(),
         strict_types_stl().to_dependency(),
         commit_verify_stl().to_dependency(),
-        bp_tx_stl().to_dependency(),
-        bp_core_stl().to_dependency(),
         aluvm_stl().to_dependency(),
-        rgb_commit_stl().to_dependency()
+        _rgb_commit_stl::<Seal>().unwrap().to_dependency()
     })
-        .transpile::<GlobalOrd>()
-        .transpile::<DbcProof>()
+        .transpile::<VerifiedContractState<Seal, W>>()
         // TODO: Commit to the RGB ISA once AluVM will support strict types
         // .transpile::<RgbIsa>()
         .compile()
@@ -79,12 +87,12 @@ fn _rgb_logic_stl() -> Result<TypeLib, CompileError> {
 
 /// Generates strict type library providing data types for RGB consensus.
 pub fn rgb_commit_stl() -> TypeLib {
-    _rgb_commit_stl().expect("invalid strict type RGB consensus commitments library")
+    _rgb_commit_stl::<Seal>().expect("invalid strict type RGB consensus commitments library")
 }
 
 /// Generates strict type library providing data types for RGB consensus.
 pub fn rgb_logic_stl() -> TypeLib {
-    _rgb_logic_stl().expect("invalid strict type RGB consensus logic library")
+    _rgb_logic_stl::<Seal, Witness>().expect("invalid strict type RGB consensus logic library")
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.11.0-beta.9"
+version = "0.12.0-nightly"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -24,27 +24,22 @@ required-features = ["stl"]
 [dependencies]
 amplify = "~4.7.0"
 baid64 = "~0.2.2"
-base64 = "0.22.1"
-strict_encoding = "~2.7.0"
-strict_types = { version = "~2.7.1", features = ["armor"] }
-aluvm = { version = "~0.11.0-beta.9", features = ["std", "ascii-armor"] }
-commit_verify = { version = "~0.11.0-beta.9", features = ["derive"] }
-single_use_seals = "~0.11.0-beta.9"
-bp-core = { version = "~0.11.0-beta.9" }
-serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
-chrono = "0.4.38"
+strict_encoding = "~2.7.1"
+strict_types = "~2.7.2" # TODO: Make strict types optional, used only in STL
+aluvm = { version = "~0.12.0-nightly", features = ["zk-aluvm"] }
+commit_verify = { version = "~0.12.0-nightly", features = ["derive"] }
+single_use_seals = "~0.12.0-nightly"
+serde = { version = "1", features = ["derive"], optional = true }
 
 [features]
 default = []
 all = ["stl", "serde"]
-stl = ["commit_verify/stl", "bp-core/stl", "aluvm/stl"]
+stl = ["commit_verify/stl", "aluvm/stl", "strict_types/armor"]
 serde = [
-    "serde_crate",
+    "dep:serde",
     "amplify/serde",
-    "strict_encoding/serde",
     "strict_types/serde",
     "commit_verify/serde",
-    "bp-core/serde",
     "aluvm/serde",
 ]
 
@@ -60,11 +55,8 @@ wasm-bindgen-test = "0.3"
 features = ["all"]
 
 [patch.crates-io]
-commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "develop" }
-single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "develop" }
-strict_types = { git = "https://github.com/strict-types/strict-types", branch = "develop" }
-aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "develop" }
-bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }
-bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }
-bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }
-bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "develop" }
+amplify = { git = "https://github.com/rust-amplify/rust-amplify", branch = "develop" }
+strict_encoding = { git = "https://github.com/strict-types/strict-encoding", branch = "develop" }
+commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
+single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
+aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "v0.12" }
