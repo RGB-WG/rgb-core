@@ -1,6 +1,18 @@
 Change Log
 ==========
 
+v0.13.0
+-------
+
+TODO:
+
+- no_std
+- no external dependencies
+- fallback seals?
+- inter-contract ops?
+- more introspection op-codes?
+- idempotent contract validation?
+
 v0.12.0
 -------
 
@@ -16,6 +28,12 @@ v0.12.0
 - Require state transitions to have at least 1 input
 - Make schema part of genesis data
 - Refactor consensus ordering into v2 (RCP-241101A)
+
+TODO:
+
+- Test coverage
+- Benchmarking
+- Documentation
 
 v0.7.0
 ------
@@ -115,7 +133,8 @@ v0.2.0-beta.3
 - Better CI
 - Android/iOS/Windows/MacOs build fixes
 - AnchorId strict encoding
-- Fixed issue with broken `serde_with` macro (pinned older version in Cargo.toml)
+- Fixed issue with broken `serde_with` macro (pinned older version in
+  Cargo.toml)
 - More collection types supporting `AutoConceal`
 
 v0.2.0-beta.2
@@ -211,7 +230,8 @@ v0.1.0
       *The library implements RGB Core v1 release candidate set of standards*
 - **Lightning networking protocol**: generalized P2P and RPC networking APIs
   based on the original Lightning standard; early preview
-    * Universal P2P node ids supporting IPv4, IPv6, Onion v2 and v3 addresses and
+    * Universal P2P node ids supporting IPv4, IPv6, Onion v2 and v3 addresses
+      and
       public keys
     * Feature vectors for defining and workinf with set of feature bits
     * LNP networking with ZMQ sockets for RPC interfaces

@@ -135,7 +135,6 @@ pub enum VmSchema {
 
 impl Default for VmSchema {
     fn default() -> Self {
-        // TODO: Use ISA constants
         Self::AluVm(
             IsaId::from(ISA_ALU128),
             tiny_bset![IsaId::from(ISA_GFA128), IsaId::from(ISA_RGB1)],

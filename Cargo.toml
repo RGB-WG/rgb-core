@@ -56,7 +56,8 @@ features = ["all"]
 
 [patch.crates-io]
 amplify = { git = "https://github.com/rust-amplify/rust-amplify", branch = "develop" }
-strict_encoding = { git = "https://github.com/strict-types/strict-encoding", branch = "develop" }
 commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
 single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
-aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "v0.12" }
+aluvm = { path = "../rust-aluvm" }
+#aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "v0.12" }
+

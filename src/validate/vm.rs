@@ -11,12 +11,12 @@
 use aluvm::isa::{Instr, InstructionSet};
 use aluvm::regs::IdxA;
 use aluvm::{CoreConfig, IsaId, Lib, LibId};
-use amplify::confinement::{MediumOrdMap, NonEmptyOrdMap, SmallDeque, TinyOrdMap, TinyOrdSet};
+use amplify::confinement::{NonEmptyOrdMap, SmallDeque, SmallVec, TinyOrdMap, TinyOrdSet};
 use amplify::num::u5;
 
 use crate::{
-    Assign, AssignmentType, Assignments, ExtensionType, GlobalRef, GlobalState, GlobalStateType, Metadata, Opout,
-    RgbInstr, RgbSeal, TransitionType, Validators, VerifiableState, SCHEMA_LIBS_MAX_COUNT,
+    AssignmentType, Assignments, ExtensionType, GlobalRef, GlobalState, GlobalStateType, Metadata, RgbInstr, RgbSeal,
+    TransitionType, Validators, VerifiableState, SCHEMA_LIBS_MAX_COUNT,
 };
 
 pub type RgbIsa = Instr<LibId, RgbInstr>;
@@ -35,13 +35,15 @@ pub enum VmError {
     Failed(u16),
 }
 
+/// Context for executing RGB VM instructions used to provide VM with the contract and operation
+/// information and state data.
 pub struct VmContext<'ctx> {
-    pub ty: Option<u8>,
+    pub op_ty: Option<u8>,
     pub contract_global: &'ctx TinyOrdMap<GlobalStateType, SmallDeque<GlobalRef>>,
-    pub unspent: MediumOrdMap<Opout, VerifiableState>,
     pub metadata: &'ctx Metadata,
-    pub globals: &'ctx GlobalState,
-    pub assignments: MediumOrdMap<(AssignmentType, u16), VerifiableState>,
+    pub operation_input: TinyOrdMap<AssignmentType, SmallVec<VerifiableState>>,
+    pub operation_global: &'ctx GlobalState,
+    pub operation_owned: TinyOrdMap<AssignmentType, SmallVec<VerifiableState>>,
 }
 
 pub struct RgbVm {
@@ -86,14 +88,17 @@ impl RgbVm {
         assignments: &Assignments<Seal>,
     ) -> Result<(), VmError> {
         self.vm.reset();
+
+        let operation_owned = map_assignments(assignments);
         let context = VmContext {
-            ty: None,
+            op_ty: None,
             contract_global: &self.empty_globals,
-            unspent: empty!(),
             metadata,
-            globals,
-            assignments: map_assignments(assignments),
+            operation_global: globals,
+            operation_input: empty!(),
+            operation_owned,
         };
+
         self.vm
             .exec(self.validators.genesis_validator, |id| self.libs.get(&id), &context);
         self.result()
@@ -108,19 +113,23 @@ impl RgbVm {
         assignments: &Assignments<Seal>,
     ) -> Result<(), VmError> {
         self.vm.reset();
+
+        let operation_owned = map_assignments(assignments);
         let context = VmContext {
-            ty: Some(ty.to_u8()),
+            op_ty: Some(ty.to_u8()),
             contract_global,
-            unspent: empty!(),
             metadata,
-            globals,
-            assignments: map_assignments(assignments),
+            operation_global: globals,
+            operation_input: empty!(),
+            operation_owned,
         };
+
         let validator = self
             .validators
             .extension_validators
             .get(&ty)
             .unwrap_or(&self.validators.default_extension_validator);
+
         self.vm.exec(*validator, |id| self.libs.get(&id), &context);
         self.result()
     }
@@ -129,25 +138,29 @@ impl RgbVm {
         &mut self,
         ty: TransitionType,
         contract_global: &TinyOrdMap<GlobalStateType, SmallDeque<GlobalRef>>,
-        unspent: &MediumOrdMap<Opout, Assign<Seal>>,
         metadata: &Metadata,
-        globals: &GlobalState,
+        operation_global: &GlobalState,
+        operation_input: TinyOrdMap<AssignmentType, SmallVec<VerifiableState>>,
         assignments: &Assignments<Seal>,
     ) -> Result<(), VmError> {
         self.vm.reset();
+
+        let operation_owned = map_assignments(assignments);
         let context = VmContext {
-            ty: Some(ty.to_u8()),
+            op_ty: Some(ty.to_u8()),
             contract_global,
-            unspent: MediumOrdMap::from_iter_checked(unspent.iter().map(|(opout, assign)| (*opout, assign.state))),
             metadata,
-            globals,
-            assignments: map_assignments(assignments),
+            operation_input,
+            operation_global,
+            operation_owned,
         };
+
         let validator = self
             .validators
             .transition_validators
             .get(&ty)
             .unwrap_or(&self.validators.default_transition_validator);
+
         self.vm.exec(*validator, |id| self.libs.get(&id), &context);
         self.result()
     }
@@ -168,10 +181,10 @@ impl RgbVm {
 
 fn map_assignments<Seal: RgbSeal>(
     assignments: &Assignments<Seal>,
-) -> MediumOrdMap<(AssignmentType, u16), VerifiableState> {
-    MediumOrdMap::from_iter_checked(
-        assignments
-            .all()
-            .map(|(ty, pos, assign)| ((ty, pos), assign.state)),
-    )
+) -> TinyOrdMap<AssignmentType, SmallVec<VerifiableState>> {
+    let outputs = assignments.into_iter().map(|(ty, ta)| {
+        let ta = SmallVec::from_iter_checked(ta.into_iter().map(|a| a.state));
+        (*ty, ta)
+    });
+    TinyOrdMap::from_iter_checked(outputs)
 }

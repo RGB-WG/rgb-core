@@ -12,6 +12,7 @@
 mod vm;
 mod isa;
 mod contract;
+mod microcode;
 
 pub use contract::{ContractRepository, GlobalRef, RgbWitness, ValidationError, VerifiedContractState};
 pub use isa::{RgbInstr, ISA_RGB1};

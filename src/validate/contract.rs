@@ -9,17 +9,19 @@
 // Copyright (C) 2019-2024 Dr Maxim Orlovsky. All rights reserved.
 
 use std::borrow::Borrow;
+use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use aluvm::{Lib, LibId};
-use amplify::confinement::{MediumOrdMap, NonEmptyOrdMap, SmallDeque, TinyOrdMap};
+use amplify::confinement::{MediumOrdMap, NonEmptyOrdMap, SmallDeque, SmallVec, TinyOrdMap};
 use single_use_seals::SealWitness;
 
 use crate::{
-    Assign, Assignments, ContractId, Extension, Genesis, GlobalState, GlobalStateType, OpId, Opout, RgbSeal, RgbVm,
-    Schema, SchemaId, Transition, VerifiableState, VmError, VmSchema, LIB_NAME_RGB_LOGIC, SCHEMA_LIBS_MAX_COUNT,
+    Assign, AssignmentType, Assignments, ContractId, Extension, Genesis, GlobalState, GlobalStateType, OpId, Opout,
+    RgbSeal, RgbVm, Schema, SchemaId, Transition, VerifiableState, VmError, VmSchema, LIB_NAME_RGB_LOGIC,
+    SCHEMA_LIBS_MAX_COUNT,
 };
 
 pub trait RgbWitness<Seal>: SealWitness<Seal, Message = (ContractId, OpId)> + Ord + Debug {
@@ -66,7 +68,6 @@ pub struct GlobalRef {
     pub state: VerifiableState,
 }
 
-// TODO: Add rolling bloom filter for the validated transitions.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_LOGIC)]
@@ -78,13 +79,23 @@ pub struct GlobalRef {
 pub struct VerifiedContractState<Seal: RgbSeal, Witness: RgbWitness<Seal>> {
     pub contract_id: ContractId,
     pub schema_id: SchemaId,
+
+    /// Maximum number of global state items a state of each type can old (see [`Self::global`]).
+    ///
+    /// Taken from a schema. If schema doesn't define the maximum, it defaults to `u16::MAX`.
     pub global_limits: TinyOrdMap<GlobalStateType, u16>,
+
+    /// Contract global state. Each state type contains a stack of global elements, represented as
+    /// [`SmallDeque`] object. The front of the deque is the bottom of the stack (most old
+    /// entries), the back of the deque is the top of the stack (most recent entries).
     pub global: TinyOrdMap<GlobalStateType, SmallDeque<GlobalRef>>,
+
     /// Unspent operations' outputs.
     ///
     /// There could be up to 2^24 unspent outputs participating in some history at the same time.
     /// If the number of outputs grows lager, a zk-STARK compression should be applied.
     pub unspent: MediumOrdMap<Opout, Assign<Seal>>,
+
     #[strict_type(skip)]
     #[cfg_attr(feature = "serde", serde(skip))]
     _phantom: PhantomData<Witness>,
@@ -137,6 +148,7 @@ impl<Seal: RgbSeal, Witness: RgbWitness<Seal>> VerifiedContractState<Seal, Witne
     /// [`ContractRepository::transitions`] do provide the same transition twice, or transitions
     /// which were already processed in previous calls to [`Self::extend`] and [`Self::with`]
     /// methods.
+    // TODO: Find a way to make operation idempotent.
     pub fn extend(
         &mut self,
         schema: &Schema,
@@ -175,6 +187,7 @@ impl<Seal: RgbSeal, Witness: RgbWitness<Seal>> VerifiedContractState<Seal, Witne
 
             // Collect inputs
             let mut closed_seals = vec![];
+            let mut input_state = BTreeMap::<_, SmallVec<_>>::new();
             for input in &transition.inputs {
                 // If input is not known, try to find it in a state extension
                 if !self.unspent.contains_key(&input.prev_out) {
@@ -193,13 +206,15 @@ impl<Seal: RgbSeal, Witness: RgbWitness<Seal>> VerifiedContractState<Seal, Witne
 
                 // Now, if input is unknown (and was not found in extensions) it means that the contract is invalid
                 let Some(input_assignment) = self.unspent.get(&input.prev_out) else {
-                    return Err(ValidationError::InvalidInput {
-                        transition_id: trans_id,
-                        prev_out: input.prev_out,
-                    });
+                    return Err(ValidationError::InvalidInput { transition_id: trans_id, prev_out: input.prev_out });
                 };
 
                 closed_seals.push(input_assignment.seal);
+                input_state
+                    .entry(input.prev_out.ty)
+                    .or_default()
+                    .push(input_assignment.state)
+                    .expect("max size confinement for Inputs and SmallVec must be equal");
             }
 
             // Check that the witness closes all seals from the state transition inputs
@@ -207,7 +222,7 @@ impl<Seal: RgbSeal, Witness: RgbWitness<Seal>> VerifiedContractState<Seal, Witne
                 .verify_many_seals(&closed_seals, &(self.contract_id, trans_id))
                 .map_err(ValidationError::Seal)?;
             // Validate transition with VM
-            self.validate_transition(&mut vm, transition)?;
+            self.validate_transition(&mut vm, TinyOrdMap::from_checked(input_state), transition)?;
 
             // Remove inputs from unspents
             for input in &transition.inputs {
@@ -244,19 +259,13 @@ impl<Seal: RgbSeal, Witness: RgbWitness<Seal>> VerifiedContractState<Seal, Witne
     fn validate_transition(
         &mut self,
         vm: &mut RgbVm,
+        inputs: TinyOrdMap<AssignmentType, SmallVec<VerifiableState>>,
         st: &Transition<Seal>,
     ) -> Result<(), ValidationError<Witness::Error>> {
         if st.contract_id != self.contract_id {
             return Err(ValidationError::InvalidContract(st.opid(), st.contract_id));
         }
-        vm.validate_transition(
-            st.transition_type,
-            &self.global,
-            &self.unspent,
-            &st.metadata,
-            &st.globals,
-            &st.assignments,
-        )?;
+        vm.validate_transition(st.transition_type, &self.global, &st.metadata, &st.globals, inputs, &st.assignments)?;
         self.process_state(st.opid(), &st.globals, &st.assignments)
     }
 

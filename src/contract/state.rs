@@ -58,12 +58,24 @@ impl Display for AttachId {
 
 impl_serde_baid64!(AttachId);
 
-/// Array of a field elements
+/// An element of a finite field used in verifiable state.
+pub trait FieldElement: Copy + Ord + Hash + Debug + StrictEncode + StrictDecode + StrictDumb + sealed::Sealed {}
+mod sealed {
+    pub trait Sealed {}
+    impl Sealed for u32 {}
+    impl Sealed for u64 {}
+    impl Sealed for u128 {}
+}
+impl FieldElement for u32 {}
+impl FieldElement for u64 {}
+impl FieldElement for u128 {}
+
+/// Array of a field elements.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(untagged))]
-pub enum FieldArray<F: Copy + Ord + Hash + Debug + StrictEncode + StrictDecode + StrictDumb> {
+pub enum FieldArray<F: FieldElement> {
     #[default]
     #[strict_type(tag = 0x00)]
     None,
@@ -75,6 +87,27 @@ pub enum FieldArray<F: Copy + Ord + Hash + Debug + StrictEncode + StrictDecode +
     Three(F, F, F),
     #[strict_type(tag = 0x04)]
     Four(F, F, F, F),
+}
+
+impl<F: FieldElement> FieldArray<F> {
+    pub fn get(&self, pos: u8) -> Option<F> {
+        match (*self, pos) {
+            (FieldArray::Single(el), 0)
+            | (FieldArray::Double(el, _), 0)
+            | (FieldArray::Three(el, _, _), 0)
+            | (FieldArray::Four(el, _, _, _), 0) => Some(el),
+
+            (FieldArray::Double(_, el), 1) | (FieldArray::Three(_, el, _), 1) | (FieldArray::Four(_, el, _, _), 1) => {
+                Some(el)
+            }
+
+            (FieldArray::Three(_, _, el), 2) | (FieldArray::Four(_, _, el, _), 2) => Some(el),
+
+            (FieldArray::Four(_, _, _, el), 3) => Some(el),
+
+            _ => None,
+        }
+    }
 }
 
 /// Verifiable state in a form of a field elements.
@@ -144,7 +177,6 @@ pub struct State {
     pub unverified: UnverifiedState,
 }
 
-// TODO: Add hash strategy to CommitEncode derive and use it here
 impl CommitEncode for State {
     type CommitmentId = StrictHash;
 
@@ -278,14 +310,7 @@ pub struct Assign<Seal: RgbSeal> {
 }
 
 impl<Seal: RgbSeal> Assign<Seal> {
-    pub fn new(seal: Seal, state: VerifiableState) -> Self {
-        Self {
-            seal,
-            state,
-            lock: none!(),
-            fallback: none!(),
-        }
-    }
+    pub fn new(seal: Seal, state: VerifiableState) -> Self { Self { seal, state, lock: none!(), fallback: none!() } }
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From)]
@@ -334,6 +359,13 @@ impl<Seal: RgbSeal> DerefMut for Assignments<Seal> {
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
 }
 
+impl<'a, Seal: RgbSeal> IntoIterator for &'a Assignments<Seal> {
+    type Item = (&'a AssignmentType, &'a TypedAssigns<Seal>);
+    type IntoIter = btree_map::Iter<'a, AssignmentType, TypedAssigns<Seal>>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+}
+
 impl<Seal: RgbSeal> Assignments<Seal> {
     pub fn all(&self) -> impl Iterator<Item = (AssignmentType, u16, &Assign<Seal>)> {
         self.0.iter().flat_map(|(ty, list)| {
@@ -346,7 +378,7 @@ impl<Seal: RgbSeal> Assignments<Seal> {
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
-#[display("0x{0:04X}")]
+#[display("{0:02X}#h")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(transparent))]
@@ -358,7 +390,7 @@ impl MetaType {
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
-#[display("0x{0:04X}")]
+#[display("{0:02X}#h")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(transparent))]
@@ -370,7 +402,7 @@ impl GlobalStateType {
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
-#[display("0x{0:04X}")]
+#[display("{0:02X}#h")]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(transparent))]
