@@ -27,21 +27,6 @@ pub use state::{
 
 use crate::LIB_NAME_RGB_COMMIT;
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[display(lowercase)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(rename_all = "camelCase"))]
-#[repr(u8)]
-pub enum Layer1 {
-    #[strict_type(dumb)]
-    Bitcoin = 0,
-    Liquid = 1,
-
-    BitcoinTest = 0xF0,
-    LiquidTest = 0xF1,
-}
-
 mod seal {
     use std::fmt::{Debug, Display};
 
@@ -59,6 +44,13 @@ mod seal {
         + StrictDumb
         + CommitEncode<CommitmentId: Into<Bytes32>>
     {
+        /// Seal parameters must commit to:
+        /// - used layer 1
+        /// - used hash functions (in witness)
+        /// - used witness ordering algorithm (including PoW etc.)
+        type Params: Copy + Ord + Debug + Display + StrictEncode + StrictDecode + StrictDumb;
+
+        fn params() -> Self::Params;
     }
 }
 

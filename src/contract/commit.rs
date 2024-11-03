@@ -151,7 +151,8 @@ impl<Seal: RgbSeal> CommitEncode for Genesis<Seal> {
 
     fn commit_encode(&self, e: &mut CommitEngine) {
         e.commit_to_serialized(&self.schema.schema_id());
-        e.commit_to_serialized(&self.header);
+        e.commit_to_serialized(&self.seals);
+        e.commit_to_hash(&self.header);
         e.commit_to_merkle(&self.metadata);
         e.commit_to_merkle(&self.globals);
         e.commit_to_merkle(&self.assignments);
@@ -205,10 +206,8 @@ impl MerkleLeaves for GlobalState {
     fn merkle_leaves(&self) -> Self::LeafIter<'_> {
         self.iter()
             .flat_map(|(ty, list)| {
-                list.iter().map(|val| GlobalCommitment {
-                    ty: *ty,
-                    state: val.commit_id(),
-                })
+                list.iter()
+                    .map(|val| GlobalCommitment { ty: *ty, state: val.commit_id() })
             })
             .collect::<Vec<_>>()
             .into_iter()
@@ -231,10 +230,7 @@ impl MerkleLeaves for Metadata {
 
     fn merkle_leaves(&self) -> Self::LeafIter<'_> {
         self.iter()
-            .map(|(ty, state)| MetaCommitment {
-                ty: *ty,
-                state: state.commit_id(),
-            })
+            .map(|(ty, state)| MetaCommitment { ty: *ty, state: state.commit_id() })
             .collect::<Vec<_>>()
             .into_iter()
     }

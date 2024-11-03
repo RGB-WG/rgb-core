@@ -18,7 +18,7 @@ use strict_encoding::stl::AsciiPrintable;
 use strict_encoding::{RString, StrictDeserialize, StrictDumb, StrictEncode, StrictSerialize};
 
 use crate::{
-    AssignmentType, Assignments, ContractId, Ffv, GlobalState, Layer1, Metadata, OpId, RgbSeal, Schema, SchemaId,
+    AssignmentType, Assignments, ContractId, Ffv, GlobalState, Metadata, OpId, RgbSeal, Schema, SchemaId,
     LIB_NAME_RGB_COMMIT,
 };
 
@@ -85,13 +85,7 @@ pub struct Input {
 }
 
 impl Input {
-    pub fn with(prev_out: Opout) -> Input {
-        Input {
-            prev_out,
-            fallback: default!(),
-            reserved: default!(),
-        }
-    }
+    pub fn with(prev_out: Opout) -> Input { Input { prev_out, fallback: default!(), reserved: default!() } }
 }
 
 /// An ASCII printable string up to 4096 chars representing identity of the developer.
@@ -127,17 +121,22 @@ impl Identity {
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = StrictHash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(rename_all = "camelCase"))]
 pub struct GenesisHeader {
     pub ffv: Ffv,
     pub flags: ReservedBytes<1, 0>,
     pub timestamp: i64,
     pub issuer: Identity,
-    pub layer1: Layer1,
-    // TODO: Select seal closing method per blockchain
-    // TODO: Select hashing algorithm
-    // TODO: Select MPC hashing algorithm
-    // TODO: Select PoW algorithm
+
+    /// Cryptographic hash functions used for operation commitments.
+    ///
+    /// The only supported function at this moment is SHA-256, encoded by a zero byte in this
+    /// position.
+    ///
+    /// Future support for zk-STARKs would require supporting more zk-friendly hash functions.
+    pub chf: ReservedBytes<1>,
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
@@ -146,16 +145,20 @@ pub struct GenesisHeader {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(bound = "Seal: serde::Serialize + serde::de::DeserializeOwned")
+    serde(bound = "Seal: serde::Serialize + serde::de::DeserializeOwned, Seal::Params: serde::Serialize + \
+                   serde::de::DeserializeOwned")
 )]
 pub struct Genesis<Seal: RgbSeal> {
     // Schema
     pub schema: Schema,
 
-    // Header
+    // Single-use seals
+    pub seals: Seal::Params,
+
+    // Contract header
     pub header: GenesisHeader,
 
-    // Data
+    // Genesis contract data
     pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<Seal>,

@@ -5,6 +5,7 @@ version = 3
 [[package]]
 name = "aluvm"
 version = "0.12.0-nightly-zkaluvm.1"
+source = "git+https://github.com/AluVM/rust-aluvm?branch=v0.12#2d85a0a645f6f23e981aac8a03f06a023f3d78d5"
 dependencies = [
  "amplify",
  "ascii-armor",

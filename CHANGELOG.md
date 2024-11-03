@@ -21,13 +21,15 @@ v0.12.0
 - Make RGB STARKy
 - Remove bitcoin dependencies
 - Remove schema verification
-- Remove anchors
-- Remove secret seals, make types generic over seals
-- Remove transition bundles
+- Fully abstract single-use seal protocol:
+    - Remove layer1 information
+    - Remove anchors
+    - Remove secret seals, make types generic over seals
+    - Remove transition bundles
+    - Delegate consensus ordering to single-use seal protocols
 - Remove valencies and redeems, extension graphs
 - Require state transitions to have at least 1 input
 - Make schema part of genesis data
-- Refactor consensus ordering into v2 (RCP-241101A)
 
 TODO:
 

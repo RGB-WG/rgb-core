@@ -148,7 +148,7 @@ impl<Seal: RgbSeal, Witness: RgbWitness<Seal>> VerifiedContractState<Seal, Witne
     /// [`ContractRepository::transitions`] do provide the same transition twice, or transitions
     /// which were already processed in previous calls to [`Self::extend`] and [`Self::with`]
     /// methods.
-    // TODO: Find a way to make operation idempotent.
+    // TODO: v0.13 Find a way to make operation idempotent.
     pub fn extend(
         &mut self,
         schema: &Schema,
@@ -240,6 +240,11 @@ impl<Seal: RgbSeal, Witness: RgbWitness<Seal>> VerifiedContractState<Seal, Witne
     ) -> Result<(), ValidationError<Witness::Error>> {
         debug_assert!(self.global.is_empty());
         debug_assert!(self.unspent.is_empty());
+        assert_eq!(
+            genesis.seals,
+            Seal::params(),
+            "generic seal type used for contract doesn't match seal type of the contract"
+        );
         vm.validate_genesis(&genesis.metadata, &genesis.globals, &genesis.assignments)?;
         self.process_state(genesis.opid(), &genesis.globals, &genesis.assignments)
     }

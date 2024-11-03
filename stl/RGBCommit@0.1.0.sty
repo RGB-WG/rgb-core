@@ -1,5 +1,5 @@
 {-
-  Id: stl:FXOB86iA-hCXBKOy-mW4W2yD-P!ohCRn-LjKDHjc-9NTAza8#camel-maze-paprika
+  Id: stl:3k0is7mk-fNBItPL-$J5qm6f-DqHVi5S-f5tFxi2-TvDMaNg#forest-betty-snake
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -90,15 +90,16 @@ data FieldArrayu64     : none ()
                        | three (U64, U64, U64)
                        | four (U64, U64, U64, U64)
 
-@mnemonic(cargo-isotope-minute)
+@mnemonic(report-garden-ibiza)
 data GenesisHeader     : ffv Ffv
                        , flags CommitVerify.ReservedBytes1
                        , timestamp I64
                        , issuer Identity
-                       , layer1 Layer1
+                       , chf CommitVerify.ReservedBytes1
 
-@mnemonic(rent-image-gallery)
+@mnemonic(torch-plate-whiskey)
 data GenesisSeal       : schema Schema
+                       , seals [Byte ^ 8]
                        , header GenesisHeader
                        , metadata Metadata
                        , globals GlobalState
@@ -129,10 +130,6 @@ data Input             : prevOut Opout
 
 @mnemonic(taboo-lazarus-sushi)
 data Inputs            : {Input ^ 1..}
-
-@mnemonic(torso-falcon-engine)
-data Layer1            : bitcoin | liquid | bitcoinTest#240 | liquidTest
-
 
 @mnemonic(greek-object-canal)
 data MetaType          : U8

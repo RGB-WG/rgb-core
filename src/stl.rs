@@ -11,7 +11,7 @@
 use std::convert::Infallible;
 
 pub use aluvm::stl::aluvm_stl;
-use amplify::Bytes32;
+use amplify::{Bytes, Bytes32};
 use commit_verify::stl::commit_verify_stl;
 use commit_verify::StrictHash;
 use single_use_seals::SealWitness;
@@ -26,9 +26,9 @@ use crate::{
 };
 
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_COMMIT: &str = "stl:FXOB86iA-hCXBKOy-mW4W2yD-P!ohCRn-LjKDHjc-9NTAza8#camel-maze-paprika";
+pub const LIB_ID_RGB_COMMIT: &str = "stl:3k0is7mk-fNBItPL-$J5qm6f-DqHVi5S-f5tFxi2-TvDMaNg#forest-betty-snake";
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_LOGIC: &str = "stl:Mso0b3qY-cD$RcRA-zi2bi7S-u0S5vlS-8PGeWIy-w4$v28k#parker-proton-wheel";
+pub const LIB_ID_RGB_LOGIC: &str = "stl:2FQP0Xw7-ItW5QB0-!pl7VIg-W3oCCLu-bZzf1dQ-epDI7fw#segment-depend-denver";
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(AsSlice, Display, FromStr, Hex)]
@@ -37,7 +37,11 @@ pub const LIB_ID_RGB_LOGIC: &str = "stl:Mso0b3qY-cD$RcRA-zi2bi7S-u0S5vlS-8PGeWIy
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = StrictHash)]
 pub struct Seal(Bytes32);
-impl RgbSeal for Seal {}
+impl RgbSeal for Seal {
+    type Params = Bytes<8>;
+
+    fn params() -> Self::Params { zero!() }
+}
 impl StrictType for Seal {
     const STRICT_LIB_NAME: &'static str = LIB_NAME_RGB_COMMIT;
     fn strict_name() -> Option<TypeName> { None }
