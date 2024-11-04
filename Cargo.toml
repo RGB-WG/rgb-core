@@ -22,13 +22,13 @@ name = "rgbcore-stl"
 required-features = ["stl"]
 
 [dependencies]
-amplify = "~4.7.0"
-baid64 = "~0.2.2"
-strict_encoding = "~2.7.1"
-strict_types = "~2.7.2" # TODO: Make strict types optional, used only in STL
-aluvm = { version = "~0.12.0-nightly", features = ["zk-aluvm"] }
-commit_verify = { version = "~0.12.0-nightly", features = ["derive"] }
-single_use_seals = "~0.12.0-nightly"
+amplify = "~4.8.0"
+baid64 = "~0.3.0"
+strict_encoding = "~2.8.0"
+strict_types = "~2.8.0" # TODO: Make strict types optional, used only in STL
+aluvm = { version = "~0.12.0-alpha.1", features = ["zk-aluvm"] }
+commit_verify = { version = "~0.12.0-alpha.2", features = ["derive"] }
+single_use_seals = "~0.12.0-alpha.2"
 serde = { version = "1", features = ["derive"], optional = true }
 
 [features]
@@ -55,7 +55,4 @@ wasm-bindgen-test = "0.3"
 features = ["all"]
 
 [patch.crates-io]
-amplify = { git = "https://github.com/rust-amplify/rust-amplify", branch = "develop" }
-commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
-single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
 aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "v0.12" }

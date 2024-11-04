@@ -26,9 +26,9 @@ use crate::{
 };
 
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_COMMIT: &str = "stl:3k0is7mk-fNBItPL-$J5qm6f-DqHVi5S-f5tFxi2-TvDMaNg#forest-betty-snake";
+pub const LIB_ID_RGB_COMMIT: &str = "stl:3k0is7mk-fNBItPL-.J5qm6f-DqHVi5S-f5tFxi2-TvDMaNg#forest-betty-snake";
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_LOGIC: &str = "stl:2FQP0Xw7-ItW5QB0-!pl7VIg-W3oCCLu-bZzf1dQ-epDI7fw#segment-depend-denver";
+pub const LIB_ID_RGB_LOGIC: &str = "stl:2FQP0Xw7-ItW5QB0-~pl7VIg-W3oCCLu-bZzf1dQ-epDI7fw#segment-depend-denver";
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(AsSlice, Display, FromStr, Hex)]
