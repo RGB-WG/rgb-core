@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.12.0-nightly"
+version = "0.12.0-beta.1"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -26,7 +26,7 @@ amplify = "~4.8.0"
 baid64 = "~0.3.0"
 strict_encoding = "~2.8.0"
 strict_types = "~2.8.0" # TODO: Make strict types optional, used only in STL
-aluvm = { version = "~0.12.0-alpha.1", features = ["zk-aluvm"] }
+aluvm = { version = "~0.12.0-beta.1", features = ["zk-aluvm"] }
 commit_verify = { version = "~0.12.0-alpha.2", features = ["derive"] }
 single_use_seals = "~0.12.0-alpha.2"
 serde = { version = "1", features = ["derive"], optional = true }
@@ -53,6 +53,3 @@ wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = ["all"]
-
-[patch.crates-io]
-aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "v0.12" }

@@ -4,8 +4,9 @@ version = 3
 
 [[package]]
 name = "aluvm"
-version = "0.12.0-alpha.1"
-source = "git+https://github.com/AluVM/rust-aluvm?branch=v0.12#71db1b700e060dfda00403a551c9127dec31ad02"
+version = "0.12.0-beta.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2505dfdc1b6c3455b65b212c50a005ebd6c1bfb057e0536de33172620c6e0635"
 dependencies = [
  "amplify",
  "ascii-armor",
@@ -392,7 +393,7 @@ dependencies = [
 
 [[package]]
 name = "rgb-core"
-version = "0.12.0-nightly"
+version = "0.12.0-beta.1"
 dependencies = [
  "aluvm",
  "amplify",
