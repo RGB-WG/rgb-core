@@ -20,9 +20,9 @@ pub use operations::{
 pub use schema::{Schema, Validators, VmSchema, SCHEMA_LIBS_MAX_COUNT};
 pub use seal::RgbSeal;
 pub use state::{
-    Assign, AssignmentType, Assignments, AttachId, FieldArray, GlobalState, GlobalStateType, GlobalValues, MetaType,
-    Metadata, MetadataError, State, TypedAssigns, UnverifiedState, VerifiableState, GLOBAL_STATE_MAX_ITEMS,
-    STATE_DATA_MAX_LEN, TYPED_ASSIGNMENTS_MAX_ITEMS,
+    Assign, AssignmentType, Assignments, AttachId, GlobalState, GlobalStateType, GlobalValues, MetaType, Metadata,
+    MetadataError, State, TypedAssigns, UnverifiedState, VerifiableState, GLOBAL_STATE_MAX_ITEMS, STATE_DATA_MAX_LEN,
+    TYPED_ASSIGNMENTS_MAX_ITEMS,
 };
 
 use crate::LIB_NAME_RGB_COMMIT;

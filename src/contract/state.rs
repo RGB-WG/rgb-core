@@ -58,81 +58,46 @@ impl Display for AttachId {
 
 impl_serde_baid64!(AttachId);
 
-/// An element of a finite field used in verifiable state.
-pub trait FieldElement: Copy + Ord + Hash + Debug + StrictEncode + StrictDecode + StrictDumb + sealed::Sealed {}
-mod sealed {
-    pub trait Sealed {}
-    impl Sealed for u32 {}
-    impl Sealed for u64 {}
-    impl Sealed for u128 {}
-}
-impl FieldElement for u32 {}
-impl FieldElement for u64 {}
-impl FieldElement for u128 {}
-
-/// Array of a field elements.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(untagged))]
-pub enum FieldArray<F: FieldElement> {
-    #[default]
-    #[strict_type(tag = 0x00)]
-    None,
-    #[strict_type(tag = 0x01)]
-    Single(F),
-    #[strict_type(tag = 0x02)]
-    Double(F, F),
-    #[strict_type(tag = 0x03)]
-    Three(F, F, F),
-    #[strict_type(tag = 0x04)]
-    Four(F, F, F, F),
-}
-
-impl<F: FieldElement> FieldArray<F> {
-    pub fn get(&self, pos: u8) -> Option<F> {
-        match (*self, pos) {
-            (FieldArray::Single(el), 0)
-            | (FieldArray::Double(el, _), 0)
-            | (FieldArray::Three(el, _, _), 0)
-            | (FieldArray::Four(el, _, _, _), 0) => Some(el),
-
-            (FieldArray::Double(_, el), 1) | (FieldArray::Three(_, el, _), 1) | (FieldArray::Four(_, el, _, _), 1) => {
-                Some(el)
-            }
-
-            (FieldArray::Three(_, _, el), 2) | (FieldArray::Four(_, _, el, _), 2) => Some(el),
-
-            (FieldArray::Four(_, _, _, el), 3) => Some(el),
-
-            _ => None,
-        }
-    }
-}
+pub type Fiel128 = u128;
 
 /// Verifiable state in a form of a field elements.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = StrictHash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type", content = "elements"))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(untagged))]
 pub enum VerifiableState {
-    /// Element of a field representable with less than 32 bits of data in little-endian format.
-    #[strict_type(tag = 0x10)]
-    Le32bit(FieldArray<u32>),
-
-    /// Element of a field representable with less than 64 bits of data in little-endian format.
-    #[strict_type(tag = 0x11)]
-    Le64bit(FieldArray<u64>),
-
-    /// Element of a field representable with less than 128 bits of data in little-endian format.
-    #[strict_type(tag = 0x12)]
-    Le128Bit(FieldArray<u128>),
+    #[default]
+    #[strict_type(tag = 0x00)]
+    None,
+    #[strict_type(tag = 0x01)]
+    Single(Fiel128),
+    #[strict_type(tag = 0x02)]
+    Double(Fiel128, Fiel128),
+    #[strict_type(tag = 0x03)]
+    Three(Fiel128, Fiel128, Fiel128),
+    #[strict_type(tag = 0x04)]
+    Four(Fiel128, Fiel128, Fiel128, Fiel128),
 }
 
-impl StrictDumb for VerifiableState {
-    fn strict_dumb() -> Self { Self::Le32bit(FieldArray::Single(0)) }
+impl VerifiableState {
+    pub fn get(&self, pos: u8) -> Option<Fiel128> {
+        match (*self, pos) {
+            (Self::Single(el), 0)
+            | (Self::Double(el, _), 0)
+            | (Self::Three(el, _, _), 0)
+            | (Self::Four(el, _, _, _), 0) => Some(el),
+
+            (Self::Double(_, el), 1) | (Self::Three(_, el, _), 1) | (Self::Four(_, el, _, _), 1) => Some(el),
+
+            (Self::Three(_, _, el), 2) | (Self::Four(_, _, el, _), 2) => Some(el),
+
+            (Self::Four(_, _, _, el), 3) => Some(el),
+
+            _ => None,
+        }
+    }
 }
 
 /// Binary state data, serialized using strict type notation from the structured data type.

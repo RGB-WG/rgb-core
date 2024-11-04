@@ -31,11 +31,11 @@ pub mod stl;
 
 pub use commit_verify::ReservedBytes;
 pub use contract::{
-    Assign, AssignmentType, Assignments, AttachId, ContractId, Extension, ExtensionType, Ffv, FieldArray, Genesis,
-    GenesisHeader, GlobalState, GlobalStateType, GlobalValues, Identity, Input, Inputs, MetaType, Metadata,
-    MetadataError, OpId, Opout, RgbSeal, Schema, SchemaId, State, Transition, TransitionType, TypedAssigns,
-    UnverifiedState, Validators, VerifiableState, VmSchema, GLOBAL_STATE_MAX_ITEMS, SCHEMA_LIBS_MAX_COUNT,
-    STATE_DATA_MAX_LEN, TYPED_ASSIGNMENTS_MAX_ITEMS,
+    Assign, AssignmentType, Assignments, AttachId, ContractId, Extension, ExtensionType, Ffv, Genesis, GenesisHeader,
+    GlobalState, GlobalStateType, GlobalValues, Identity, Input, Inputs, MetaType, Metadata, MetadataError, OpId,
+    Opout, RgbSeal, Schema, SchemaId, State, Transition, TransitionType, TypedAssigns, UnverifiedState, Validators,
+    VerifiableState, VmSchema, GLOBAL_STATE_MAX_ITEMS, SCHEMA_LIBS_MAX_COUNT, STATE_DATA_MAX_LEN,
+    TYPED_ASSIGNMENTS_MAX_ITEMS,
 };
 pub use validate::{
     ContractRepository, GlobalRef, RgbInstr, RgbVm, RgbWitness, ValidationError, VerifiedContractState, VmContext,

@@ -144,23 +144,11 @@ impl Microcode for aluvm::Core<LibId> {
     }
 
     fn ldfe(&mut self, state: VerifiableState, dst: RegA, el: u8) -> bool {
-        match (state, dst.a()) {
-            (VerifiableState::Le32bit(arr), A::A32) => {
-                let Some(fiel) = arr.get(el) else { return false };
-                self.set_a32(dst.idx(), fiel);
-                true
-            }
-            (VerifiableState::Le64bit(arr), A::A64) => {
-                let Some(fiel) = arr.get(el) else { return false };
-                self.set_a64(dst.idx(), fiel);
-                true
-            }
-            (VerifiableState::Le128Bit(arr), A::A128) => {
-                let Some(fiel) = arr.get(el) else { return false };
-                self.set_a128(dst.idx(), fiel);
-                true
-            }
-            _ => false,
+        if dst.a() != A::A128 {
+            return false;
         }
+        let Some(fiel) = state.get(el) else { return false };
+        self.set_a128(dst.idx(), fiel);
+        true
     }
 }

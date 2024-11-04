@@ -1,5 +1,5 @@
 {-
-  Id: stl:2FQP0Xw7-ItW5QB0-~pl7VIg-W3oCCLu-bZzf1dQ-epDI7fw#segment-depend-denver
+  Id: stl:SCtqOrUy-niXJlxu-9gqayQs-r5KKXwA-TI2mus.-e3rhnYI#marco-charter-dominic
   Name: RGBLogic
   Version: 0.1.0
   Description: Consensus logic layer for RGB smart contracts
@@ -11,30 +11,27 @@
 @context
 typelib RGBLogic
 
-import CommitVerify#escort-between-doctor
-  use ReservedBytes1#origin-roger-relax
-  use ReservedBytes2#florida-libra-circus
-
-import RGBCommit#forest-betty-snake
+import RGBCommit#annual-factor-object
   use GlobalStateType#script-pasta-detail
-  use VerifiableState#cobalt-relax-target
-  use FieldArrayu64#gold-hawaii-gregory
-  use FieldArrayu128#stamp-plastic-hope
-  use FieldArrayu32#spark-balloon-result
+  use VerifiableState#shampoo-igloo-spell
+  use AssignSeal#cabaret-dream-william
   use SchemaId#ramirez-patron-simon
   use OpId#picnic-single-gloria
   use ContractId#uniform-welcome-papa
   use Opout#vortex-lopez-parking
   use AssignmentType#pilot-finland-betty
-  use AssignSeal#origin-soviet-scholar
+
+import CommitVerify#escort-between-doctor
+  use ReservedBytes1#origin-roger-relax
+  use ReservedBytes2#florida-libra-circus
 
 
-@mnemonic(solo-vital-deluxe)
+@mnemonic(almond-vampire-navy)
 data GlobalRef         : opid RGBCommit.OpId
                        , pos U16
                        , state RGBCommit.VerifiableState
 
-@mnemonic(song-nectar-trivial)
+@mnemonic(legacy-jimmy-bagel)
 data VerifiedContractStateSealWitness : contractId RGBCommit.ContractId
                        , schemaId RGBCommit.SchemaId
                        , globalLimits {RGBCommit.GlobalStateType -> ^ ..0xff U16}
