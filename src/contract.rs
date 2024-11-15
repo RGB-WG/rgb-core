@@ -14,13 +14,13 @@ use core::str::FromStr;
 use amplify::confinement::SmallString;
 use amplify::{Bytes32, Wrapper};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
-use bp::dbc;
 use commit_verify::{mpc, CommitmentId, DigestExt, ReservedBytes, Sha256};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use ultrasonic::{Codex, Operation};
 
 use crate::LIB_NAME_RGB_CORE;
 
+#[cfg(feature = "bp")]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_CORE, tags = custom, dumb = Self::Bitcoin(strict_dumb!()))]
@@ -33,15 +33,16 @@ use crate::LIB_NAME_RGB_CORE;
 pub enum BpLayer {
     #[strict_type(tag = 0x00)]
     #[display("bitcoin:{0}")]
-    Bitcoin(dbc::Method),
+    Bitcoin(bp::dbc::Method),
 
     #[strict_type(tag = 0x01)]
     #[display("liquid:{0}")]
-    Liquid(dbc::Method),
+    Liquid(bp::dbc::Method),
 }
 
 pub trait Layer1: Copy + Eq + StrictDumb + StrictEncode + StrictDecode + Debug + Display {}
 
+#[cfg(feature = "bp")]
 impl Layer1 for BpLayer {}
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -50,7 +51,7 @@ impl Layer1 for BpLayer {}
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_CORE)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(rename_all = "camelCase"))]
-pub struct Contract<L1: Layer1 = BpLayer> {
+pub struct Contract<L1: Layer1> {
     pub layer1: L1,
     pub testnet: bool,
     // aligning to 16 byte edge

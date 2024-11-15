@@ -10,31 +10,36 @@
 
 use core::borrow::Borrow;
 
-use amplify::ByteArray;
-use bp::seals::TxoSeal;
-use bp::{dbc, Txid};
-use commit_verify::{mpc, CommitId};
-use single_use_seals::{SealError, SealWitness};
+#[cfg(feature = "bp")]
+use commit_verify::mpc;
+use commit_verify::CommitId;
+use single_use_seals::{ClientSideWitness, PublishedWitness, SealError, SealWitness, SingleUseSeal};
 use ultrasonic::{CallError, CellAddr, Codex, LibRepo, Memory, Operation, Opid};
 
 use crate::ContractId;
 
-pub trait ContractState<D: dbc::Proof>: Memory {
-    fn read_seal(&self, addr: CellAddr) -> Option<TxoSeal<D>>;
+pub trait FromContractOpid: Sized {
+    fn from_contract_opid(contract_id: ContractId, opid: Opid) -> Self;
+}
+
+pub trait ContractState<Seal: SingleUseSeal>: Memory {
+    fn read_seal(&self, addr: CellAddr) -> Option<Seal>;
     fn apply(&self, op: &Operation);
 }
 
-pub trait ContractStash<D: dbc::Proof> {
+pub trait ContractStash<Seal: SingleUseSeal> {
     fn contract_id(&self) -> ContractId;
     fn codex(&self) -> impl Borrow<Codex>;
     fn operations(&self) -> impl Iterator<Item = impl Borrow<Operation>>;
-    fn witness(&self, opid: Opid) -> Option<SealWitness<TxoSeal<D>>>;
+    fn witness(&self, opid: Opid) -> Option<SealWitness<Seal>>;
     fn lib_repo(&self) -> &impl LibRepo;
 }
 
-pub trait ContractVerify<D: dbc::Proof>: ContractStash<D> {
+pub trait ContractVerify<Seal: SingleUseSeal>: ContractStash<Seal>
+where <Seal::CliWitness as ClientSideWitness>::Message: FromContractOpid
+{
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
-    fn evaluate(&self, state: &mut impl ContractState<D>) -> Result<(), VerificationError<D>> {
+    fn evaluate(&self, state: &mut impl ContractState<Seal>) -> Result<(), VerificationError<Seal>> {
         let codex = self.codex();
         let lib_repo = self.lib_repo();
         let contract_id = self.contract_id();
@@ -54,10 +59,10 @@ pub trait ContractVerify<D: dbc::Proof>: ContractStash<D> {
                 closed_seals.push(seal);
             }
 
-            let message = (contract_id.into(), mpc::Message::from_byte_array(opid.to_byte_array()));
+            let message = <Seal::CliWitness as ClientSideWitness>::Message::from_contract_opid(contract_id, opid);
             witness
                 .verify_seals_closing(closed_seals, message)
-                .map_err(|e| VerificationError::Seal(witness.published.txid(), opid, e))?;
+                .map_err(|e| VerificationError::Seal(witness.published.pub_id(), opid, e))?;
 
             codex.borrow().verify(op, state, lib_repo)?;
             state.apply(op);
@@ -67,20 +72,30 @@ pub trait ContractVerify<D: dbc::Proof>: ContractStash<D> {
     }
 }
 
-impl<D: dbc::Proof, C: ContractStash<D>> ContractVerify<D> for C {}
+impl<Seal: SingleUseSeal, C: ContractStash<Seal>> ContractVerify<Seal> for C where <Seal::CliWitness as ClientSideWitness>::Message: FromContractOpid
+{}
 
-#[derive(Clone, Debug, Display, Error, From)]
+// TODO: Find a way to do Debug and Clone implementation
+#[derive(Display, From)]
 #[display(doc_comments)]
-pub enum VerificationError<D: dbc::Proof> {
+pub enum VerificationError<Seal: SingleUseSeal> {
     /// no witness known for the operation {0}.
     NoWitness(Opid),
 
     /// single-use seals are not closed properly with witness {0} for operation {1}.
     ///
     /// Details: {2}
-    Seal(Txid, Opid, SealError<TxoSeal<D>>),
+    Seal(<Seal::PubWitness as PublishedWitness<Seal>>::PubId, Opid, SealError<Seal>),
 
     #[from]
     #[display(inner)]
     Vm(CallError),
+}
+
+#[cfg(feature = "bp")]
+impl FromContractOpid for (mpc::ProtocolId, mpc::Message) {
+    fn from_contract_opid(contract_id: ContractId, opid: Opid) -> Self {
+        use amplify::ByteArray;
+        (mpc::ProtocolId::from(contract_id), mpc::Message::from_byte_array(opid.to_byte_array()))
+    }
 }

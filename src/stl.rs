@@ -16,10 +16,10 @@ use strict_types::{CompileError, TypeLib};
 use ultrasonic::stl::{aluvm_stl, finite_field_stl, usonic_stl};
 
 use crate::contract::Contract;
-use crate::LIB_NAME_RGB_CORE;
+use crate::{BpLayer, LIB_NAME_RGB_CORE};
 
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_CORE: &str = "stl:7yVHu5r6-pqA4gPo-TcpdLd6-hEXC3ho-O4qXTaZ-eaaiS.U#lima-guru-average";
+pub const LIB_ID_RGB_CORE: &str = "stl:bXLp49bi-59fV~Oy-.vzNYUR-AHHJtJD-HRrejYO-E41kd.A#hobby-salmon-sample";
 
 fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB_CORE), tiny_bset! {
@@ -31,7 +31,7 @@ fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
         usonic_stl().to_dependency(),
         bp_core_stl().to_dependency(),
     })
-    .transpile::<Contract>()
+    .transpile::<Contract<BpLayer>>()
     .compile()
 }
 

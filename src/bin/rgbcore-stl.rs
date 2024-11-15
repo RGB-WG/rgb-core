@@ -90,6 +90,6 @@ Bundles vesper lexicon=types+commitments
     .unwrap();
     let layout = Contract::<BpLayer>::commitment_layout();
     writeln!(file, "{layout}").unwrap();
-    let tt = sys.type_tree("RGBCore.Contract").unwrap();
+    let tt = sys.type_tree("RGBCore.ContractBpLayer").unwrap();
     writeln!(file, "{tt}").unwrap();
 }

@@ -8,9 +8,9 @@
 Bundles vesper lexicon=types+commitments
 
 commitment ContractId, hasher SHA256, tagged urn:lnp-bp:rgb:contract#2024-11-14
-  serialized Contract
+  serialized ContractBpLayer
 
-rec Contract
+rec ContractBpLayer
   union layer1, BpLayer
   enum testnet, Bool, false 0, true 1
   is salt, U64
