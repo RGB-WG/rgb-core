@@ -1,5 +1,5 @@
 {-
-  Id: stl:RNTqHHwk-gxYDVut-Xf2DbjI-MZOfgvS-i.PciHi-zvbad9M#school-aspect-mineral
+  Id: stl:7yVHu5r6-pqA4gPo-TcpdLd6-hEXC3ho-O4qXTaZ-eaaiS.U#lima-guru-average
   Name: RGBCore
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -18,6 +18,7 @@ import FiniteField#tomato-jeep-thomas
   use Fe128#reserve-source-patrol
 
 import CommitVerify#escort-between-doctor
+  use ReservedBytes13#chief-pattern-evita
   use ReservedBytes2#florida-libra-circus
   use ReservedBytes8#rudolf-tape-adrian
 
@@ -43,9 +44,10 @@ import UltraSONIC#wizard-volume-arizona
 data BpLayer           : bitcoin BPCore.Method
                        | liquid BPCore.Method
 
-@mnemonic(mother-sultan-opera)
+@mnemonic(donor-morris-yoga)
 data Contract          : layer1 BpLayer
                        , testnet Std.Bool
+                       , reserved CommitVerify.ReservedBytes13
                        , salt U64
                        , timestamp I64
                        , issuer [Unicode]

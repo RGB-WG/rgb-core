@@ -15,7 +15,7 @@ use amplify::confinement::SmallString;
 use amplify::{Bytes32, Wrapper};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use bp::dbc;
-use commit_verify::{mpc, CommitmentId, DigestExt, Sha256};
+use commit_verify::{mpc, CommitmentId, DigestExt, ReservedBytes, Sha256};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use ultrasonic::{Codex, Operation};
 
@@ -53,8 +53,12 @@ impl Layer1 for BpLayer {}
 pub struct Contract<L1: Layer1 = BpLayer> {
     pub layer1: L1,
     pub testnet: bool,
+    // aligning to 16 byte edge
+    #[cfg_attr(feature = "serde", serde(skip))]
+    pub reserved: ReservedBytes<13>,
     pub salt: u64,
     pub timestamp: i64,
+    // ^^ above is a fixed-size contract header of 32 bytes
     pub issuer: SmallString,
     pub codex: Codex,
     pub initial: Operation,
