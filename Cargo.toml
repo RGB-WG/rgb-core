@@ -35,13 +35,14 @@ serde = { version = "1", features = ["derive"], optional = true }
 [features]
 default = []
 all = ["stl", "serde"]
-stl = ["commit_verify/stl", "strict_types/armor"]
+stl = ["commit_verify/stl", "strict_types/armor", "ultrasonic/stl", "bp-core/stl"]
 serde = [
     "dep:serde",
     "amplify/serde",
     "strict_types/serde",
     "commit_verify/serde",
-    "ultrasonic/serde"
+    "ultrasonic/serde",
+    "bp-core/serde"
 ]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -58,8 +59,7 @@ features = ["all"]
 [patch.crates-io]
 aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "v0.12" }
 zk-aluvm = { git = "https://github.com/AluVM/zk-aluvm" }
-# ultrasonic = { git = "https://github.com/AluVM/ultrasonic" }
-ultrasonic = { path = "../ultrasonic" }
+ultrasonic = { git = "https://github.com/AluVM/ultrasonic" }
 commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
 single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
 bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "v0.12" }

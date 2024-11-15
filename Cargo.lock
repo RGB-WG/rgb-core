@@ -5,7 +5,7 @@ version = 3
 [[package]]
 name = "aluvm"
 version = "0.12.0-beta.1"
-source = "git+https://github.com/AluVM/rust-aluvm?branch=v0.12#693106575ee67ebd4c5d7153490e7bfbbf8f5877"
+source = "git+https://github.com/AluVM/rust-aluvm?branch=v0.12#7457bbd746152d95c674cb79ed8801969606cb09"
 dependencies = [
  "amplify",
  "baid64 0.3.0",
@@ -187,7 +187,9 @@ dependencies = [
  "chrono",
  "commit_verify",
  "secp256k1",
+ "serde",
  "strict_encoding",
+ "strict_types",
 ]
 
 [[package]]
@@ -201,8 +203,10 @@ dependencies = [
  "bp-seals",
  "commit_verify",
  "getrandom",
+ "serde",
  "single_use_seals",
  "strict_encoding",
+ "strict_types",
  "wasm-bindgen",
 ]
 
@@ -216,6 +220,7 @@ dependencies = [
  "bp-consensus",
  "commit_verify",
  "secp256k1",
+ "serde",
  "strict_encoding",
 ]
 
@@ -230,6 +235,7 @@ dependencies = [
  "bp-dbc",
  "commit_verify",
  "rand",
+ "serde",
  "single_use_seals",
  "strict_encoding",
 ]
@@ -617,6 +623,7 @@ dependencies = [
  "bitcoin_hashes",
  "rand",
  "secp256k1-sys",
+ "serde",
 ]
 
 [[package]]
@@ -853,7 +860,8 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "ultrasonic"
-version = "0.12.0-beta.1"
+version = "0.12.0-nightly"
+source = "git+https://github.com/AluVM/ultrasonic#f0feec8b43193365073e9d035e7d5d560f5c03bb"
 dependencies = [
  "amplify",
  "commit_verify",
@@ -1136,7 +1144,7 @@ dependencies = [
 [[package]]
 name = "zk-aluvm"
 version = "0.12.0-beta.1"
-source = "git+https://github.com/AluVM/zk-aluvm#1eb6a2e926ee0cd1caa9387ddf58901a306b1c5f"
+source = "git+https://github.com/AluVM/zk-aluvm#eb29f1df01fd3411dd00386e1430d4ba2f15ce55"
 dependencies = [
  "aluvm",
  "amplify",

@@ -8,22 +8,28 @@
 // Copyright (C) 2019-2024 LNP/BP Standards Association. All rights reserved.
 // Copyright (C) 2019-2024 Dr Maxim Orlovsky. All rights reserved.
 
+use bp::stl::bp_core_stl;
 use commit_verify::stl::commit_verify_stl;
 use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
+use ultrasonic::stl::{aluvm_stl, finite_field_stl, usonic_stl};
 
 use crate::contract::Contract;
 use crate::LIB_NAME_RGB_CORE;
 
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_CORE: &str = "stl:e34bLx8U-iXAiLoF-Uvz.lun-EMEGotf-uzLJwMs-EVsilEU#annual-factor-object";
+pub const LIB_ID_RGB_CORE: &str = "stl:PRMybadt-eNgHzbD-cYXKZJW-zUHwdNp-p9mWnyT-pbZWoFQ#oberon-ricardo-spell";
 
 fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB_CORE), tiny_bset! {
         std_stl().to_dependency(),
         strict_types_stl().to_dependency(),
         commit_verify_stl().to_dependency(),
+        aluvm_stl().to_dependency(),
+        finite_field_stl().to_dependency(),
+        usonic_stl().to_dependency(),
+        bp_core_stl().to_dependency(),
     })
     .transpile::<Contract>()
     .compile()

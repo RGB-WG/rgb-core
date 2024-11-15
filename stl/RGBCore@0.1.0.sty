@@ -1,0 +1,56 @@
+{-
+  Id: stl:PRMybadt-eNgHzbD-cYXKZJW-zUHwdNp-p9mWnyT-pbZWoFQ#oberon-ricardo-spell
+  Name: RGBCore
+  Version: 0.1.0
+  Description: Consensus commitment layer for RGB smart contracts
+  Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+  Copyright (C) 2023-2024 LNP/BP Standards Association. All rights reserved.
+  License: Apache-2.0
+-}
+
+@context
+typelib RGBCore
+
+import BPCore#russian-granite-campus
+  use Method#bali-boris-plasma
+
+import FiniteField#tomato-jeep-thomas
+  use Fe128#reserve-source-patrol
+
+import CommitVerify#escort-between-doctor
+  use ReservedBytes2#florida-libra-circus
+  use ReservedBytes8#rudolf-tape-adrian
+
+import Std#ralph-blue-lucky
+  use Bool#oxygen-complex-duet
+
+import AluVM#yogurt-cricket-frog
+  use LibId#germany-culture-olivia
+  use CoreConfig#ventura-ibiza-special
+  use LibSite#polo-macro-elite
+
+import UltraSONIC#wizard-volume-arizona
+  use StateCell#minute-prince-isotope
+  use StateData#exact-regard-direct
+  use Operation#race-vendor-printer
+  use Opid#storm-dragon-brain
+  use Input#america-talent-pagoda
+  use Codex#symbol-isabel-nadia
+  use CellAddr#lecture-vincent-carbon
+
+
+@mnemonic(winter-zebra-pierre)
+data Contract          : layer1 Layer1
+                       , testnet Std.Bool
+                       , seals BPCore.Method
+                       , salt U64
+                       , timestamp I64
+                       , issuer [Unicode]
+                       , codex UltraSONIC.Codex
+                       , initial UltraSONIC.Operation
+
+@mnemonic(camilla-basket-justin)
+data Layer1            : bitcoin | liquid
+
+
+

@@ -1,0 +1,82 @@
+{-
+  Description: RGB Contract
+  Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+  Copyright (C) 2024 LNP/BP Standards Association. All rights reserved.
+  License: Apache-2.0
+-}
+
+Bundles vesper lexicon=types+commitments
+
+commitment ContractId, hasher SHA256, tagged urn:lnp-bp:rgb:contract#2024-11-14
+  serialized Contract
+
+rec Contract
+  enum layer1, Layer1, bitcoin 0, liquid 1
+  enum testnet, Bool, false 0, true 1
+  is salt, U64
+  is timestamp, I64
+  str issuer, len 0..MAX16
+  rec initial, Operation
+    is callId, U16
+    list destroying, len 0..MAX16
+      rec Input
+        rec addr, CellAddr
+          bytes opid, len 32, aka Opid
+          is pos, U16
+        union witness, StateData
+          is none, Unit, tag 0
+          is single, U128, wrapped, aka Fe128, tag 1
+          tuple double, tag 2
+            is _, U128, aka Fe128
+            is _, U128, aka Fe128
+          tuple three, tag 3
+            is _, U128, aka Fe128
+            is _, U128, aka Fe128
+            is _, U128, aka Fe128
+          tuple four, tag 4
+            is _, U128, aka Fe128
+            is _, U128, aka Fe128
+            is _, U128, aka Fe128
+            is _, U128, aka Fe128
+    list reading, len 0..MAX16
+      rec CellAddr
+        bytes opid, len 32, aka Opid
+        is pos, U16
+    list destructible, len 0..MAX16
+      rec StateCell
+        union data, StateData
+          is none, Unit, tag 0
+          is single, U128, wrapped, aka Fe128, tag 1
+          tuple double, tag 2
+            is _, U128, aka Fe128
+            is _, U128, aka Fe128
+          tuple three, tag 3
+            is _, U128, aka Fe128
+            is _, U128, aka Fe128
+            is _, U128, aka Fe128
+          tuple four, tag 4
+            is _, U128, aka Fe128
+            is _, U128, aka Fe128
+            is _, U128, aka Fe128
+            is _, U128, aka Fe128
+        is seal, U128, aka Fe128
+          rec some, LibSite, option, wrapped, tag 1
+            bytes libId, len 32, aka LibId
+            is offset, U16
+    list immutable, len 0..MAX16
+      union StateData
+        is none, Unit, tag 0
+        is single, U128, wrapped, aka Fe128, tag 1
+        tuple double, tag 2
+          is _, U128, aka Fe128
+          is _, U128, aka Fe128
+        tuple three, tag 3
+          is _, U128, aka Fe128
+          is _, U128, aka Fe128
+          is _, U128, aka Fe128
+        tuple four, tag 4
+          is _, U128, aka Fe128
+          is _, U128, aka Fe128
+          is _, U128, aka Fe128
+          is _, U128, aka Fe128
+

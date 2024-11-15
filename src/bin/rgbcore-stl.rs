@@ -11,12 +11,15 @@
 use std::fs;
 use std::io::Write;
 
+use bp::bc::stl::bp_tx_stl;
+use bp::stl::bp_core_stl;
 use commit_verify::stl::commit_verify_stl;
 use commit_verify::CommitmentLayout;
 use rgbcore::Contract;
 use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::parse_args;
 use strict_types::SystemBuilder;
+use ultrasonic::stl::{aluvm_stl, finite_field_stl, usonic_stl};
 
 fn main() {
     let (format, dir) = parse_args();
@@ -39,11 +42,26 @@ fn main() {
         .expect("unable to write to the file");
 
     let std = std_stl();
+    let tx = bp_tx_stl();
+    let bp = bp_core_stl();
     let cv = commit_verify_stl();
     let st = strict_types_stl();
+    let vm = aluvm_stl();
+    let ff = finite_field_stl();
+    let us = usonic_stl();
 
     let sys = SystemBuilder::new()
         .import(rgb_commit)
+        .unwrap()
+        .import(vm)
+        .unwrap()
+        .import(us)
+        .unwrap()
+        .import(ff)
+        .unwrap()
+        .import(bp)
+        .unwrap()
+        .import(tx)
         .unwrap()
         .import(cv)
         .unwrap()

@@ -24,11 +24,10 @@ extern crate commit_verify;
 extern crate serde;
 
 mod contract;
-// mod validate;
+mod verify;
 
 #[cfg(feature = "stl")]
 pub mod stl;
-mod verify;
 
 pub use commit_verify::ReservedBytes;
 pub use contract::{Contract, ContractId, Ffv, Layer1};
