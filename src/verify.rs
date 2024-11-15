@@ -10,6 +10,7 @@
 
 use core::borrow::Borrow;
 
+use amplify::Bytes32;
 #[cfg(feature = "bp")]
 use commit_verify::mpc;
 use commit_verify::CommitId;
@@ -90,6 +91,10 @@ pub enum VerificationError<Seal: SingleUseSeal> {
     #[from]
     #[display(inner)]
     Vm(CallError),
+}
+
+impl FromContractOpid for Bytes32 {
+    fn from_contract_opid(_: ContractId, opid: Opid) -> Self { *opid }
 }
 
 #[cfg(feature = "bp")]
