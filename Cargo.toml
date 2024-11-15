@@ -27,9 +27,9 @@ baid64 = "~0.3.0"
 strict_encoding = "~2.8.0"
 strict_types = "~2.8.0" # TODO: Make strict types optional, used only in STL
 ultrasonic = "0.12.0-beta.1"
-commit_verify = { version = "~0.12.0-alpha.2", features = ["derive"] }
-single_use_seals = "~0.12.0-alpha.2"
-bp-core = "~0.12.0-alpha.1"
+commit_verify = { version = "~0.12.0-alpha.3", features = ["derive"] }
+single_use_seals = "~0.12.0-alpha.3"
+bp-core = "~0.12.0-beta.1"
 serde = { version = "1", features = ["derive"], optional = true }
 
 [features]
@@ -55,14 +55,3 @@ wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = ["all"]
-
-[patch.crates-io]
-aluvm = { git = "https://github.com/AluVM/rust-aluvm", branch = "v0.12" }
-zk-aluvm = { git = "https://github.com/AluVM/zk-aluvm" }
-ultrasonic = { git = "https://github.com/AluVM/ultrasonic" }
-commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
-single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
-bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "v0.12" }
-bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "v0.12" }
-bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "v0.12" }
-bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "v0.12" }
