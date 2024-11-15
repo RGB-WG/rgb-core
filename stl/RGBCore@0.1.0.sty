@@ -1,5 +1,5 @@
 {-
-  Id: stl:PRMybadt-eNgHzbD-cYXKZJW-zUHwdNp-p9mWnyT-pbZWoFQ#oberon-ricardo-spell
+  Id: stl:RNTqHHwk-gxYDVut-Xf2DbjI-MZOfgvS-i.PciHi-zvbad9M#school-aspect-mineral
   Name: RGBCore
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -39,18 +39,17 @@ import UltraSONIC#wizard-volume-arizona
   use CellAddr#lecture-vincent-carbon
 
 
-@mnemonic(winter-zebra-pierre)
-data Contract          : layer1 Layer1
+@mnemonic(diamond-galaxy-shake)
+data BpLayer           : bitcoin BPCore.Method
+                       | liquid BPCore.Method
+
+@mnemonic(mother-sultan-opera)
+data Contract          : layer1 BpLayer
                        , testnet Std.Bool
-                       , seals BPCore.Method
                        , salt U64
                        , timestamp I64
                        , issuer [Unicode]
                        , codex UltraSONIC.Codex
                        , initial UltraSONIC.Operation
-
-@mnemonic(camilla-basket-justin)
-data Layer1            : bitcoin | liquid
-
 
 

@@ -15,7 +15,7 @@ use bp::bc::stl::bp_tx_stl;
 use bp::stl::bp_core_stl;
 use commit_verify::stl::commit_verify_stl;
 use commit_verify::CommitmentLayout;
-use rgbcore::Contract;
+use rgbcore::{BpLayer, Contract};
 use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::parse_args;
 use strict_types::SystemBuilder;
@@ -88,7 +88,7 @@ Bundles vesper lexicon=types+commitments
 "
     )
     .unwrap();
-    let layout = Contract::commitment_layout();
+    let layout = Contract::<BpLayer>::commitment_layout();
     writeln!(file, "{layout}").unwrap();
     let tt = sys.type_tree("RGBCore.Contract").unwrap();
     writeln!(file, "{tt}").unwrap();

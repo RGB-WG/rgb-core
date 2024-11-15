@@ -8,7 +8,7 @@
 // Copyright (C) 2019-2024 LNP/BP Standards Association. All rights reserved.
 // Copyright (C) 2019-2024 Dr Maxim Orlovsky. All rights reserved.
 
-use core::fmt::{self, Display, Formatter};
+use core::fmt::{self, Debug, Display, Formatter};
 use core::str::FromStr;
 
 use amplify::confinement::SmallString;
@@ -16,30 +16,43 @@ use amplify::{Bytes32, Wrapper};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use bp::dbc;
 use commit_verify::{mpc, CommitmentId, DigestExt, Sha256};
+use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use ultrasonic::{Codex, Operation};
 
 use crate::LIB_NAME_RGB_CORE;
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Display, Default)]
-#[display(lowercase)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_CORE, tags = repr, into_u8, try_from_u8)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Display)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_CORE, tags = custom, dumb = Self::Bitcoin(strict_dumb!()))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(rename_all = "camelCase", tag = "blockchain", content = "seals")
+)]
 #[repr(u8)]
-pub enum Layer1 {
-    #[default]
-    Bitcoin = 0,
-    Liquid = 1,
+pub enum BpLayer {
+    #[strict_type(tag = 0x00)]
+    #[display("bitcoin:{0}")]
+    Bitcoin(dbc::Method),
+
+    #[strict_type(tag = 0x01)]
+    #[display("liquid:{0}")]
+    Liquid(dbc::Method),
 }
+
+pub trait Layer1: Copy + Eq + StrictDumb + StrictEncode + StrictDecode + Debug + Display {}
+
+impl Layer1 for BpLayer {}
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = ContractId)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_CORE)]
-pub struct Contract {
-    pub layer1: Layer1,
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(rename_all = "camelCase"))]
+pub struct Contract<L1: Layer1 = BpLayer> {
+    pub layer1: L1,
     pub testnet: bool,
-    pub seals: dbc::Method,
     pub salt: u64,
     pub timestamp: i64,
     pub issuer: SmallString,

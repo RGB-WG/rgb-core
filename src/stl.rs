@@ -19,7 +19,7 @@ use crate::contract::Contract;
 use crate::LIB_NAME_RGB_CORE;
 
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_CORE: &str = "stl:PRMybadt-eNgHzbD-cYXKZJW-zUHwdNp-p9mWnyT-pbZWoFQ#oberon-ricardo-spell";
+pub const LIB_ID_RGB_CORE: &str = "stl:RNTqHHwk-gxYDVut-Xf2DbjI-MZOfgvS-i.PciHi-zvbad9M#school-aspect-mineral";
 
 fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB_CORE), tiny_bset! {

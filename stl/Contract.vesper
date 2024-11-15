@@ -11,7 +11,7 @@ commitment ContractId, hasher SHA256, tagged urn:lnp-bp:rgb:contract#2024-11-14
   serialized Contract
 
 rec Contract
-  enum layer1, Layer1, bitcoin 0, liquid 1
+  union layer1, BpLayer
   enum testnet, Bool, false 0, true 1
   is salt, U64
   is timestamp, I64

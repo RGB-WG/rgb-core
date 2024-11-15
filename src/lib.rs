@@ -30,7 +30,7 @@ mod verify;
 pub mod stl;
 
 pub use commit_verify::ReservedBytes;
-pub use contract::{Contract, ContractId, Ffv, Layer1};
+pub use contract::{BpLayer, Contract, ContractId, Ffv, Layer1};
 pub use verify::{ContractStash, ContractState, ContractVerify, VerificationError};
 
 pub const LIB_NAME_RGB_CORE: &str = "RGBCore";
