@@ -23,24 +23,22 @@ pub trait FromContractOpid: Sized {
     fn from_contract_opid(contract_id: ContractId, opid: Opid) -> Self;
 }
 
-pub trait ContractState<Seal: SingleUseSeal>: Memory {
+pub trait ContractStockpile<Seal: SingleUseSeal> {
+    fn contract_id(&self) -> ContractId;
+    fn codex(&self) -> impl Borrow<Codex>;
+    fn memory(&self) -> &impl Memory;
+    fn operations(&self) -> impl Iterator<Item = impl Borrow<Operation>>;
+    fn witness(&self, opid: Opid) -> Option<SealWitness<Seal>>;
+    fn lib_repo(&self) -> &impl LibRepo;
     fn read_seal(&self, addr: CellAddr) -> Option<Seal>;
     fn apply(&self, op: &Operation);
 }
 
-pub trait ContractStash<Seal: SingleUseSeal> {
-    fn contract_id(&self) -> ContractId;
-    fn codex(&self) -> impl Borrow<Codex>;
-    fn operations(&self) -> impl Iterator<Item = impl Borrow<Operation>>;
-    fn witness(&self, opid: Opid) -> Option<SealWitness<Seal>>;
-    fn lib_repo(&self) -> &impl LibRepo;
-}
-
-pub trait ContractVerify<Seal: SingleUseSeal>: ContractStash<Seal>
+pub trait ContractVerify<Seal: SingleUseSeal>: ContractStockpile<Seal>
 where <Seal::CliWitness as ClientSideWitness>::Message: FromContractOpid
 {
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
-    fn evaluate(&self, state: &mut impl ContractState<Seal>) -> Result<(), VerificationError<Seal>> {
+    fn evaluate(&self) -> Result<(), VerificationError<Seal>> {
         let codex = self.codex();
         let lib_repo = self.lib_repo();
         let contract_id = self.contract_id();
@@ -54,7 +52,7 @@ where <Seal::CliWitness as ClientSideWitness>::Message: FromContractOpid
 
             let mut closed_seals = vec![];
             for input in &op.destroying {
-                let Some(seal) = state.read_seal(input.addr) else {
+                let Some(seal) = self.read_seal(input.addr) else {
                     return Err(VerificationError::Vm(CallError::NoReadOnceInput(input.addr)));
                 };
                 closed_seals.push(seal);
@@ -65,15 +63,15 @@ where <Seal::CliWitness as ClientSideWitness>::Message: FromContractOpid
                 .verify_seals_closing(closed_seals, message)
                 .map_err(|e| VerificationError::Seal(witness.published.pub_id(), opid, e))?;
 
-            codex.borrow().verify(op, state, lib_repo)?;
-            state.apply(op);
+            codex.borrow().verify(op, self.memory(), lib_repo)?;
+            self.apply(op);
         }
 
         Ok(())
     }
 }
 
-impl<Seal: SingleUseSeal, C: ContractStash<Seal>> ContractVerify<Seal> for C where <Seal::CliWitness as ClientSideWitness>::Message: FromContractOpid
+impl<Seal: SingleUseSeal, C: ContractStockpile<Seal>> ContractVerify<Seal> for C where <Seal::CliWitness as ClientSideWitness>::Message: FromContractOpid
 {}
 
 // TODO: Find a way to do Debug and Clone implementation

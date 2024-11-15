@@ -33,6 +33,6 @@ pub use commit_verify::ReservedBytes;
 #[cfg(feature = "bp")]
 pub use contract::BpLayer;
 pub use contract::{Contract, ContractId, Ffv, Layer1};
-pub use verify::{ContractStash, ContractState, ContractVerify, FromContractOpid, VerificationError};
+pub use verify::{ContractStockpile, ContractVerify, FromContractOpid, VerificationError};
 
 pub const LIB_NAME_RGB_CORE: &str = "RGBCore";

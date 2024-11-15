@@ -11,7 +11,7 @@
 use core::fmt::{self, Debug, Display, Formatter};
 use core::str::FromStr;
 
-use amplify::confinement::SmallString;
+use amplify::confinement::{SmallString, TinyString};
 use amplify::{Bytes32, Wrapper};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use commit_verify::{mpc, CommitmentId, DigestExt, ReservedBytes, Sha256};
@@ -60,6 +60,7 @@ pub struct Contract<L1: Layer1> {
     pub salt: u64,
     pub timestamp: i64,
     // ^^ above is a fixed-size contract header of 32 bytes
+    pub name: Option<TinyString>,
     pub issuer: SmallString,
     pub codex: Codex,
     pub initial: Operation,
