@@ -16,23 +16,20 @@ extern crate core;
 extern crate amplify;
 #[macro_use]
 extern crate strict_encoding;
-#[macro_use]
-extern crate commit_verify;
 
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde;
 
-mod contract;
+mod bp;
 mod verify;
 
 #[cfg(feature = "stl")]
 pub mod stl;
 
-pub use commit_verify::ReservedBytes;
 #[cfg(feature = "bp")]
-pub use contract::BpLayer;
-pub use contract::{Contract, ContractId, Ffv, Layer1};
+pub use bp::{Bp, BpLayer, ContractBp};
+pub use commit_verify::ReservedBytes;
 pub use verify::{ContractStockpile, ContractVerify, FromContractOpid, VerificationError};
 
 pub const LIB_NAME_RGB_CORE: &str = "RGBCore";

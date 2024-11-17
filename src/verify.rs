@@ -10,14 +10,9 @@
 
 use core::borrow::Borrow;
 
-use amplify::Bytes32;
-#[cfg(feature = "bp")]
-use commit_verify::mpc;
 use commit_verify::CommitId;
 use single_use_seals::{ClientSideWitness, PublishedWitness, SealError, SealWitness, SingleUseSeal};
-use ultrasonic::{CallError, CellAddr, Codex, LibRepo, Memory, Operation, Opid};
-
-use crate::ContractId;
+use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
 pub trait FromContractOpid: Sized {
     fn from_contract_opid(contract_id: ContractId, opid: Opid) -> Self;
@@ -89,16 +84,4 @@ pub enum VerificationError<Seal: SingleUseSeal> {
     #[from]
     #[display(inner)]
     Vm(CallError),
-}
-
-impl FromContractOpid for Bytes32 {
-    fn from_contract_opid(_: ContractId, opid: Opid) -> Self { *opid }
-}
-
-#[cfg(feature = "bp")]
-impl FromContractOpid for (mpc::ProtocolId, mpc::Message) {
-    fn from_contract_opid(contract_id: ContractId, opid: Opid) -> Self {
-        use amplify::ByteArray;
-        (mpc::ProtocolId::from(contract_id), mpc::Message::from_byte_array(opid.to_byte_array()))
-    }
 }

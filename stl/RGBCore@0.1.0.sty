@@ -1,5 +1,5 @@
 {-
-  Id: stl:bXLp49bi-59fV~Oy-.vzNYUR-AHHJtJD-HRrejYO-E41kd.A#hobby-salmon-sample
+  Id: stl:ywrkLqrE-YrDEMiI-xedk0Xi-7_vOwlh-~5qFXiH-b~oecM8#format-bison-richard
   Name: RGBCore
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -11,47 +11,48 @@
 @context
 typelib RGBCore
 
-import BPCore#russian-granite-campus
+import BPCore#charter-uncle-engine
   use Method#bali-boris-plasma
 
 import FiniteField#tomato-jeep-thomas
   use Fe128#reserve-source-patrol
 
-import CommitVerify#escort-between-doctor
-  use ReservedBytes13#chief-pattern-evita
-  use ReservedBytes2#florida-libra-circus
-  use ReservedBytes8#rudolf-tape-adrian
-
-import Std#ralph-blue-lucky
+import Std#delete-roman-hair
   use Bool#oxygen-complex-duet
+  use AlphaNumLodash#percent-bingo-caesar
+  use AlphaCapsLodash#duet-hammer-labor
 
-import AluVM#yogurt-cricket-frog
+import UltraSONIC#arizona-voltage-garage
+  use StateCell#minute-prince-isotope
+  use ContractName#value-reform-lesson
+  use ContractBp#olga-almanac-music
+  use StateData#exact-regard-direct
+  use Operation#race-vendor-printer
+  use Opid#storm-dragon-brain
+  use Codex#hope-premium-prince
+  use Ffv#pigment-career-hippie
+  use Input#america-talent-pagoda
+  use CellAddr#lecture-vincent-carbon
+
+import AluVM#reward-accent-swim
   use LibId#germany-culture-olivia
   use CoreConfig#ventura-ibiza-special
   use LibSite#polo-macro-elite
 
-import UltraSONIC#wizard-volume-arizona
-  use StateCell#minute-prince-isotope
-  use StateData#exact-regard-direct
-  use Operation#race-vendor-printer
-  use Opid#storm-dragon-brain
-  use Input#america-talent-pagoda
-  use Codex#symbol-isabel-nadia
-  use CellAddr#lecture-vincent-carbon
+import StrictTypes#henry-heart-survive
+  use TypeName#edgar-carol-mystery
 
+import CommitVerify#uranium-alien-extend
+  use ReservedBytes2#florida-libra-circus
+  use ReservedBytes10#marble-prepare-arnold
+  use ReservedBytes8#rudolf-tape-adrian
+
+
+@mnemonic(camilla-bazooka-career)
+data Bp                : layer BpLayer, testnet Std.Bool
 
 @mnemonic(diamond-galaxy-shake)
 data BpLayer           : bitcoin BPCore.Method
                        | liquid BPCore.Method
-
-@mnemonic(frozen-world-bronze)
-data ContractBpLayer   : layer1 BpLayer
-                       , testnet Std.Bool
-                       , reserved CommitVerify.ReservedBytes13
-                       , salt U64
-                       , timestamp I64
-                       , issuer [Unicode]
-                       , codex UltraSONIC.Codex
-                       , initial UltraSONIC.Operation
 
 
