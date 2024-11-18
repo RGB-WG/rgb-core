@@ -18,7 +18,7 @@ use ultrasonic::stl::{aluvm_stl, finite_field_stl, usonic_stl};
 use crate::{ContractBp, LIB_NAME_RGB_CORE};
 
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_CORE: &str = "stl:ywrkLqrE-YrDEMiI-xedk0Xi-7_vOwlh-~5qFXiH-b~oecM8#format-bison-richard";
+pub const LIB_ID_RGB_CORE: &str = "stl:dYn2bhAN-UmKhp4J-jxir7xd-_6XH~GN-0IvVcO0-9mqYzJs#compare-mary-clinic";
 
 fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB_CORE), tiny_bset! {

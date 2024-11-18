@@ -209,8 +209,7 @@ dependencies = [
 [[package]]
 name = "bp-consensus"
 version = "0.12.0-beta.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fc5eebefee1bc1998ee8e77034db5c6044defb9bbeb5af2d0f34c4cce971e76"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.12#e80d08474899288e16e41ddc335a3cb487d14baa"
 dependencies = [
  "amplify",
  "chrono",
@@ -224,8 +223,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.12.0-beta.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4d8f36a816cdbc005a20cb07a4e25475b16a82a2c347f7899533e01913854bd"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.12#e80d08474899288e16e41ddc335a3cb487d14baa"
 dependencies = [
  "amplify",
  "bp-consensus",
@@ -243,8 +241,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.12.0-beta.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ef68cb458df925ec49022bd87e29fae1d67faae4373c25809076fb056468b39"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.12#e80d08474899288e16e41ddc335a3cb487d14baa"
 dependencies = [
  "amplify",
  "base85",
@@ -258,8 +255,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.12.0-beta.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f06d0a16292c50472776d75249d996a397309a36c0c14c902e5e9902439f76c0"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.12#e80d08474899288e16e41ddc335a3cb487d14baa"
 dependencies = [
  "amplify",
  "baid64 0.2.2",
@@ -604,7 +600,6 @@ name = "rgb-core"
 version = "0.12.0-beta.2"
 dependencies = [
  "amplify",
- "baid64 0.4.0",
  "bp-core",
  "commit_verify",
  "getrandom",
@@ -753,8 +748,7 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 [[package]]
 name = "single_use_seals"
 version = "0.12.0-alpha.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9550e2f1be9c206b86146373d03bd1d26480440d43779e16ade04350ecfde97"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.12#50367120a62189b3966d6e242398f8e1d5001864"
 
 [[package]]
 name = "strict_encoding"

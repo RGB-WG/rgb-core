@@ -10,12 +10,10 @@
 
 use core::fmt::{self, Debug, Display, Formatter};
 
-use amplify::Bytes32;
-use commit_verify::mpc;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictWriter};
-use ultrasonic::{Contract, ContractId, Opid, ProofOfPubl};
+use ultrasonic::{Contract, ProofOfPubl};
 
-use crate::{FromContractOpid, LIB_NAME_RGB_CORE};
+use crate::LIB_NAME_RGB_CORE;
 
 pub type ContractBp = Contract<Bp>;
 
@@ -71,17 +69,3 @@ pub enum BpLayer {
 }
 
 impl ProofOfPubl for Bp {}
-
-impl FromContractOpid for Bytes32 {
-    fn from_contract_opid(_: ContractId, opid: Opid) -> Self { *opid }
-}
-
-impl FromContractOpid for (mpc::ProtocolId, mpc::Message) {
-    fn from_contract_opid(contract_id: ContractId, opid: Opid) -> Self {
-        use amplify::ByteArray;
-        (
-            mpc::ProtocolId::from_byte_array(contract_id.to_byte_array()),
-            mpc::Message::from_byte_array(opid.to_byte_array()),
-        )
-    }
-}

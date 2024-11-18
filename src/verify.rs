@@ -10,13 +10,10 @@
 
 use core::borrow::Borrow;
 
+use amplify::{Bytes32, Wrapper};
 use commit_verify::CommitId;
-use single_use_seals::{ClientSideWitness, PublishedWitness, SealError, SealWitness, SingleUseSeal};
+use single_use_seals::{PublishedWitness, SealError, SealWitness, SingleUseSeal};
 use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
-
-pub trait FromContractOpid: Sized {
-    fn from_contract_opid(contract_id: ContractId, opid: Opid) -> Self;
-}
 
 pub trait ContractStockpile<Seal: SingleUseSeal> {
     fn contract_id(&self) -> ContractId;
@@ -29,14 +26,11 @@ pub trait ContractStockpile<Seal: SingleUseSeal> {
     fn apply(&self, op: &Operation);
 }
 
-pub trait ContractVerify<Seal: SingleUseSeal>: ContractStockpile<Seal>
-where <Seal::CliWitness as ClientSideWitness>::Message: FromContractOpid
-{
+pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractStockpile<Seal> {
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
     fn evaluate(&self) -> Result<(), VerificationError<Seal>> {
         let codex = self.codex();
         let lib_repo = self.lib_repo();
-        let contract_id = self.contract_id();
 
         for op in self.operations() {
             let op = op.borrow();
@@ -53,9 +47,8 @@ where <Seal::CliWitness as ClientSideWitness>::Message: FromContractOpid
                 closed_seals.push(seal);
             }
 
-            let message = <Seal::CliWitness as ClientSideWitness>::Message::from_contract_opid(contract_id, opid);
             witness
-                .verify_seals_closing(closed_seals, message)
+                .verify_seals_closing(closed_seals, opid.into_inner())
                 .map_err(|e| VerificationError::Seal(witness.published.pub_id(), opid, e))?;
 
             codex.borrow().verify(op, self.memory(), lib_repo)?;
@@ -66,8 +59,7 @@ where <Seal::CliWitness as ClientSideWitness>::Message: FromContractOpid
     }
 }
 
-impl<Seal: SingleUseSeal, C: ContractStockpile<Seal>> ContractVerify<Seal> for C where <Seal::CliWitness as ClientSideWitness>::Message: FromContractOpid
-{}
+impl<Seal: SingleUseSeal<Message = Bytes32>, C: ContractStockpile<Seal>> ContractVerify<Seal> for C {}
 
 // TODO: Find a way to do Debug and Clone implementation
 #[derive(Display, From)]

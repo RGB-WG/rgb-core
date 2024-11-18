@@ -30,6 +30,6 @@ pub mod stl;
 #[cfg(feature = "bp")]
 pub use bp::{Bp, BpLayer, ContractBp};
 pub use commit_verify::ReservedBytes;
-pub use verify::{ContractStockpile, ContractVerify, FromContractOpid, VerificationError};
+pub use verify::{ContractStockpile, ContractVerify, VerificationError};
 
 pub const LIB_NAME_RGB_CORE: &str = "RGBCore";
