@@ -11,11 +11,9 @@
 use core::fmt::{self, Debug, Display, Formatter};
 
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictWriter};
-use ultrasonic::{Contract, ProofOfPubl};
+use ultrasonic::ProofOfPubl;
 
 use crate::LIB_NAME_RGB_CORE;
-
-pub type ContractBp = Contract<Bp>;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]

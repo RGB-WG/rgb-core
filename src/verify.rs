@@ -30,6 +30,7 @@ pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractStockp
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
     fn evaluate(&self) -> Result<(), VerificationError<Seal>> {
         let codex = self.codex();
+        let contract_id = self.contract_id();
         let lib_repo = self.lib_repo();
 
         for op in self.operations() {
@@ -51,7 +52,9 @@ pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractStockp
                 .verify_seals_closing(closed_seals, opid.into_inner())
                 .map_err(|e| VerificationError::Seal(witness.published.pub_id(), opid, e))?;
 
-            codex.borrow().verify(op, self.memory(), lib_repo)?;
+            codex
+                .borrow()
+                .verify(contract_id, op, self.memory(), lib_repo)?;
             self.apply(op);
         }
 

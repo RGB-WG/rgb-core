@@ -13,24 +13,20 @@ use commit_verify::stl::commit_verify_stl;
 use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
-use ultrasonic::stl::{aluvm_stl, finite_field_stl, usonic_stl};
 
-use crate::{ContractBp, LIB_NAME_RGB_CORE};
+use crate::{Bp, LIB_NAME_RGB_CORE};
 
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_CORE: &str = "stl:dYn2bhAN-UmKhp4J-jxir7xd-_6XH~GN-0IvVcO0-9mqYzJs#compare-mary-clinic";
+pub const LIB_ID_RGB_CORE: &str = "stl:NI~k6bPm-Ff2sxLE-keVt8Sv-f~uwGLs-IANdkev-ZbTDSwg#jargon-candid-audio";
 
 fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB_CORE), tiny_bset! {
         std_stl().to_dependency(),
         strict_types_stl().to_dependency(),
         commit_verify_stl().to_dependency(),
-        aluvm_stl().to_dependency(),
-        finite_field_stl().to_dependency(),
-        usonic_stl().to_dependency(),
         bp_core_stl().to_dependency(),
     })
-    .transpile::<ContractBp>()
+    .transpile::<Bp>()
     .compile()
 }
 

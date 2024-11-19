@@ -28,7 +28,7 @@ mod verify;
 pub mod stl;
 
 #[cfg(feature = "bp")]
-pub use bp::{Bp, BpLayer, ContractBp};
+pub use bp::{Bp, BpLayer};
 pub use commit_verify::ReservedBytes;
 pub use verify::{ContractStockpile, ContractVerify, VerificationError};
 

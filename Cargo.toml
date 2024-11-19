@@ -15,16 +15,12 @@ exclude = [".github"]
 
 [lib]
 name = "rgbcore"
-crate-type = ["cdylib", "rlib"] # We need this for WASM
-
-[[bin]]
-name = "rgbcore-stl"
-required-features = ["stl"]
+crate-type = ["cdylib", "rlib", "staticlib"] # We need this for WASM
 
 [dependencies]
 amplify = "~4.8.0"
 strict_encoding = "~2.8.1"
-strict_types = "~2.8.1" # TODO: Make strict types optional, used only in STL
+strict_types = { version = "~2.8.1", optional = true }
 ultrasonic = "0.12.0-beta.1"
 commit_verify = { version = "~0.12.0-alpha.3", optional = true }
 single_use_seals = "~0.12.0-alpha.3"
@@ -33,13 +29,12 @@ serde = { version = "1", features = ["derive"], optional = true }
 
 [features]
 default = ["bp"]
-all = ["bp", "stl", "serde"]
+all = ["bp", "serde"]
 bp = ["bp-core", "bp-core/serde"]
-stl = ["commit_verify/stl", "strict_types/armor", "ultrasonic/stl", "bp-core/stl"]
+stl = ["bp", "strict_types", "commit_verify/stl", "bp-core/stl"]
 serde = [
     "dep:serde",
     "amplify/serde",
-    "strict_types/serde",
     "ultrasonic/serde",
 ]
 
