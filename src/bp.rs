@@ -11,7 +11,7 @@
 use core::fmt::{self, Debug, Display, Formatter};
 
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode, StrictWriter};
-use ultrasonic::ProofOfPubl;
+use ultrasonic::Capabilities;
 
 use crate::LIB_NAME_RGB_CORE;
 
@@ -66,4 +66,4 @@ pub enum BpLayer {
     Liquid(bp::dbc::Method),
 }
 
-impl ProofOfPubl for Bp {}
+impl Capabilities for Bp {}
