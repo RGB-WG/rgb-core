@@ -17,7 +17,7 @@ use strict_types::{CompileError, TypeLib};
 use crate::{Bp, LIB_NAME_RGB_CORE};
 
 /// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_CORE: &str = "stl:NI~k6bPm-Ff2sxLE-keVt8Sv-f~uwGLs-IANdkev-ZbTDSwg#jargon-candid-audio";
+pub const LIB_ID_RGB_CORE: &str = "stl:CHVOQxpG-2DQFIdm-dcvmuYN-JfIIZdL-dXrpDtl-zFrVLPw#invent-newton-harvard";
 
 fn _rgb_core_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB_CORE), tiny_bset! {

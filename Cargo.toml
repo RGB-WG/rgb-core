@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.12.0-beta.2"
+version = "0.12.0-beta.3"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -21,10 +21,10 @@ crate-type = ["cdylib", "rlib", "staticlib"] # We need this for WASM
 amplify = "~4.8.0"
 strict_encoding = "~2.8.1"
 strict_types = { version = "~2.8.1", optional = true }
-ultrasonic = "0.12.0-beta.1"
-commit_verify = { version = "~0.12.0-alpha.3", optional = true }
-single_use_seals = "~0.12.0-alpha.3"
-bp-core = { version = "~0.12.0-beta.1", optional = true }
+ultrasonic = "0.12.0-beta.2"
+commit_verify = { version = "~0.12.0-beta.1", optional = true }
+single_use_seals = "~0.12.0-beta.1"
+bp-core = { version = "~0.12.0-beta.2", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
 
 [features]
@@ -48,11 +48,3 @@ wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = ["all"]
-
-[patch.crates-io]
-strict_types = { git = "https://github.com/strict-types/strict-types", branch = "develop" }
-commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
-zk-aluvm = { git = "https://github.com/AluVM/zk-aluvm" }
-ultrasonic = { git = "https://github.com/AluVM/ultrasonic" }
-single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
-bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "v0.12" }
