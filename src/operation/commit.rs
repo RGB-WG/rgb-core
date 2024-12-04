@@ -30,6 +30,7 @@ use amplify::hex::{FromHex, ToHex};
 use amplify::num::u256;
 use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
+use bp::seals::txout::CloseMethod;
 use commit_verify::{
     mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, Conceal, DigestExt, MerkleHash,
     MerkleLeaves, ReservedBytes, Sha256, StrictHash,
@@ -237,6 +238,7 @@ pub struct BaseCommitment {
     pub timestamp: i64,
     pub issuer: StrictHash,
     pub testnet: bool,
+    pub close_method: CloseMethod,
     pub asset_tags: StrictHash,
 }
 
@@ -280,6 +282,7 @@ impl Genesis {
             schema_id: self.schema_id,
             timestamp: self.timestamp,
             testnet: self.testnet,
+            close_method: self.close_method,
             issuer: self.issuer.commit_id(),
             asset_tags: self.asset_tags.commit_id(),
         };

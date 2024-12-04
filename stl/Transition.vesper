@@ -69,14 +69,12 @@ Transition rec
           confidentialState rec tag=1
             seal union XChainBlindSealTxPtr
               bitcoin rec BlindSealTxPtr wrapped tag=0
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
                 vout is U32 aka=Vout
                 blinding is U64
               liquid rec BlindSealTxPtr wrapped tag=1
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
@@ -93,14 +91,12 @@ Transition rec
           revealed rec tag=3
             seal union XChainBlindSealTxPtr
               bitcoin rec BlindSealTxPtr wrapped tag=0
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
                 vout is U32 aka=Vout
                 blinding is U64
               liquid rec BlindSealTxPtr wrapped tag=1
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
@@ -121,14 +117,12 @@ Transition rec
           confidentialState rec tag=1
             seal union XChainBlindSealTxPtr
               bitcoin rec BlindSealTxPtr wrapped tag=0
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
                 vout is U32 aka=Vout
                 blinding is U64
               liquid rec BlindSealTxPtr wrapped tag=1
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
@@ -151,14 +145,12 @@ Transition rec
           revealed rec tag=3
             seal union XChainBlindSealTxPtr
               bitcoin rec BlindSealTxPtr wrapped tag=0
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
                 vout is U32 aka=Vout
                 blinding is U64
               liquid rec BlindSealTxPtr wrapped tag=1
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
@@ -181,14 +173,12 @@ Transition rec
           confidentialState rec tag=1
             seal union XChainBlindSealTxPtr
               bitcoin rec BlindSealTxPtr wrapped tag=0
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
                 vout is U32 aka=Vout
                 blinding is U64
               liquid rec BlindSealTxPtr wrapped tag=1
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
@@ -207,14 +197,12 @@ Transition rec
           revealed rec tag=3
             seal union XChainBlindSealTxPtr
               bitcoin rec BlindSealTxPtr wrapped tag=0
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
                 vout is U32 aka=Vout
                 blinding is U64
               liquid rec BlindSealTxPtr wrapped tag=1
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
@@ -235,14 +223,12 @@ Transition rec
           confidentialState rec tag=1
             seal union XChainBlindSealTxPtr
               bitcoin rec BlindSealTxPtr wrapped tag=0
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
                 vout is U32 aka=Vout
                 blinding is U64
               liquid rec BlindSealTxPtr wrapped tag=1
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
@@ -263,14 +249,12 @@ Transition rec
           revealed rec tag=3
             seal union XChainBlindSealTxPtr
               bitcoin rec BlindSealTxPtr wrapped tag=0
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1
                 vout is U32 aka=Vout
                 blinding is U64
               liquid rec BlindSealTxPtr wrapped tag=1
-                method enum Method opretFirst=0 tapretFirst=1
                 txid union TxPtr
                   witnessTx is Unit tag=0
                   txid bytes len=32 wrapped aka=Txid tag=1

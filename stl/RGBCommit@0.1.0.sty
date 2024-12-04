@@ -1,5 +1,5 @@
 {-
-  Id: stl:bJ8Swut6-fEFixNt-bJuRY6D-ZNyYV2D-aNfTFnN-68w5Ngk#point-ariel-kinetic
+  Id: stl:IJ8ChpTj-XMVz1y3-z15BDBB-huKjqsO-YswXmFV-XxCnB0Y#pamela-polka-corona
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -11,16 +11,16 @@
 @context
 typelib RGBCommit
 
+import BPCore#symbol-tropic-grand
+  use BlindSealTxid#halt-crash-valid
+  use Method#bali-boris-plasma
+  use SecretSeal#dollar-iris-wizard
+  use BlindSealTxPtr#content-paradox-dominic
+  use TxPtr#italian-july-eddie
+
 import StrictTypes#century-comrade-chess
   use TypeName#edgar-carol-mystery
   use SemId#logic-absorb-hilton
-
-import BPCore#austin-story-retro
-  use Method#bali-boris-plasma
-  use BlindSealTxPtr#fortune-iron-salmon
-  use SecretSeal#dollar-iris-wizard
-  use BlindSealTxid#media-judge-anita
-  use TxPtr#italian-july-eddie
 
 import AluVM#congo-archive-folio
   use LibSite#ultra-grace-message
@@ -177,12 +177,13 @@ data AttachId          : [Byte ^ 32]
 @mnemonic(harvard-burma-bicycle)
 data AttachState       : id AttachId, mediaType MediaType
 
-@mnemonic(needle-minute-harvest)
+@mnemonic(europe-basil-compare)
 data BaseCommitment    : flags CommitVerify.ReservedBytes1
                        , schemaId SchemaId
                        , timestamp I64
                        , issuer CommitVerify.StrictHash
                        , testnet Std.Bool
+                       , closeMethod BPCore.Method
                        , assetTags CommitVerify.StrictHash
 
 @mnemonic(animal-plume-minus)
@@ -237,13 +238,14 @@ data FungibleState     : bits64#8 U64 | (|)
 data FungibleType      : unsigned64Bit#8 | (|)
 
 
-@mnemonic(gossip-daniel-under)
+@mnemonic(havana-motor-nina)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , flags CommitVerify.ReservedBytes1
                        , timestamp I64
                        , issuer Identity
                        , testnet Std.Bool
+                       , closeMethod BPCore.Method
                        , assetTags AssetTags
                        , metadata Metadata
                        , globals GlobalState
@@ -417,11 +419,11 @@ data ValencyType       : U16
 @mnemonic(email-snow-safari)
 data VoidState         : ()
 
-@mnemonic(senator-limbo-raymond)
+@mnemonic(poem-heaven-chicken)
 data XChainBlindSealTxPtr : bitcoin BPCore.BlindSealTxPtr
                        | liquid BPCore.BlindSealTxPtr
 
-@mnemonic(dynamic-life-brown)
+@mnemonic(vision-promise-user)
 data XChainBlindSealTxid : bitcoin BPCore.BlindSealTxid
                        | liquid BPCore.BlindSealTxid
 

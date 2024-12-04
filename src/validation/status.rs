@@ -24,6 +24,7 @@ use core::ops::AddAssign;
 use std::fmt::{self, Display, Formatter};
 
 use amplify::num::u24;
+use bp::seals::txout::CloseMethod;
 use commit_verify::mpc::InvalidProof;
 use strict_types::SemId;
 
@@ -32,7 +33,7 @@ use crate::validation::WitnessResolverError;
 use crate::vm::XWitnessId;
 use crate::{
     BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, Opout, StateType, Vin,
-    XGraphSeal, XOutputSeal,
+    XGraphSeal,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
@@ -291,8 +292,6 @@ pub enum Failure {
     /// seal {1} is defined on {0} which is not in the set of layers allowed
     /// by the contract genesis.
     SealLayerMismatch(Layer1, XGraphSeal),
-    /// seal {1} has a different closing method from the bundle {0} requirement.
-    SealInvalidMethod(BundleId, XOutputSeal),
     /// transition bundle {0} doesn't close seal with the witness {1}. Details:
     /// {2}
     SealsInvalid(BundleId, XWitnessId, String),
@@ -305,6 +304,11 @@ pub enum Failure {
     /// transition bundle {0} is not properly anchored to the witness {1}.
     /// Details: {2}
     MpcInvalid(BundleId, XWitnessId, InvalidProof),
+
+    /// anchor close method {0} is different from the one of the contract {1}
+    AnchorInvalidMethod(CloseMethod, CloseMethod),
+    /// bundle close method {0} is different from the one of the contract {1}
+    BundleInvalidMethod(CloseMethod, CloseMethod),
 
     // State extensions errors
     /// valency {valency} redeemed by state extension {opid} references

@@ -25,7 +25,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
 use bp::dbc::{Anchor, Proof};
-use bp::seals::txout::{TxoSeal, Witness};
+use bp::seals::txout::{CloseMethod, Witness};
 use bp::{dbc, Outpoint};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
@@ -135,6 +135,7 @@ pub struct Validator<
     schema_id: SchemaId,
     contract_id: ContractId,
     layer1: Option<Layer1>,
+    close_method: CloseMethod,
 
     contract_state: Rc<RefCell<S>>,
     validated_op_seals: RefCell<BTreeSet<OpId>>,
@@ -160,6 +161,7 @@ impl<
         let genesis = consignment.genesis();
         let contract_id = genesis.contract_id();
         let schema_id = genesis.schema_id;
+        let close_method = genesis.close_method;
 
         // Prevent repeated validation of single-use seals
         let validated_op_seals = RefCell::new(BTreeSet::<OpId>::new());
@@ -172,6 +174,7 @@ impl<
             schema_id,
             contract_id,
             layer1,
+            close_method,
             validated_op_seals,
             resolver: CheckedWitnessResolver::from(resolver),
             contract_state: Rc::new(RefCell::new(S::init(context))),
@@ -394,6 +397,24 @@ impl<
             // [VALIDATION]: We validate that the seals were properly defined on BP-type layers
             let (seals, input_map) = self.validate_seal_definitions(witness_id.layer1(), bundle);
 
+            if self.close_method != anchor.dbc_proof.method() {
+                self.status
+                    .borrow_mut()
+                    .add_failure(Failure::AnchorInvalidMethod(
+                        anchor.dbc_proof.method(),
+                        self.close_method,
+                    ));
+                continue;
+            }
+            if self.close_method != bundle.close_method {
+                self.status
+                    .borrow_mut()
+                    .add_failure(Failure::BundleInvalidMethod(
+                        bundle.close_method,
+                        self.close_method,
+                    ));
+                continue;
+            }
             if anchor.dbc_proof.method() != bundle.close_method {
                 self.status
                     .borrow_mut()
@@ -481,14 +502,6 @@ impl<
             }
             Ok(pub_witness) => {
                 let seals = seals.as_ref();
-                for seal in seals
-                    .iter()
-                    .filter(|seal| seal.method() != anchor.dbc_proof.method())
-                {
-                    self.status
-                        .borrow_mut()
-                        .add_failure(Failure::SealInvalidMethod(bundle_id, *seal));
-                }
                 match anchor.clone() {
                     EAnchor {
                         mpc_proof,

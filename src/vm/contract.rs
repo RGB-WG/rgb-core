@@ -29,7 +29,7 @@ use std::rc::Rc;
 
 use amplify::confinement;
 use amplify::num::u24;
-use bp::seals::txout::{CloseMethod, ExplicitSeal, VerifyError, Witness};
+use bp::seals::txout::{ExplicitSeal, VerifyError, Witness};
 use bp::{dbc, Tx, Txid};
 use chrono::{MappedLocalTime, TimeZone, Utc};
 use commit_verify::mpc;
@@ -95,26 +95,17 @@ impl<Dbc: dbc::Proof, Seal: TxoSeal> SealWitness<Seal> for XChain<Witness<Dbc>> 
 }
 
 impl<U: ExposedSeal> XChain<U> {
-    pub fn method(self) -> CloseMethod
-    where U: TxoSeal {
-        match self {
-            XChain::Bitcoin(seal) => seal.method(),
-            XChain::Liquid(seal) => seal.method(),
-            XChain::Other(_) => unreachable!(),
-        }
-    }
-
     #[inline]
     pub fn to_output_seal(self) -> Option<XOutputSeal>
     where U: TxoSeal {
         Some(match self {
             XChain::Bitcoin(seal) => {
                 let outpoint = seal.outpoint()?;
-                XChain::Bitcoin(ExplicitSeal::new(seal.method(), outpoint))
+                XChain::Bitcoin(ExplicitSeal::new(outpoint))
             }
             XChain::Liquid(seal) => {
                 let outpoint = seal.outpoint()?;
-                XChain::Liquid(ExplicitSeal::new(seal.method(), outpoint))
+                XChain::Liquid(ExplicitSeal::new(outpoint))
             }
             XChain::Other(_) => unreachable!(),
         })
@@ -125,10 +116,10 @@ impl<U: ExposedSeal> XChain<U> {
         self.to_output_seal()
             .or(match (self, witness_id) {
                 (XChain::Bitcoin(seal), XWitnessId::Bitcoin(txid)) => {
-                    Some(XChain::Bitcoin(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
+                    Some(XChain::Bitcoin(ExplicitSeal::new(seal.outpoint_or(txid))))
                 }
                 (XChain::Liquid(seal), XWitnessId::Liquid(txid)) => {
-                    Some(XChain::Liquid(ExplicitSeal::new(seal.method(), seal.outpoint_or(txid))))
+                    Some(XChain::Liquid(ExplicitSeal::new(seal.outpoint_or(txid))))
                 }
                 _ => None,
             })
