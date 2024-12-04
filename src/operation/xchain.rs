@@ -26,9 +26,8 @@ use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use std::{fmt, io};
 
-use amplify::confinement::TinyOrdSet;
 use bp::{Bp, Outpoint};
-use commit_verify::{Conceal, StrictHash};
+use commit_verify::Conceal;
 use strict_encoding::{
     DecodeError, DefineUnion, ReadTuple, ReadUnion, StrictDecode, StrictDumb, StrictEncode,
     StrictEnum, StrictSum, StrictType, StrictUnion, TypedRead, TypedWrite, VariantError,
@@ -105,31 +104,6 @@ mod _serde {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[display(lowercase)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[repr(u8)]
-pub enum AltLayer1 {
-    #[strict_type(dumb)]
-    Liquid = 1,
-    // Abraxas = 0x10,
-    // Prime = 0x11,
-}
-
-impl AltLayer1 {
-    pub fn layer1(&self) -> Layer1 {
-        match self {
-            AltLayer1::Liquid => Layer1::Liquid,
-        }
-    }
-}
-
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(
     feature = "serde",
@@ -179,20 +153,6 @@ impl FromStr for Impossible {
     type Err = Infallible;
     fn from_str(_: &str) -> Result<Self, Self::Err> { panic!("must not be parsed") }
 }
-
-#[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, Default, From)]
-#[wrapper(Deref)]
-#[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict, id = StrictHash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct AltLayer1Set(TinyOrdSet<AltLayer1>);
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[cfg_attr(

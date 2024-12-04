@@ -37,10 +37,10 @@ use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize}
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    AltLayer1Set, AssetTag, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
+    AssetTag, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
     ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
-    GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose, OpId, SecretSeal, TypedAssigns,
-    VoidState, XChain, LIB_NAME_RGB_COMMIT,
+    GenesisSeal, GlobalState, GraphSeal, Layer1, Metadata, OpDisclose, OpId, SecretSeal,
+    TypedAssigns, VoidState, XChain, LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -360,7 +360,6 @@ pub struct Genesis {
     pub timestamp: i64,
     pub issuer: Identity,
     pub testnet: bool,
-    pub alt_layers1: AltLayer1Set,
     pub asset_tags: AssetTags,
     pub metadata: Metadata,
     pub globals: GlobalState,
@@ -371,6 +370,19 @@ pub struct Genesis {
 
 impl StrictSerialize for Genesis {}
 impl StrictDeserialize for Genesis {}
+
+impl Genesis {
+    pub fn layer1(&self) -> Option<Layer1> {
+        if let Some((_, typed_assigns)) = self.assignments.iter().next() {
+            typed_assigns
+                .to_confidential_seals()
+                .first()
+                .map(|cs| cs.layer1())
+        } else {
+            None
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]

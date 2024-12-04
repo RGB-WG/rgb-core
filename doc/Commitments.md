@@ -201,10 +201,9 @@ assignments are concealed before the merklization, and range proofs are
 removed from the commitment, such that an aggregation of the historical proofs
 can be applied without changing the operation ids. 
  
-To ensure succinctness, other types of collections, such as redeemed and 
-defined valencies and list of alternate layer 1 in genesis are not merklized 
-and strict-serialized producing `StrictHash`, which participates in the final 
-`OpCommitment` structure.
+To ensure succinctness, other types of collections, such as redeemed and
+defined valencies in genesis are not merklized and strict-serialized producing
+`StrictHash`, which participates in the final `OpCommitment` structure.
 
 ```mermaid
 flowchart LR
@@ -222,7 +221,6 @@ flowchart LR
   subgraph "Genesis"
     schemaId --> BaseCommitment
     testnet --> BaseCommitment
-    altLayers1 -- StrictHash --> BaseCommitment
   end
 
   subgraph "Transition"

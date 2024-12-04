@@ -237,7 +237,6 @@ pub struct BaseCommitment {
     pub timestamp: i64,
     pub issuer: StrictHash,
     pub testnet: bool,
-    pub alt_layers1: StrictHash,
     pub asset_tags: StrictHash,
 }
 
@@ -281,7 +280,6 @@ impl Genesis {
             schema_id: self.schema_id,
             timestamp: self.timestamp,
             testnet: self.testnet,
-            alt_layers1: self.alt_layers1.commit_id(),
             issuer: self.issuer.commit_id(),
             asset_tags: self.asset_tags.commit_id(),
         };

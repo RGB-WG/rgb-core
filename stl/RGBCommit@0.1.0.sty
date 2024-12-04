@@ -1,5 +1,5 @@
 {-
-  Id: stl:IFcnrPeI-TANxLfZ-feJax6Q-1TUM4Hq-AjI161s-3tbmxak#harvest-person-orion
+  Id: stl:bJ8Swut6-fEFixNt-bJuRY6D-ZNyYV2D-aNfTFnN-68w5Ngk#point-ariel-kinetic
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -43,13 +43,6 @@ import Bitcoin#signal-color-cipher
   use Vout#brush-gloria-heroic
   use Txid#shallow-light-reverse
 
-
-@mnemonic(edison-survive-nitro)
-data AltLayer1         : liquid#1 | (|)
-
-
-@mnemonic(almond-office-pulse)
-data AltLayer1Set      : {AltLayer1 ^ ..0xff}
 
 @mnemonic(slang-amber-club)
 data AssetTag          : [Byte ^ 32]
@@ -184,13 +177,12 @@ data AttachId          : [Byte ^ 32]
 @mnemonic(harvard-burma-bicycle)
 data AttachState       : id AttachId, mediaType MediaType
 
-@mnemonic(amadeus-sunday-casino)
+@mnemonic(needle-minute-harvest)
 data BaseCommitment    : flags CommitVerify.ReservedBytes1
                        , schemaId SchemaId
                        , timestamp I64
                        , issuer CommitVerify.StrictHash
                        , testnet Std.Bool
-                       , altLayers1 CommitVerify.StrictHash
                        , assetTags CommitVerify.StrictHash
 
 @mnemonic(animal-plume-minus)
@@ -245,14 +237,13 @@ data FungibleState     : bits64#8 U64 | (|)
 data FungibleType      : unsigned64Bit#8 | (|)
 
 
-@mnemonic(fashion-delta-polka)
+@mnemonic(gossip-daniel-under)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , flags CommitVerify.ReservedBytes1
                        , timestamp I64
                        , issuer Identity
                        , testnet Std.Bool
-                       , altLayers1 AltLayer1Set
                        , assetTags AssetTags
                        , metadata Metadata
                        , globals GlobalState

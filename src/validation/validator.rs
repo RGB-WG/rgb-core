@@ -36,8 +36,8 @@ use crate::vm::{
     ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd, XWitnessId, XWitnessTx,
 };
 use crate::{
-    validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpType, Operation, Opout, Schema,
-    SchemaId, TransitionBundle, XChain, XOutpoint, XOutputSeal,
+    validation, BundleId, ContractId, Layer1, OpId, OpType, Operation, Opout, Schema, SchemaId,
+    TransitionBundle, XChain, XOutpoint, XOutputSeal,
 };
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
@@ -134,7 +134,7 @@ pub struct Validator<
 
     schema_id: SchemaId,
     contract_id: ContractId,
-    layers1: BTreeSet<Layer1>,
+    layer1: Option<Layer1>,
 
     contract_state: Rc<RefCell<S>>,
     validated_op_seals: RefCell<BTreeSet<OpId>>,
@@ -164,15 +164,14 @@ impl<
         // Prevent repeated validation of single-use seals
         let validated_op_seals = RefCell::new(BTreeSet::<OpId>::new());
 
-        let mut layers1 = bset! { Layer1::Bitcoin };
-        layers1.extend(genesis.alt_layers1.iter().map(AltLayer1::layer1));
+        let layer1 = genesis.layer1();
 
         Self {
             consignment,
             status: RefCell::new(status),
             schema_id,
             contract_id,
-            layers1,
+            layer1,
             validated_op_seals,
             resolver: CheckedWitnessResolver::from(resolver),
             contract_state: Rc::new(RefCell::new(S::init(context))),
@@ -581,7 +580,7 @@ impl<
                         });
                     continue;
                 }
-                if !self.layers1.contains(&seal.layer1()) {
+                if self.layer1 != Some(seal.layer1()) {
                     self.status
                         .borrow_mut()
                         .add_failure(Failure::SealLayerMismatch(seal.layer1(), seal));

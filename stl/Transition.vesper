@@ -20,7 +20,6 @@ OpCommitment rec
       timestamp is I64
       issuer bytes len=32 aka=StrictHash
       testnet enum Bool false=0 true=1
-      altLayers1 bytes len=32 aka=StrictHash
       assetTags bytes len=32 aka=StrictHash
     transition tuple tag=1
       _ bytes len=32 aka=ContractId
