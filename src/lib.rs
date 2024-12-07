@@ -28,21 +28,9 @@ extern crate core;
 
 #[macro_use]
 extern crate amplify;
-#[macro_use]
-extern crate strict_encoding;
 
-#[cfg(feature = "serde")]
-#[macro_use]
-extern crate serde;
-
-mod bp;
 mod verify;
 
-#[cfg(feature = "stl")]
-pub mod stl;
-
-#[cfg(feature = "bp")]
-pub use bp::{Bp, BpLayer};
 pub use commit_verify::ReservedBytes;
 pub use verify::{ContractApi, ContractVerify, VerificationError};
 
