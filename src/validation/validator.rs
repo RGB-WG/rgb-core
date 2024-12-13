@@ -282,7 +282,7 @@ impl<
                     }
                 };
             for op in bundle.known_transitions.values() {
-                ops.insert(OrdOpRef::Transition(op, witness_id, witness_ord));
+                ops.insert(OrdOpRef::Transition(op, witness_id, witness_ord, bundle_id));
                 for input in &op.inputs {
                     // We will error in `validate_operations` below on the absent extension from the
                     // consignment.

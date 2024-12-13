@@ -37,11 +37,11 @@ use single_use_seals::SealWitness;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    AssetTags, AssignmentType, Assignments, AssignmentsRef, AttachState, ContractId, DataState,
-    ExposedSeal, Extension, ExtensionType, FungibleState, Genesis, GlobalState, GlobalStateType,
-    GraphSeal, Impossible, Inputs, Layer1, Metadata, OpFullType, OpId, OpType, Operation,
-    Transition, TransitionType, TxoSeal, TypedAssigns, Valencies, XChain, XOutpoint, XOutputSeal,
-    LIB_NAME_RGB_LOGIC,
+    AssetTags, AssignmentType, Assignments, AssignmentsRef, AttachState, BundleId, ContractId,
+    DataState, ExposedSeal, Extension, ExtensionType, FungibleState, Genesis, GlobalState,
+    GlobalStateType, GraphSeal, Impossible, Inputs, Layer1, Metadata, OpFullType, OpId, OpType,
+    Operation, Transition, TransitionType, TxoSeal, TypedAssigns, Valencies, XChain, XOutpoint,
+    XOutputSeal, LIB_NAME_RGB_LOGIC,
 };
 
 pub type XWitnessId = XChain<Txid>;
@@ -135,7 +135,7 @@ impl<U: ExposedSeal> XChain<U> {
 pub enum OrdOpRef<'op> {
     #[from]
     Genesis(&'op Genesis),
-    Transition(&'op Transition, XWitnessId, WitnessOrd),
+    Transition(&'op Transition, XWitnessId, WitnessOrd, BundleId),
     Extension(&'op Extension, XWitnessId, WitnessOrd),
 }
 
@@ -157,10 +157,17 @@ impl OrdOpRef<'_> {
         }
     }
 
+    pub fn bundle_id(&self) -> Option<BundleId> {
+        match self {
+            OrdOpRef::Genesis(_) | OrdOpRef::Extension(..) => None,
+            OrdOpRef::Transition(_, _, _, bundle_id) => Some(*bundle_id),
+        }
+    }
+
     pub fn op_ord(&self) -> OpOrd {
         match self {
             OrdOpRef::Genesis(_) => OpOrd::Genesis,
-            OrdOpRef::Transition(op, _, witness_ord) => OpOrd::Transition {
+            OrdOpRef::Transition(op, _, witness_ord, _) => OpOrd::Transition {
                 witness: *witness_ord,
                 ty: op.transition_type,
                 nonce: op.nonce,
