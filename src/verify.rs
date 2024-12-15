@@ -22,53 +22,60 @@
 // or implied. See the License for the specific language governing permissions and limitations under
 // the License.
 
-use core::borrow::Borrow;
+use alloc::collections::BTreeMap;
+use core::error::Error;
 
+use amplify::confinement::SmallOrdMap;
 use amplify::{Bytes32, Wrapper};
 use commit_verify::CommitId;
 use single_use_seals::{PublishedWitness, SealError, SealWitness, SingleUseSeal};
 use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
+pub struct Transaction<Seal: SingleUseSeal> {
+    pub operation: Operation,
+    pub defines: SmallOrdMap<CellAddr, Seal>,
+    pub witness: Option<SealWitness<Seal>>,
+}
+
 pub trait ContractApi<Seal: SingleUseSeal> {
     fn memory(&self) -> &impl Memory;
-    fn read_seal(&self, addr: CellAddr) -> Option<Seal>;
-    fn apply(&mut self, op: &Operation);
+    fn apply(&mut self, transaction: Transaction<Seal>);
 }
 
 pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Seal> {
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
-    fn evaluate(
+    fn evaluate<E: Error>(
         &mut self,
         contract_id: ContractId,
-        codex: impl Borrow<Codex>,
-        operations: impl IntoIterator<Item = (impl Borrow<Operation>, Option<impl Borrow<SealWitness<Seal>>>)>,
+        codex: &Codex,
         repo: &impl LibRepo,
-    ) -> Result<(), VerificationError<Seal>> {
-        let codex = codex.borrow();
-        for (op, witness) in operations {
-            let op = op.borrow();
-            let opid = op.commit_id();
+        transactions: impl IntoIterator<Item = Result<Transaction<Seal>, E>>,
+    ) -> Result<(), VerificationError<Seal, E>> {
+        let mut seals = BTreeMap::new();
+        for step in transactions {
+            let tx = step.map_err(VerificationError::Transaction)?;
+            let opid = tx.operation.commit_id();
 
             let mut closed_seals = vec![];
-            for input in &op.destroying {
-                let Some(seal) = self.read_seal(input.addr) else {
+            for input in &tx.operation.destroying {
+                let Some(seal) = seals.get(&input.addr) else {
                     return Err(VerificationError::Vm(CallError::NoReadOnceInput(input.addr)));
                 };
                 closed_seals.push(seal);
             }
 
             if !closed_seals.is_empty() {
-                let Some(witness) = witness else {
+                let Some(witness) = &tx.witness else {
                     return Err(VerificationError::NoWitness(opid));
                 };
-                let witness = witness.borrow();
                 witness
                     .verify_seals_closing(closed_seals, opid.into_inner())
                     .map_err(|e| VerificationError::Seal(witness.published.pub_id(), opid, e))?;
             }
 
-            codex.verify(contract_id, op, self.memory(), repo)?;
-            self.apply(op);
+            codex.verify(contract_id, &tx.operation, self.memory(), repo)?;
+            seals.extend(tx.defines.iter().map(|(addr, seal)| (*addr, seal.clone())));
+            self.apply(tx);
         }
 
         Ok(())
@@ -80,7 +87,7 @@ impl<Seal: SingleUseSeal<Message = Bytes32>, C: ContractApi<Seal>> ContractVerif
 // TODO: Find a way to do Debug and Clone implementation
 #[derive(Display, From)]
 #[display(doc_comments)]
-pub enum VerificationError<Seal: SingleUseSeal> {
+pub enum VerificationError<Seal: SingleUseSeal, E: Error> {
     /// no witness known for the operation {0}.
     NoWitness(Opid),
 
@@ -92,4 +99,7 @@ pub enum VerificationError<Seal: SingleUseSeal> {
     #[from]
     #[display(inner)]
     Vm(CallError),
+
+    #[display(inner)]
+    Transaction(E),
 }

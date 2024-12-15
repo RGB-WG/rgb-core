@@ -13,7 +13,6 @@ dependencies = [
  "commit_verify",
  "getrandom",
  "paste",
- "serde",
  "strict_encoding",
  "wasm-bindgen",
 ]
@@ -28,8 +27,6 @@ dependencies = [
  "amplify_num",
  "amplify_syn",
  "ascii",
- "serde",
- "stringly_conversions",
  "wasm-bindgen",
 ]
 
@@ -51,7 +48,6 @@ version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99bcb75a2982047f733547042fc3968c0f460dfcf7d90b90dea3b2744580e9ad"
 dependencies = [
- "serde",
  "wasm-bindgen",
 ]
 
@@ -71,9 +67,6 @@ name = "ascii"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d92bec98840b8f03a5ff5413de5293bfcd8bf96467cf5452609f939ec6f5de16"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "baid64"
@@ -151,7 +144,6 @@ dependencies = [
  "amplify",
  "commit_encoding_derive",
  "ripemd",
- "serde",
  "sha2",
  "strict_encoding",
  "strict_types",
@@ -384,36 +376,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1cf6437eb19a8f4a6cc0f7dca544973b0b78843adbfeb3683d1a94a0024a294"
 
 [[package]]
-name = "serde"
-version = "1.0.215"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6513c1ad0b11a9376da888e3e0baa0077f1aed55c17f50e7b2397136129fb88f"
-dependencies = [
- "serde_derive",
-]
-
-[[package]]
-name = "serde_derive"
-version = "1.0.215"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad1e866f866923f252f05c889987993144fb74e722403468a4ebd70c3cd756c0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.90",
-]
-
-[[package]]
-name = "serde_str_helpers"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b744a7c94f2f3785496af33a0d93857dfc0c521e25c38e993e9c5bb45f09c841"
-dependencies = [
- "serde",
- "serde_derive",
-]
-
-[[package]]
 name = "sha2"
 version = "0.10.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -443,7 +405,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fd36b71bb44ca146be0b2185ed6c6deb3684cc0d5c3a94284e97fe7fa6a642f"
 dependencies = [
  "amplify",
- "serde",
  "strict_encoding_derive",
  "wasm-bindgen",
 ]
@@ -474,16 +435,6 @@ dependencies = [
  "strict_encoding",
  "vesper-lang",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "stringly_conversions"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff63080f492dd4d289ffcaed8d7ece38adfb423db910eb342c0e04d409536a7a"
-dependencies = [
- "paste",
- "serde_str_helpers",
 ]
 
 [[package]]
@@ -523,7 +474,6 @@ dependencies = [
  "baid64",
  "commit_verify",
  "getrandom",
- "serde",
  "strict_encoding",
  "wasm-bindgen",
  "zk-aluvm",
@@ -781,7 +731,6 @@ dependencies = [
  "aluvm",
  "amplify",
  "getrandom",
- "serde",
  "strict_encoding",
  "wasm-bindgen",
 ]

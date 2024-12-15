@@ -25,11 +25,6 @@ single_use_seals = "~0.12.0-beta.1"
 
 [features]
 default = []
-all = ["serde"]
-serde = [
-    "amplify/serde",
-    "ultrasonic/serde",
-]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
