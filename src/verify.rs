@@ -39,21 +39,21 @@ pub struct Transaction<Seal: SingleUseSeal> {
 
 pub trait ContractApi<Seal: SingleUseSeal> {
     fn memory(&self) -> &impl Memory;
-    fn apply<E: Error>(&mut self, transaction: Transaction<Seal>) -> Result<(), E>;
+    fn apply<E2: Error>(&mut self, transaction: Transaction<Seal>) -> Result<(), E2>;
 }
 
 pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Seal> {
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
-    fn evaluate<E: Error>(
+    fn evaluate<E1: Error, E2: Error>(
         &mut self,
         contract_id: ContractId,
         codex: &Codex,
         repo: &impl LibRepo,
-        mut transactions: impl FnMut() -> Option<Result<Transaction<Seal>, E>>,
-    ) -> Result<(), VerificationError<Seal, E>> {
+        mut transactions: impl FnMut() -> Option<Result<Transaction<Seal>, E1>>,
+    ) -> Result<(), VerificationError<Seal, E1, E2>> {
         let mut seals = BTreeMap::new();
         while let Some(step) = transactions() {
-            let tx = step.map_err(VerificationError::Transaction)?;
+            let tx = step.map_err(VerificationError::Retrieve)?;
             let opid = tx.operation.commit_id();
 
             let mut closed_seals = alloc::vec![];
@@ -77,7 +77,8 @@ pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Se
 
             codex.verify(contract_id, &tx.operation, self.memory(), repo)?;
             seals.extend(tx.defines.iter().map(|(addr, seal)| (*addr, seal.clone())));
-            self.apply(tx).map_err(VerificationError::Transaction)?;
+            self.apply(tx)
+                .map_err(|e| VerificationError::Apply(opid, e))?;
         }
 
         Ok(())
@@ -89,7 +90,7 @@ impl<Seal: SingleUseSeal<Message = Bytes32>, C: ContractApi<Seal>> ContractVerif
 // TODO: Find a way to do Debug and Clone implementation
 #[derive(Display, From)]
 #[display(doc_comments)]
-pub enum VerificationError<Seal: SingleUseSeal, E: Error> {
+pub enum VerificationError<Seal: SingleUseSeal, E1: Error, E2: Error> {
     /// no witness known for the operation {0}.
     NoWitness(Opid),
 
@@ -102,6 +103,11 @@ pub enum VerificationError<Seal: SingleUseSeal, E: Error> {
     #[display(inner)]
     Vm(CallError),
 
-    #[display(inner)]
-    Transaction(E),
+    /// error retrieving transaction; {0}
+    Retrieve(E1),
+
+    /// error applying transaction data to the contract for operation {0}.
+    ///
+    /// Details: {1}
+    Apply(Opid, E2),
 }
