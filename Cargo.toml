@@ -20,11 +20,21 @@ crate-type = ["cdylib", "rlib", "staticlib"] # We need this for WASM
 [dependencies]
 amplify = { version = "~4.8.0", default-features = false, features = ["alloc"] }
 ultrasonic = "0.12.0-beta.2"
+strict_encoding = "2.8.1"
 commit_verify = "~0.12.0-beta.1"
-single_use_seals = "~0.12.0-beta.1"
+single_use_seals = { version = "~0.12.0-beta.1", features = ["strict_encoding"] }
+serde = { version = "1", optional = true }
 
 [features]
 default = []
+all = ["serde"]
+serde = [
+    "dep:serde",
+    "amplify/serde",
+    "ultrasonic/serde",
+    "commit_verify/serde",
+    "single_use_seals/serde"
+]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
@@ -39,3 +49,4 @@ features = ["all"]
 
 [patch.crates-io]
 ultrasonic = { git = "https://github.com/AluVM/ultrasonic" }
+single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }

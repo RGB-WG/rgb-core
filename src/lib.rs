@@ -23,12 +23,17 @@
 // the License.
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-#![no_std]
+// TODO: Enable when strict encoding supports
+// #![no_std]
 
 extern crate alloc;
-
 #[macro_use]
 extern crate amplify;
+#[macro_use]
+extern crate strict_encoding;
+#[cfg(feature = "serde")]
+#[macro_use]
+extern crate serde;
 
 mod verify;
 

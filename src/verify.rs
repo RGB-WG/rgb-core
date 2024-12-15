@@ -31,6 +31,15 @@ use commit_verify::CommitId;
 use single_use_seals::{PublishedWitness, SealError, SealWitness, SingleUseSeal};
 use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = "RGBCore")]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(bound = "Seal: serde::Serialize + for<'d> serde::Deserialize<'d>, Seal::PubWitness: serde::Serialize + \
+                   for<'d> serde::Deserialize<'d>, Seal::CliWitness: serde::Serialize + for<'d> \
+                   serde::Deserialize<'d>")
+)]
 pub struct Transaction<Seal: SingleUseSeal> {
     pub operation: Operation,
     pub defines: SmallOrdMap<CellAddr, Seal>,
