@@ -39,7 +39,7 @@ pub struct Transaction<Seal: SingleUseSeal> {
 
 pub trait ContractApi<Seal: SingleUseSeal> {
     fn memory(&self) -> &impl Memory;
-    fn apply(&mut self, transaction: Transaction<Seal>);
+    fn apply<E: Error>(&mut self, transaction: Transaction<Seal>) -> Result<(), E>;
 }
 
 pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Seal> {
@@ -49,10 +49,10 @@ pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Se
         contract_id: ContractId,
         codex: &Codex,
         repo: &impl LibRepo,
-        transactions: impl IntoIterator<Item = Result<Transaction<Seal>, E>>,
+        mut transactions: impl FnMut() -> Option<Result<Transaction<Seal>, E>>,
     ) -> Result<(), VerificationError<Seal, E>> {
         let mut seals = BTreeMap::new();
-        for step in transactions {
+        while let Some(step) = transactions() {
             let tx = step.map_err(VerificationError::Transaction)?;
             let opid = tx.operation.commit_id();
 
@@ -75,7 +75,7 @@ pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Se
 
             codex.verify(contract_id, &tx.operation, self.memory(), repo)?;
             seals.extend(tx.defines.iter().map(|(addr, seal)| (*addr, seal.clone())));
-            self.apply(tx);
+            self.apply(tx).map_err(VerificationError::Transaction)?;
         }
 
         Ok(())
