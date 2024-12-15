@@ -56,7 +56,7 @@ pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Se
             let tx = step.map_err(VerificationError::Transaction)?;
             let opid = tx.operation.commit_id();
 
-            let mut closed_seals = vec![];
+            let mut closed_seals = alloc::vec![];
             for input in &tx.operation.destroying {
                 let Some(seal) = seals.get(&input.addr) else {
                     return Err(VerificationError::Vm(CallError::NoReadOnceInput(input.addr)));

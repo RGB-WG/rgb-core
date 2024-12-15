@@ -18,7 +18,7 @@ name = "rgbcore"
 crate-type = ["cdylib", "rlib", "staticlib"] # We need this for WASM
 
 [dependencies]
-amplify = "~4.8.0"
+amplify = { version = "~4.8.0", default-features = false, features = ["alloc"] }
 ultrasonic = "0.12.0-beta.2"
 commit_verify = "~0.12.0-beta.1"
 single_use_seals = "~0.12.0-beta.1"

@@ -23,8 +23,7 @@
 // the License.
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-// TODO: Enable once strict_encoding is no_std
-//#![no_std]
+#![no_std]
 
 extern crate alloc;
 
@@ -35,5 +34,3 @@ mod verify;
 
 pub use commit_verify::ReservedBytes;
 pub use verify::{ContractApi, ContractVerify, Transaction, VerificationError};
-
-pub const LIB_NAME_RGB_CORE: &str = "RGBCore";
