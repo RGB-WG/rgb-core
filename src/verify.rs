@@ -25,7 +25,7 @@
 use alloc::collections::BTreeMap;
 use core::error::Error;
 
-use amplify::confinement::SmallOrdMap;
+use amplify::confinement::{SmallOrdMap, SmallVec};
 use amplify::{Bytes32, Wrapper};
 use commit_verify::CommitId;
 use single_use_seals::{PublishedWitness, SealError, SealWitness, SingleUseSeal};
@@ -34,7 +34,7 @@ use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operat
 pub struct Transaction<Seal: SingleUseSeal> {
     pub operation: Operation,
     pub defines: SmallOrdMap<CellAddr, Seal>,
-    pub witness: Option<SealWitness<Seal>>,
+    pub witness: SmallVec<SealWitness<Seal>>,
 }
 
 pub trait ContractApi<Seal: SingleUseSeal> {
@@ -65,12 +65,14 @@ pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Se
             }
 
             if !closed_seals.is_empty() {
-                let Some(witness) = &tx.witness else {
+                if tx.witness.is_empty() {
                     return Err(VerificationError::NoWitness(opid));
                 };
-                witness
-                    .verify_seals_closing(closed_seals, opid.into_inner())
-                    .map_err(|e| VerificationError::Seal(witness.published.pub_id(), opid, e))?;
+                for witness in &tx.witness {
+                    witness
+                        .verify_seals_closing(closed_seals.iter().map(|seal| *seal), opid.into_inner())
+                        .map_err(|e| VerificationError::Seal(witness.published.pub_id(), opid, e))?;
+                }
             }
 
             codex.verify(contract_id, &tx.operation, self.memory(), repo)?;
