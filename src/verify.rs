@@ -47,19 +47,20 @@ pub struct Transaction<Seal: SingleUseSeal> {
 }
 
 pub trait ContractApi<Seal: SingleUseSeal> {
+    type Error: Error;
     fn memory(&self) -> &impl Memory;
-    fn apply<E2: Error>(&mut self, transaction: Transaction<Seal>) -> Result<(), E2>;
+    fn apply(&mut self, transaction: Transaction<Seal>) -> Result<(), Self::Error>;
 }
 
 pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Seal> {
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
-    fn evaluate<E1: Error, E2: Error>(
+    fn evaluate<E: Error>(
         &mut self,
         contract_id: ContractId,
         codex: &Codex,
         repo: &impl LibRepo,
-        mut transactions: impl FnMut() -> Option<Result<Transaction<Seal>, E1>>,
-    ) -> Result<(), VerificationError<Seal, E1, E2>> {
+        mut transactions: impl FnMut() -> Option<Result<Transaction<Seal>, E>>,
+    ) -> Result<(), VerificationError<Seal, E, Self::Error>> {
         let mut seals = BTreeMap::new();
         while let Some(step) = transactions() {
             let tx = step.map_err(VerificationError::Retrieve)?;
@@ -97,7 +98,7 @@ pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Se
 impl<Seal: SingleUseSeal<Message = Bytes32>, C: ContractApi<Seal>> ContractVerify<Seal> for C {}
 
 // TODO: Find a way to do Debug and Clone implementation
-#[derive(Display, From)]
+#[derive(Debug, Display, From)]
 #[display(doc_comments)]
 pub enum VerificationError<Seal: SingleUseSeal, E1: Error, E2: Error> {
     /// no witness known for the operation {0}.
