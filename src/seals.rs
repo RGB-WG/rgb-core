@@ -38,6 +38,8 @@ pub const BITCOIN_TAPRET: u32 = 0x0001_0002_u32;
 pub const LIQUID_OPRET: u32 = 0x0002_0001_u32;
 #[cfg(feature = "liquid")]
 pub const LIQUID_TAPRET: u32 = 0x0002_0002_u32;
+#[cfg(feature = "prime")]
+pub const PRIME_SEALS: u32 = 0x0010_0001_u32;
 
 #[cfg(any(feature = "bitcoin", feature = "liquid"))]
 pub mod bitcoin {
