@@ -23,11 +23,17 @@ ultrasonic = "0.12.0-beta.2"
 strict_encoding = "2.8.1"
 commit_verify = "~0.12.0-beta.1"
 single_use_seals = { version = "~0.12.0-beta.1", features = ["strict_encoding"] }
+bp-core = { version = "0.12.0-beta.2", optional = true }
 serde = { version = "1", optional = true }
 
 [features]
-default = []
-all = ["serde"]
+default = ["bitcoin"]
+all = ["bitcoin", "liquid", "prime", "serde"]
+
+bitcoin = ["bp-core"]
+liquid = []
+prime = []
+
 serde = [
     "dep:serde",
     "amplify/serde",
@@ -50,3 +56,4 @@ features = ["all"]
 [patch.crates-io]
 ultrasonic = { git = "https://github.com/AluVM/ultrasonic" }
 single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
+bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "v0.12" }

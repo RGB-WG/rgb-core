@@ -36,9 +36,9 @@ extern crate strict_encoding;
 extern crate serde;
 
 mod verify;
+mod seals;
 
-pub use verify::{
-    ContractApi, ContractVerify, OperationSeals, ReadOperation, ReadWitness, SonicSeal, Step, VerificationError,
-};
+pub use seals::*;
+pub use verify::{ContractApi, ContractVerify, OperationSeals, ReadOperation, ReadWitness, Step, VerificationError};
 
 pub const LIB_NAME_RGB_CORE: &str = "RGBCore";

@@ -27,20 +27,16 @@ use core::error::Error;
 use std::collections::BTreeSet;
 
 use amplify::confinement::SmallVec;
-use amplify::{Bytes32, Wrapper};
+use amplify::Wrapper;
 use single_use_seals::{PublishedWitness, SealError, SealWitness, SingleUseSeal};
-use ultrasonic::{AuthToken, CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
+use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
-use crate::LIB_NAME_RGB_CORE;
+use crate::{SonicSeal, LIB_NAME_RGB_CORE};
 
 // TODO: Move to amplify crate
 pub enum Step<A, B> {
     Next(A),
     Complete(B),
-}
-
-pub trait SonicSeal: SingleUseSeal<Message = Bytes32> {
-    fn auth_token(&self) -> AuthToken;
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
