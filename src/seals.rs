@@ -92,9 +92,10 @@ impl FromStr for SealType {
     }
 }
 
-impl From<u32> for SealType {
-    fn from(caps: u32) -> Self {
-        match caps {
+impl TryFrom<u32> for SealType {
+    type Error = UnknownType;
+    fn try_from(caps: u32) -> Result<Self, Self::Error> {
+        Ok(match caps {
             #[cfg(feature = "bitcoin")]
             BITCOIN_OPRET => Self::BitcoinOpret,
             #[cfg(feature = "bitcoin")]
@@ -103,8 +104,8 @@ impl From<u32> for SealType {
             LIQUID_TAPRET => Self::LiquidTapret,
             #[cfg(feature = "prime")]
             PRIME_SEALS => Self::Prime,
-            unknown => panic!("unknown seal type {unknown:#10x}"),
-        }
+            unknown => return Err(UnknownType(format!("unknown seal type {unknown:#10x}"))),
+        })
     }
 }
 
