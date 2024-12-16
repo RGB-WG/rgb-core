@@ -25,14 +25,16 @@
 use alloc::collections::BTreeMap;
 use core::error::Error;
 
-use amplify::confinement::{SmallOrdMap, SmallVec};
+use amplify::confinement::{ConfinedVec, SmallOrdMap, U64 as U64MAX};
 use amplify::{Bytes32, Wrapper};
 use commit_verify::CommitId;
 use single_use_seals::{PublishedWitness, SealError, SealWitness, SingleUseSeal};
 use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
+use crate::LIB_NAME_RGB_CORE;
+
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = "RGBCore")]
+#[strict_type(lib = LIB_NAME_RGB_CORE)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -42,8 +44,23 @@ use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operat
 )]
 pub struct Transaction<Seal: SingleUseSeal> {
     pub operation: Operation,
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub aux: OpAux<Seal>,
+}
+
+/// Operation auxillary data
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_CORE)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(bound = "Seal: serde::Serialize + for<'d> serde::Deserialize<'d>, Seal::PubWitness: serde::Serialize + \
+                   for<'d> serde::Deserialize<'d>, Seal::CliWitness: serde::Serialize + for<'d> \
+                   serde::Deserialize<'d>")
+)]
+pub struct OpAux<Seal: SingleUseSeal> {
     pub defines: SmallOrdMap<CellAddr, Seal>,
-    pub witness: SmallVec<SealWitness<Seal>>,
+    pub witness: ConfinedVec<SealWitness<Seal>, 0, U64MAX>,
 }
 
 pub trait ContractApi<Seal: SingleUseSeal> {
@@ -75,10 +92,10 @@ pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Se
             }
 
             if !closed_seals.is_empty() {
-                if tx.witness.is_empty() {
+                if tx.aux.witness.is_empty() {
                     return Err(VerificationError::NoWitness(opid));
                 };
-                for witness in &tx.witness {
+                for witness in &tx.aux.witness {
                     witness
                         .verify_seals_closing(closed_seals.iter().map(|seal| *seal), opid.into_inner())
                         .map_err(|e| VerificationError::Seal(witness.published.pub_id(), opid, e))?;
@@ -86,7 +103,12 @@ pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Se
             }
 
             codex.verify(contract_id, &tx.operation, self.memory(), repo)?;
-            seals.extend(tx.defines.iter().map(|(addr, seal)| (*addr, seal.clone())));
+            let iter = tx
+                .aux
+                .defines
+                .iter()
+                .map(|(addr, seal)| (*addr, seal.clone()));
+            seals.extend(iter);
             self.apply(tx)
                 .map_err(|e| VerificationError::Apply(opid, e))?;
         }

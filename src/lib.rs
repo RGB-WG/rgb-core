@@ -38,4 +38,6 @@ extern crate serde;
 mod verify;
 
 pub use commit_verify::ReservedBytes;
-pub use verify::{ContractApi, ContractVerify, Transaction, VerificationError};
+pub use verify::{ContractApi, ContractVerify, OpAux, Transaction, VerificationError};
+
+pub const LIB_NAME_RGB_CORE: &str = "RGBCore";
