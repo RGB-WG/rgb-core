@@ -46,6 +46,7 @@ pub const LIQUID_TAPRET: u32 = 0x0002_0002_u32;
 pub const PRIME_SEALS: u32 = 0x0010_0001_u32;
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[repr(u32)]
 pub enum SealType {
     #[cfg(feature = "bitcoin")]
