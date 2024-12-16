@@ -23,12 +23,11 @@
 // the License.
 
 use alloc::collections::BTreeMap;
-use core::error::Error;
 use std::collections::BTreeSet;
 
 use amplify::confinement::SmallVec;
 use amplify::Wrapper;
-use single_use_seals::{PublishedWitness, SealError, SealWitness, SingleUseSeal};
+use single_use_seals::{PublishedWitness, SealError, SealWitness};
 use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
 use crate::{SonicSeal, LIB_NAME_RGB_CORE};
@@ -60,16 +59,14 @@ pub struct OperationSeals<Seal: SonicSeal> {
 
 pub trait ReadOperation: Sized {
     type Seal: SonicSeal;
-    type WitnessReader: ReadWitness<Seal = Self::Seal, OpReader = Self, Error = Self::Error>;
-    type Error: Error;
-    fn read_operation(self) -> Result<Option<(OperationSeals<Self::Seal>, Self::WitnessReader)>, Self::Error>;
+    type WitnessReader: ReadWitness<Seal = Self::Seal, OpReader = Self>;
+    fn read_operation(self) -> Option<(OperationSeals<Self::Seal>, Self::WitnessReader)>;
 }
 
 pub trait ReadWitness: Sized {
     type Seal: SonicSeal;
-    type OpReader: ReadOperation<Seal = Self::Seal, WitnessReader = Self, Error = Self::Error>;
-    type Error: Error;
-    fn read_witness(self) -> Result<Step<(SealWitness<Self::Seal>, Self), Self::OpReader>, Self::Error>;
+    type OpReader: ReadOperation<Seal = Self::Seal, WitnessReader = Self>;
+    fn read_witness(self) -> Step<(SealWitness<Self::Seal>, Self), Self::OpReader>;
 }
 
 /// API exposed by the contract required for evaluating and verifying the contract state (see
@@ -77,11 +74,10 @@ pub trait ReadWitness: Sized {
 ///
 /// NB: `apply_operation` is called only after `apply_witness`.
 pub trait ContractApi<Seal: SonicSeal> {
-    type Error: Error;
     fn contract_id(&self) -> ContractId;
     fn memory(&self) -> &impl Memory;
-    fn apply_operation(&mut self, header: OperationSeals<Seal>) -> Result<(), Self::Error>;
-    fn apply_witness(&mut self, opid: Opid, witness: SealWitness<Seal>) -> Result<(), Self::Error>;
+    fn apply_operation(&mut self, header: OperationSeals<Seal>);
+    fn apply_witness(&mut self, opid: Opid, witness: SealWitness<Seal>);
 }
 
 // We use dedicated trait here in order to prevent overriding of the implementation in client
@@ -95,14 +91,11 @@ pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
         // We have to pass this as an independent parameter and not through the trait due to rust borrow checker
         repo: &impl LibRepo,
         mut reader: R,
-    ) -> Result<(), VerificationError<Seal, R::Error, Self::Error>> {
+    ) -> Result<(), VerificationError<Seal>> {
         let contract_id = self.contract_id();
 
         let mut seals = BTreeMap::<CellAddr, Seal>::new();
-        while let Some((header, mut witness_reader)) = reader
-            .read_operation()
-            .map_err(VerificationError::Retrieve)?
-        {
+        while let Some((header, mut witness_reader)) = reader.read_operation() {
             // First, we verify the operation
             codex.verify(contract_id, &header.operation, self.memory(), repo)?;
 
@@ -135,23 +128,19 @@ pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
                 .map(|(_, seal)| seal.auth_token().to_byte_array())
                 .collect::<BTreeSet<_>>();
             if sealed != defined {
-                return Err(VerificationError::SealDefinitionMismatch(opid));
+                return Err(VerificationError::SealsDefinitionMismatch(opid));
             }
 
             // This convoluted logic happens since we use a state machine which ensures the client can't lie to
             // the verifier
             let mut witness_count = 0usize;
             loop {
-                match witness_reader
-                    .read_witness()
-                    .map_err(VerificationError::Retrieve)?
-                {
+                match witness_reader.read_witness() {
                     Step::Next((witness, w)) => {
                         witness
                             .verify_seals_closing(&closed_seals, opid.into_inner())
-                            .map_err(|e| VerificationError::Seal(witness.published.pub_id(), opid, e))?;
-                        self.apply_witness(opid, witness)
-                            .map_err(|e| VerificationError::Apply(opid, e))?;
+                            .map_err(|e| VerificationError::SealsNotClosed(witness.published.pub_id(), opid, e))?;
+                        self.apply_witness(opid, witness);
                         witness_reader = w;
                     }
                     Step::Complete(r) => {
@@ -167,8 +156,7 @@ pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
             }
 
             seals.extend(iter);
-            self.apply_operation(header)
-                .map_err(|e| VerificationError::Apply(opid, e))?;
+            self.apply_operation(header);
         }
 
         Ok(())
@@ -180,28 +168,20 @@ impl<Seal: SonicSeal, C: ContractApi<Seal>> ContractVerify<Seal> for C {}
 // TODO: Find a way to do Debug and Clone implementation
 #[derive(Debug, Display, From)]
 #[display(doc_comments)]
-pub enum VerificationError<Seal: SingleUseSeal, E1: Error, E2: Error> {
+pub enum VerificationError<Seal: SonicSeal> {
     /// no witness known for the operation {0}.
     NoWitness(Opid),
 
     /// single-use seals are not closed properly with witness {0} for operation {1}.
     ///
     /// Details: {2}
-    Seal(<Seal::PubWitness as PublishedWitness<Seal>>::PubId, Opid, SealError<Seal>),
+    SealsNotClosed(<Seal::PubWitness as PublishedWitness<Seal>>::PubId, Opid, SealError<Seal>),
 
     /// seals, reported to be defined by the operation {0}, do match the assignments in the
     /// operation.
-    SealDefinitionMismatch(Opid),
+    SealsDefinitionMismatch(Opid),
 
     #[from]
     #[display(inner)]
     Vm(CallError),
-
-    /// error retrieving transaction; {0}
-    Retrieve(E1),
-
-    /// error applying transaction data to the contract for operation {0}.
-    ///
-    /// Details: {1}
-    Apply(Opid, E2),
 }
