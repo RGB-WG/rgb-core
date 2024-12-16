@@ -75,6 +75,8 @@ pub trait ReadWitness: Sized {
 /// NB: `apply_operation` is called only after `apply_witness`.
 pub trait ContractApi<Seal: SonicSeal> {
     fn contract_id(&self) -> ContractId;
+    fn codex(&self) -> &Codex;
+    fn repo(&self) -> &impl LibRepo;
     fn memory(&self) -> &impl Memory;
     fn apply_operation(&mut self, header: OperationSeals<Seal>);
     fn apply_witness(&mut self, opid: Opid, witness: SealWitness<Seal>);
@@ -84,20 +86,14 @@ pub trait ContractApi<Seal: SonicSeal> {
 // libraries
 pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
-    fn evaluate<R: ReadOperation<Seal = Seal>>(
-        &mut self,
-        // We have to pass this as an independent parameter and not through the trait due to rust borrow checker
-        codex: &Codex,
-        // We have to pass this as an independent parameter and not through the trait due to rust borrow checker
-        repo: &impl LibRepo,
-        mut reader: R,
-    ) -> Result<(), VerificationError<Seal>> {
+    fn evaluate<R: ReadOperation<Seal = Seal>>(&mut self, mut reader: R) -> Result<(), VerificationError<Seal>> {
         let contract_id = self.contract_id();
 
         let mut seals = BTreeMap::<CellAddr, Seal>::new();
         while let Some((header, mut witness_reader)) = reader.read_operation() {
             // First, we verify the operation
-            codex.verify(contract_id, &header.operation, self.memory(), repo)?;
+            self.codex()
+                .verify(contract_id, &header.operation, self.memory(), self.repo())?;
 
             // Next we verify its single-use seals
             let opid = header.operation.opid();
