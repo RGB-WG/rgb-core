@@ -24,92 +24,154 @@
 
 use alloc::collections::BTreeMap;
 use core::error::Error;
+use std::collections::BTreeSet;
 
-use amplify::confinement::{ConfinedVec, SmallOrdMap, U64 as U64MAX};
+use amplify::confinement::SmallVec;
 use amplify::{Bytes32, Wrapper};
-use commit_verify::CommitId;
 use single_use_seals::{PublishedWitness, SealError, SealWitness, SingleUseSeal};
-use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
+use ultrasonic::{AuthToken, CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
 use crate::LIB_NAME_RGB_CORE;
 
+// TODO: Move to amplify crate
+pub enum Step<A, B> {
+    Next(A),
+    Complete(B),
+}
+
+pub trait SonicSeal: SingleUseSeal<Message = Bytes32> {
+    fn auth_token(&self) -> AuthToken;
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_CORE)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(bound = "Seal: serde::Serialize + for<'d> serde::Deserialize<'d>, Seal::PubWitness: serde::Serialize + \
-                   for<'d> serde::Deserialize<'d>, Seal::CliWitness: serde::Serialize + for<'d> \
-                   serde::Deserialize<'d>")
+    serde(
+        rename_all = "camelCase",
+        bound = "Seal: serde::Serialize + for<'d> serde::Deserialize<'d>, Seal::PubWitness: serde::Serialize + \
+                 for<'d> serde::Deserialize<'d>, Seal::CliWitness: serde::Serialize + for<'d> serde::Deserialize<'d>"
+    )
 )]
-pub struct Transaction<Seal: SingleUseSeal> {
+pub struct OperationSeals<Seal: SonicSeal> {
     pub operation: Operation,
-    #[cfg_attr(feature = "serde", serde(flatten))]
-    pub aux: OpAux<Seal>,
+    /// Operation itself contains only AuthToken's, which are a commitments to the seals. Hence, we
+    /// have to separately include a full seal definitions next to the operation data.
+    pub defined_seals: SmallVec<Seal>,
 }
 
-/// Operation auxillary data
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_CORE)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(bound = "Seal: serde::Serialize + for<'d> serde::Deserialize<'d>, Seal::PubWitness: serde::Serialize + \
-                   for<'d> serde::Deserialize<'d>, Seal::CliWitness: serde::Serialize + for<'d> \
-                   serde::Deserialize<'d>")
-)]
-pub struct OpAux<Seal: SingleUseSeal> {
-    pub defines: SmallOrdMap<CellAddr, Seal>,
-    pub witness: ConfinedVec<SealWitness<Seal>, 0, U64MAX>,
-}
-
-pub trait ContractApi<Seal: SingleUseSeal> {
+pub trait ReadOperation: Sized {
+    type Seal: SonicSeal;
+    type WitnessReader: ReadWitness<Seal = Self::Seal, OpReader = Self, Error = Self::Error>;
     type Error: Error;
-    fn memory(&self) -> &impl Memory;
-    fn apply(&mut self, transaction: Transaction<Seal>) -> Result<(), Self::Error>;
+    fn read_operation(self) -> Result<Option<(OperationSeals<Self::Seal>, Self::WitnessReader)>, Self::Error>;
 }
 
-pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Seal> {
+pub trait ReadWitness: Sized {
+    type Seal: SonicSeal;
+    type OpReader: ReadOperation<Seal = Self::Seal, WitnessReader = Self, Error = Self::Error>;
+    type Error: Error;
+    fn read_witness(self) -> Result<Step<(SealWitness<Self::Seal>, Self), Self::OpReader>, Self::Error>;
+}
+
+/// API exposed by the contract required for evaluating and verifying the contract state (see
+/// [`ContractVerify`]).
+///
+/// NB: `apply_operation` is called only after `apply_witness`.
+pub trait ContractApi<Seal: SonicSeal> {
+    type Error: Error;
+    fn contract_id(&self) -> ContractId;
+    fn memory(&self) -> &impl Memory;
+    fn apply_operation(&mut self, header: OperationSeals<Seal>) -> Result<(), Self::Error>;
+    fn apply_witness(&mut self, opid: Opid, witness: SealWitness<Seal>) -> Result<(), Self::Error>;
+}
+
+// We use dedicated trait here in order to prevent overriding of the implementation in client
+// libraries
+pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
-    fn evaluate<E: Error>(
+    fn evaluate<R: ReadOperation<Seal = Seal>>(
         &mut self,
-        contract_id: ContractId,
+        // We have to pass this as an independent parameter and not through the trait due to rust borrow checker
         codex: &Codex,
+        // We have to pass this as an independent parameter and not through the trait due to rust borrow checker
         repo: &impl LibRepo,
-        mut transactions: impl FnMut() -> Option<Result<Transaction<Seal>, E>>,
-    ) -> Result<(), VerificationError<Seal, E, Self::Error>> {
-        let mut seals = BTreeMap::new();
-        while let Some(step) = transactions() {
-            let tx = step.map_err(VerificationError::Retrieve)?;
-            let opid = tx.operation.commit_id();
+        mut reader: R,
+    ) -> Result<(), VerificationError<Seal, R::Error, Self::Error>> {
+        let contract_id = self.contract_id();
+
+        let mut seals = BTreeMap::<CellAddr, Seal>::new();
+        while let Some((header, mut witness_reader)) = reader
+            .read_operation()
+            .map_err(VerificationError::Retrieve)?
+        {
+            // First, we verify the operation
+            codex.verify(contract_id, &header.operation, self.memory(), repo)?;
+
+            // Next we verify its single-use seals
+            let opid = header.operation.opid();
 
             let mut closed_seals = alloc::vec![];
-            for input in &tx.operation.destroying {
+            for input in &header.operation.destroying {
                 let Some(seal) = seals.get(&input.addr) else {
                     return Err(VerificationError::Vm(CallError::NoReadOnceInput(input.addr)));
                 };
-                closed_seals.push(seal);
+                closed_seals.push(seal.clone());
             }
 
-            if !closed_seals.is_empty() {
-                if tx.aux.witness.is_empty() {
-                    return Err(VerificationError::NoWitness(opid));
-                };
-                for witness in &tx.aux.witness {
-                    witness
-                        .verify_seals_closing(closed_seals.iter().map(|seal| *seal), opid.into_inner())
-                        .map_err(|e| VerificationError::Seal(witness.published.pub_id(), opid, e))?;
-                }
-            }
-
-            codex.verify(contract_id, &tx.operation, self.memory(), repo)?;
-            let iter = tx
-                .aux
-                .defines
+            let iter = header
+                .defined_seals
                 .iter()
-                .map(|(addr, seal)| (*addr, seal.clone()));
+                .enumerate()
+                .map(|(pos, seal)| (CellAddr::new(opid, pos as u16), seal.clone()));
+
+            // We need to check that all seal definitions strictly match operation-defined destructible cells
+            let defined = header
+                .operation
+                .destructible
+                .iter()
+                .map(|cell| cell.auth.to_byte_array())
+                .collect::<BTreeSet<_>>();
+            let sealed = iter
+                .clone()
+                .map(|(_, seal)| seal.auth_token().to_byte_array())
+                .collect::<BTreeSet<_>>();
+            if sealed != defined {
+                return Err(VerificationError::SealDefinitionMismatch(opid));
+            }
+
+            // This convoluted logic happens since we use a state machine which ensures the client can't lie to
+            // the verifier
+            let mut witness_count = 0usize;
+            loop {
+                match witness_reader
+                    .read_witness()
+                    .map_err(VerificationError::Retrieve)?
+                {
+                    Step::Next((witness, w)) => {
+                        witness
+                            .verify_seals_closing(&closed_seals, opid.into_inner())
+                            .map_err(|e| VerificationError::Seal(witness.published.pub_id(), opid, e))?;
+                        self.apply_witness(opid, witness)
+                            .map_err(|e| VerificationError::Apply(opid, e))?;
+                        witness_reader = w;
+                    }
+                    Step::Complete(r) => {
+                        reader = r;
+                        break;
+                    }
+                }
+                witness_count += 1;
+            }
+
+            if !closed_seals.is_empty() && witness_count == 0 {
+                return Err(VerificationError::NoWitness(opid));
+            }
+
             seals.extend(iter);
-            self.apply(tx)
+            self.apply_operation(header)
                 .map_err(|e| VerificationError::Apply(opid, e))?;
         }
 
@@ -117,7 +179,7 @@ pub trait ContractVerify<Seal: SingleUseSeal<Message = Bytes32>>: ContractApi<Se
     }
 }
 
-impl<Seal: SingleUseSeal<Message = Bytes32>, C: ContractApi<Seal>> ContractVerify<Seal> for C {}
+impl<Seal: SonicSeal, C: ContractApi<Seal>> ContractVerify<Seal> for C {}
 
 // TODO: Find a way to do Debug and Clone implementation
 #[derive(Debug, Display, From)]
@@ -130,6 +192,10 @@ pub enum VerificationError<Seal: SingleUseSeal, E1: Error, E2: Error> {
     ///
     /// Details: {2}
     Seal(<Seal::PubWitness as PublishedWitness<Seal>>::PubId, Opid, SealError<Seal>),
+
+    /// seals, reported to be defined by the operation {0}, do match the assignments in the
+    /// operation.
+    SealDefinitionMismatch(Opid),
 
     #[from]
     #[display(inner)]
