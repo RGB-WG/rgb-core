@@ -39,6 +39,7 @@ mod verify;
 mod seals;
 
 pub use seals::*;
+pub use single_use_seals::*;
 pub use verify::{ContractApi, ContractVerify, OperationSeals, ReadOperation, ReadWitness, Step, VerificationError};
 
 pub const LIB_NAME_RGB_CORE: &str = "RGBCore";
