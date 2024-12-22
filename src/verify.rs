@@ -102,7 +102,7 @@ pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
             let mut closed_seals = alloc::vec![];
             for input in &header.operation.destroying {
                 let Some(seal) = seals.get(&input.addr) else {
-                    return Err(VerificationError::Vm(CallError::NoReadOnceInput(input.addr)));
+                    return Err(VerificationError::SealUnknown(input.addr));
                 };
                 closed_seals.push(seal.clone());
             }
@@ -173,6 +173,9 @@ pub enum VerificationError<Seal: SonicSeal> {
     ///
     /// Details: {2}
     SealsNotClosed(<Seal::PubWitness as PublishedWitness<Seal>>::PubId, Opid, SealError<Seal>),
+
+    /// unknown seal definition for cell address {0}.
+    SealUnknown(CellAddr),
 
     /// seals, reported to be defined by the operation {0}, do match the assignments in the
     /// operation.
