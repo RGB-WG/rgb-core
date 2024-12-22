@@ -55,5 +55,6 @@ features = ["all"]
 
 [patch.crates-io]
 ultrasonic = { git = "https://github.com/AluVM/ultrasonic" }
+commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
 single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
 bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "v0.12" }

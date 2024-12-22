@@ -26,7 +26,8 @@ use alloc::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 use amplify::confinement::SmallVec;
-use amplify::Wrapper;
+use amplify::ByteArray;
+use bp::seals::mmb;
 use single_use_seals::{PublishedWitness, SealError, SealWitness};
 use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
@@ -134,7 +135,7 @@ pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
                 match witness_reader.read_witness() {
                     Step::Next((witness, w)) => {
                         witness
-                            .verify_seals_closing(&closed_seals, opid.into_inner())
+                            .verify_seals_closing(&closed_seals, mmb::Message::from_byte_array(opid.to_byte_array()))
                             .map_err(|e| VerificationError::SealsNotClosed(witness.published.pub_id(), opid, e))?;
                         self.apply_witness(opid, witness);
                         witness_reader = w;

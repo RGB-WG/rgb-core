@@ -24,11 +24,11 @@
 
 use core::str::FromStr;
 
-use amplify::Bytes32;
+use bp::seals::mmb;
 use single_use_seals::SingleUseSeal;
 use ultrasonic::AuthToken;
 
-pub trait SonicSeal: SingleUseSeal<Message = Bytes32> {
+pub trait SonicSeal: SingleUseSeal<Message = mmb::Message> {
     fn auth_token(&self) -> AuthToken;
 }
 
