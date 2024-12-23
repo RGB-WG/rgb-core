@@ -92,19 +92,19 @@ pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
 
         let mut first = true;
         let mut seals = BTreeMap::<CellAddr, Seal>::new();
-        while let Some((header, mut witness_reader)) = reader.read_operation() {
+        while let Some((mut header, mut witness_reader)) = reader.read_operation() {
             // Genesis can't commit to the contract id since the contract doesn't exist yet; thus, we have to
             // apply this little trick
-            let used_id = if first {
-                first = false;
-                ContractId::from_byte_array(self.codex().codex_id().to_byte_array())
-            } else {
-                contract_id
-            };
+            if first {
+                if header.operation.contract_id.to_byte_array() != self.codex().codex_id().to_byte_array() {
+                    return Err(VerificationError::NoCodexCommitment);
+                }
+                header.operation.contract_id = contract_id;
+            }
 
             // First, we verify the operation
             self.codex()
-                .verify(used_id, &header.operation, self.memory(), self.repo())?;
+                .verify(contract_id, &header.operation, self.memory(), self.repo())?;
 
             // Next we verify its single-use seals
             let opid = header.operation.opid();
@@ -163,7 +163,11 @@ pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
             }
 
             seals.extend(iter);
-            self.apply_operation(header);
+            if first {
+                first = false
+            } else {
+                self.apply_operation(header);
+            }
         }
 
         Ok(())
@@ -176,6 +180,9 @@ impl<Seal: SonicSeal, C: ContractApi<Seal>> ContractVerify<Seal> for C {}
 #[derive(Debug, Display, From)]
 #[display(doc_comments)]
 pub enum VerificationError<Seal: SonicSeal> {
+    /// genesis does not commit to the codex id; a wrong contract genesis is used.
+    NoCodexCommitment,
+
     /// no witness known for the operation {0}.
     NoWitness(Opid),
 
