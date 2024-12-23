@@ -111,10 +111,10 @@ pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
 
             let mut closed_seals = alloc::vec![];
             for input in &header.operation.destroying {
-                let Some(seal) = seals.get(&input.addr) else {
+                let Some(seal) = seals.remove(&input.addr) else {
                     return Err(VerificationError::SealUnknown(input.addr));
                 };
-                closed_seals.push(seal.clone());
+                closed_seals.push(seal);
             }
 
             let iter = header
