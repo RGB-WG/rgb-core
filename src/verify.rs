@@ -134,7 +134,7 @@ pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
                 .clone()
                 .map(|(_, seal)| seal.auth_token().to_byte_array())
                 .collect::<BTreeSet<_>>();
-            if sealed != defined {
+            if !sealed.is_subset(&defined) {
                 return Err(VerificationError::SealsDefinitionMismatch(opid));
             }
 
