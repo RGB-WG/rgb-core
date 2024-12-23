@@ -32,7 +32,7 @@ pub trait SealAuthToken {
     fn auth_token(&self) -> AuthToken;
 }
 
-pub trait SonicSeal: SingleUseSeal<Message = mmb::Message> + SealAuthToken {}
+pub trait RgbSeal: SingleUseSeal<Message = mmb::Message> + SealAuthToken {}
 
 // Below are capabilities constants used in the standard library:
 
@@ -128,7 +128,7 @@ pub mod bitcoin {
         fn auth_token(&self) -> AuthToken { self.to_definition().auth_token() }
     }
 
-    impl<D: dbc::Proof> SonicSeal for TxoSeal<D> {}
+    impl<D: dbc::Proof> RgbSeal for TxoSeal<D> {}
 
     impl SealAuthToken for TxoSealDef {
         // SECURITY: Here we cut SHA256 tagged hash of a single-use seal definition to 30 bytes in order

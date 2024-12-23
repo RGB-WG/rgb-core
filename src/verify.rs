@@ -31,7 +31,7 @@ use bp::seals::mmb;
 use single_use_seals::{PublishedWitness, SealError, SealWitness};
 use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
-use crate::{SonicSeal, LIB_NAME_RGB_CORE};
+use crate::{RgbSeal, LIB_NAME_RGB_CORE};
 
 // TODO: Move to amplify crate
 pub enum Step<A, B> {
@@ -51,7 +51,7 @@ pub enum Step<A, B> {
                  for<'d> serde::Deserialize<'d>, Seal::CliWitness: serde::Serialize + for<'d> serde::Deserialize<'d>"
     )
 )]
-pub struct OperationSeals<Seal: SonicSeal> {
+pub struct OperationSeals<Seal: RgbSeal> {
     pub operation: Operation,
     /// Operation itself contains only AuthToken's, which are a commitments to the seals. Hence, we
     /// have to separately include a full seal definitions next to the operation data.
@@ -59,13 +59,13 @@ pub struct OperationSeals<Seal: SonicSeal> {
 }
 
 pub trait ReadOperation: Sized {
-    type Seal: SonicSeal;
+    type Seal: RgbSeal;
     type WitnessReader: ReadWitness<Seal = Self::Seal, OpReader = Self>;
     fn read_operation(self) -> Option<(OperationSeals<Self::Seal>, Self::WitnessReader)>;
 }
 
 pub trait ReadWitness: Sized {
-    type Seal: SonicSeal;
+    type Seal: RgbSeal;
     type OpReader: ReadOperation<Seal = Self::Seal, WitnessReader = Self>;
     fn read_witness(self) -> Step<(SealWitness<Self::Seal>, Self), Self::OpReader>;
 }
@@ -74,7 +74,7 @@ pub trait ReadWitness: Sized {
 /// [`ContractVerify`]).
 ///
 /// NB: `apply_operation` is called only after `apply_witness`.
-pub trait ContractApi<Seal: SonicSeal> {
+pub trait ContractApi<Seal: RgbSeal> {
     fn contract_id(&self) -> ContractId;
     fn codex(&self) -> &Codex;
     fn repo(&self) -> &impl LibRepo;
@@ -85,7 +85,7 @@ pub trait ContractApi<Seal: SonicSeal> {
 
 // We use dedicated trait here in order to prevent overriding of the implementation in client
 // libraries
-pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
+pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
     fn evaluate<R: ReadOperation<Seal = Seal>>(&mut self, mut reader: R) -> Result<(), VerificationError<Seal>> {
         let contract_id = self.contract_id();
@@ -174,12 +174,12 @@ pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
     }
 }
 
-impl<Seal: SonicSeal, C: ContractApi<Seal>> ContractVerify<Seal> for C {}
+impl<Seal: RgbSeal, C: ContractApi<Seal>> ContractVerify<Seal> for C {}
 
 // TODO: Find a way to do Debug and Clone implementation
 #[derive(Debug, Display, From)]
 #[display(doc_comments)]
-pub enum VerificationError<Seal: SonicSeal> {
+pub enum VerificationError<Seal: RgbSeal> {
     /// genesis does not commit to the codex id; a wrong contract genesis is used.
     NoCodexCommitment,
 
