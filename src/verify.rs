@@ -90,11 +90,21 @@ pub trait ContractVerify<Seal: SonicSeal>: ContractApi<Seal> {
     fn evaluate<R: ReadOperation<Seal = Seal>>(&mut self, mut reader: R) -> Result<(), VerificationError<Seal>> {
         let contract_id = self.contract_id();
 
+        let mut first = true;
         let mut seals = BTreeMap::<CellAddr, Seal>::new();
         while let Some((header, mut witness_reader)) = reader.read_operation() {
+            // Genesis can't commit to the contract id since the contract doesn't exist yet; thus, we have to
+            // apply this little trick
+            let used_id = if first {
+                first = false;
+                ContractId::from_byte_array(self.codex().codex_id().to_byte_array())
+            } else {
+                contract_id
+            };
+
             // First, we verify the operation
             self.codex()
-                .verify(contract_id, &header.operation, self.memory(), self.repo())?;
+                .verify(used_id, &header.operation, self.memory(), self.repo())?;
 
             // Next we verify its single-use seals
             let opid = header.operation.opid();
