@@ -28,9 +28,11 @@ use bp::seals::mmb;
 use single_use_seals::SingleUseSeal;
 use ultrasonic::AuthToken;
 
-pub trait SonicSeal: SingleUseSeal<Message = mmb::Message> {
+pub trait SealAuthToken {
     fn auth_token(&self) -> AuthToken;
 }
+
+pub trait SonicSeal: SingleUseSeal<Message = mmb::Message> + SealAuthToken {}
 
 // Below are capabilities constants used in the standard library:
 
@@ -114,7 +116,7 @@ pub mod bitcoin {
     use bp::dbc;
     use bp::dbc::opret::OpretProof;
     use bp::dbc::tapret::TapretProof;
-    use bp::seals::TxoSeal;
+    use bp::seals::{TxoSeal, TxoSealDef};
     use commit_verify::CommitId;
 
     use super::*;
@@ -122,7 +124,13 @@ pub mod bitcoin {
     pub type OpretSeal = TxoSeal<OpretProof>;
     pub type TapretSeal = TxoSeal<TapretProof>;
 
-    impl<D: dbc::Proof> SonicSeal for TxoSeal<D> {
+    impl<D: dbc::Proof> SealAuthToken for TxoSeal<D> {
+        fn auth_token(&self) -> AuthToken { self.to_definition().auth_token() }
+    }
+
+    impl<D: dbc::Proof> SonicSeal for TxoSeal<D> {}
+
+    impl SealAuthToken for TxoSealDef {
         // SECURITY: Here we cut SHA256 tagged hash of a single-use seal definition to 30 bytes in order
         // to fit it into a field element with no overflows. This must be a secure operation since we
         // still have a sufficient 120-bit collision resistance.

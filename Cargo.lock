@@ -157,7 +157,7 @@ dependencies = [
 [[package]]
 name = "bp-consensus"
 version = "0.12.0-beta.2"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.12#cdacf2a101c4ddbaf06ac79ef3b17d5044ef015d"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.12#f42b77490142a28e7da916dfd80257e45a52d524"
 dependencies = [
  "amplify",
  "chrono",
@@ -169,7 +169,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.12.0-beta.2"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.12#cdacf2a101c4ddbaf06ac79ef3b17d5044ef015d"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.12#f42b77490142a28e7da916dfd80257e45a52d524"
 dependencies = [
  "amplify",
  "bp-consensus",
@@ -185,7 +185,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.12.0-beta.2"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.12#cdacf2a101c4ddbaf06ac79ef3b17d5044ef015d"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.12#f42b77490142a28e7da916dfd80257e45a52d524"
 dependencies = [
  "amplify",
  "base85",
@@ -198,7 +198,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.12.0-beta.2"
-source = "git+https://github.com/BP-WG/bp-core?branch=v0.12#cdacf2a101c4ddbaf06ac79ef3b17d5044ef015d"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.12#f42b77490142a28e7da916dfd80257e45a52d524"
 dependencies = [
  "amplify",
  "baid64",
@@ -254,7 +254,7 @@ dependencies = [
 [[package]]
 name = "commit_encoding_derive"
 version = "0.12.0-beta.1"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.12#01ed41fbbea5db4302319f3ab5d14ebd142c8a0e"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.12#293358fda9b848a5ec2a7cfd0b49bf8c5f49a017"
 dependencies = [
  "amplify",
  "amplify_syn",
@@ -266,7 +266,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.12.0-beta.1"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.12#01ed41fbbea5db4302319f3ab5d14ebd142c8a0e"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.12#293358fda9b848a5ec2a7cfd0b49bf8c5f49a017"
 dependencies = [
  "amplify",
  "commit_encoding_derive",
@@ -624,7 +624,7 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 [[package]]
 name = "single_use_seals"
 version = "0.12.0-beta.1"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.12#01ed41fbbea5db4302319f3ab5d14ebd142c8a0e"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.12#293358fda9b848a5ec2a7cfd0b49bf8c5f49a017"
 dependencies = [
  "serde",
  "strict_encoding",
@@ -731,7 +731,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 [[package]]
 name = "ultrasonic"
 version = "0.12.0-beta.2"
-source = "git+https://github.com/AluVM/ultrasonic#178a7b83a4ba6e5657210e7261b1075de79576b7"
+source = "git+https://github.com/AluVM/ultrasonic#1b20385acdfa8558143223c202fc42f0884c2739"
 dependencies = [
  "amplify",
  "baid64",
