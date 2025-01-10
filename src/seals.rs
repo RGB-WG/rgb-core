@@ -53,22 +53,27 @@ pub const PRIME_SEALS: u32 = 0x0010_0001_u32;
 pub enum SealType {
     #[cfg(feature = "bitcoin")]
     #[display("bcor")]
+    #[cfg_attr(feature = "serde", serde(rename = "bcor"))]
     BitcoinOpret = BITCOIN_OPRET,
 
     #[cfg(feature = "bitcoin")]
     #[display("bctr")]
+    #[cfg_attr(feature = "serde", serde(rename = "bct"))]
     BitcoinTapret = BITCOIN_TAPRET,
 
     #[cfg(feature = "liquid")]
     #[display("lqor")]
+    #[cfg_attr(feature = "serde", serde(rename = "lqor"))]
     LiquidOpret = LIQUID_OPRET,
 
     #[cfg(feature = "liquid")]
     #[display("lqtr")]
+    #[cfg_attr(feature = "serde", serde(rename = "lqtr"))]
     LiquidTapret = LIQUID_TAPRET,
 
     #[cfg(feature = "prime")]
     #[display("prime")]
+    #[cfg_attr(feature = "serde", serde(rename = "prime"))]
     Prime = PRIME_SEALS,
 }
 
