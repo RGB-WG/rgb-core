@@ -252,6 +252,8 @@ pub enum Failure {
     WitnessUnresolved(BundleId, XWitnessId, WitnessResolverError),
     /// operation {0} is under a different contract {1}.
     ContractMismatch(OpId, ContractId),
+    /// opout {0} appears more than once as input
+    DoubleSpend(Opout),
 
     // Errors checking bundle commitments
     /// transition bundle {0} references state transition {1} which is not

@@ -139,6 +139,7 @@ pub struct Validator<
 
     contract_state: Rc<RefCell<S>>,
     validated_op_seals: RefCell<BTreeSet<OpId>>,
+    input_assignments: RefCell<BTreeSet<Opout>>,
 
     resolver: CheckedWitnessResolver<&'resolver R>,
 }
@@ -165,6 +166,7 @@ impl<
 
         // Prevent repeated validation of single-use seals
         let validated_op_seals = RefCell::new(BTreeSet::<OpId>::new());
+        let input_transitions = RefCell::new(BTreeSet::<Opout>::new());
 
         let layer1 = genesis.layer1();
 
@@ -176,6 +178,7 @@ impl<
             layer1,
             close_method,
             validated_op_seals,
+            input_assignments: input_transitions,
             resolver: CheckedWitnessResolver::from(resolver),
             contract_state: Rc::new(RefCell::new(S::init(context))),
         }
@@ -550,6 +553,11 @@ impl<
             // outputs.
             for input in &transition.inputs {
                 let Opout { op, ty, no } = input.prev_out;
+                if !self.input_assignments.borrow_mut().insert(input.prev_out) {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::DoubleSpend(input.prev_out));
+                }
 
                 let Some(prev_op) = self.consignment.operation(op) else {
                     // Node, referenced as the ancestor, was not found in the consignment.
