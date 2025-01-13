@@ -22,8 +22,6 @@
 // or implied. See the License for the specific language governing permissions and limitations under
 // the License.
 
-use core::str::FromStr;
-
 use bp::seals::mmb;
 use single_use_seals::SingleUseSeal;
 use ultrasonic::AuthToken;
@@ -36,106 +34,16 @@ pub trait RgbSeal: SingleUseSeal<Message = mmb::Message> + SealAuthToken {}
 
 // Below are capabilities constants used in the standard library:
 
-#[cfg(feature = "bitcoin")]
-pub const BITCOIN_OPRET: u32 = 0x0001_0001_u32;
-#[cfg(feature = "bitcoin")]
-pub const BITCOIN_TAPRET: u32 = 0x0001_0002_u32;
-#[cfg(feature = "liquid")]
-pub const LIQUID_OPRET: u32 = 0x0002_0001_u32;
-#[cfg(feature = "liquid")]
-pub const LIQUID_TAPRET: u32 = 0x0002_0002_u32;
-#[cfg(feature = "prime")]
-pub const PRIME_SEALS: u32 = 0x0010_0001_u32;
-
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[repr(u32)]
-pub enum SealType {
-    #[cfg(feature = "bitcoin")]
-    #[display("bcor")]
-    #[cfg_attr(feature = "serde", serde(rename = "bcor"))]
-    BitcoinOpret = BITCOIN_OPRET,
-
-    #[cfg(feature = "bitcoin")]
-    #[display("bctr")]
-    #[cfg_attr(feature = "serde", serde(rename = "bct"))]
-    BitcoinTapret = BITCOIN_TAPRET,
-
-    #[cfg(feature = "liquid")]
-    #[display("lqor")]
-    #[cfg_attr(feature = "serde", serde(rename = "lqor"))]
-    LiquidOpret = LIQUID_OPRET,
-
-    #[cfg(feature = "liquid")]
-    #[display("lqtr")]
-    #[cfg_attr(feature = "serde", serde(rename = "lqtr"))]
-    LiquidTapret = LIQUID_TAPRET,
-
-    #[cfg(feature = "prime")]
-    #[display("prime")]
-    #[cfg_attr(feature = "serde", serde(rename = "prime"))]
-    Prime = PRIME_SEALS,
-}
-
-#[derive(Clone, Eq, PartialEq, Debug, Display, Error)]
-#[display("unknown seal type `{0}`")]
-pub struct UnknownType(String);
-
-impl FromStr for SealType {
-    type Err = UnknownType;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            #[cfg(feature = "bitcoin")]
-            "bcor" => Ok(SealType::BitcoinOpret),
-            #[cfg(feature = "bitcoin")]
-            "bctr" => Ok(SealType::BitcoinTapret),
-            #[cfg(feature = "liquid")]
-            "lqtr" => Ok(SealType::LiquidTapret),
-            #[cfg(feature = "prime")]
-            "prime" => Ok(SealType::Prime),
-            _ => Err(UnknownType(s.to_string())),
-        }
-    }
-}
-
-impl TryFrom<u32> for SealType {
-    type Error = UnknownType;
-    fn try_from(caps: u32) -> Result<Self, Self::Error> {
-        Ok(match caps {
-            #[cfg(feature = "bitcoin")]
-            BITCOIN_OPRET => Self::BitcoinOpret,
-            #[cfg(feature = "bitcoin")]
-            BITCOIN_TAPRET => Self::BitcoinTapret,
-            #[cfg(feature = "liquid")]
-            LIQUID_TAPRET => Self::LiquidTapret,
-            #[cfg(feature = "prime")]
-            PRIME_SEALS => Self::Prime,
-            unknown => return Err(UnknownType(format!("unknown seal type {unknown:#10x}"))),
-        })
-    }
-}
-
 #[cfg(any(feature = "bitcoin", feature = "liquid"))]
 pub mod bitcoin {
-    use bp::dbc;
-    use bp::dbc::opret::OpretProof;
-    use bp::dbc::tapret::TapretProof;
-    use bp::seals::{TxoSeal, TxoSealDef};
+    use bp::seals::TxoSeal;
     use commit_verify::CommitId;
 
     use super::*;
 
-    pub type OpretSeal = TxoSeal<OpretProof>;
-    pub type TapretSeal = TxoSeal<TapretProof>;
+    impl RgbSeal for TxoSeal {}
 
-    impl<D: dbc::Proof> SealAuthToken for TxoSeal<D> {
-        fn auth_token(&self) -> AuthToken { self.to_definition().auth_token() }
-    }
-
-    impl<D: dbc::Proof> RgbSeal for TxoSeal<D> {}
-
-    impl SealAuthToken for TxoSealDef {
+    impl SealAuthToken for TxoSeal {
         // SECURITY: Here we cut SHA256 tagged hash of a single-use seal definition to 30 bytes in order
         // to fit it into a field element with no overflows. This must be a secure operation since we
         // still have a sufficient 120-bit collision resistance.
