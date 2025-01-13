@@ -148,15 +148,15 @@ pub enum OrdOpRef<'op> {
     Extension(&'op Extension, XWitnessId, WitnessOrd),
 }
 
-impl<'op> PartialOrd for OrdOpRef<'op> {
+impl PartialOrd for OrdOpRef<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl<'op> Ord for OrdOpRef<'op> {
+impl Ord for OrdOpRef<'_> {
     fn cmp(&self, other: &Self) -> Ordering { self.op_ord().cmp(&other.op_ord()) }
 }
 
-impl<'op> OrdOpRef<'op> {
+impl OrdOpRef<'_> {
     pub fn witness_id(&self) -> Option<XWitnessId> {
         match self {
             OrdOpRef::Genesis(_) => None,

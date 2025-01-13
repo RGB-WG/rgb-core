@@ -162,7 +162,7 @@ impl<'consignment, C: ConsignmentApi> CheckedConsignment<'consignment, C> {
     pub fn new(consignment: &'consignment C) -> Self { Self(consignment) }
 }
 
-impl<'consignment, C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'consignment, C> {
+impl<C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'_, C> {
     fn schema(&self) -> &Schema { self.0.schema() }
 
     fn types(&self) -> &TypeSystem { self.0.types() }
