@@ -157,8 +157,7 @@ dependencies = [
 [[package]]
 name = "bp-consensus"
 version = "0.12.0-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1303344864858bcdbe31e36ba2285efb4cdd53e1c6b275b8840c88469a3f18f"
+source = "git+https://github.com/BP-WG/bp-core?branch=refactor/consensus#1645008e3aa31c762747a159877a2cd4550de933"
 dependencies = [
  "amplify",
  "chrono",
@@ -170,8 +169,7 @@ dependencies = [
 [[package]]
 name = "bp-core"
 version = "0.12.0-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "469adfa23c07f6c178392f278a32ab43bf7c370ca0d29f4865ecd568b946b5d4"
+source = "git+https://github.com/BP-WG/bp-core?branch=refactor/consensus#1645008e3aa31c762747a159877a2cd4550de933"
 dependencies = [
  "amplify",
  "bp-consensus",
@@ -187,8 +185,7 @@ dependencies = [
 [[package]]
 name = "bp-dbc"
 version = "0.12.0-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c58353b119115259123518bcc1a2578b326d74dbabddb0b31c682d83509858c9"
+source = "git+https://github.com/BP-WG/bp-core?branch=refactor/consensus#1645008e3aa31c762747a159877a2cd4550de933"
 dependencies = [
  "amplify",
  "base85",
@@ -201,8 +198,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.12.0-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6f15dc1cad42e0cc9801509500a6cee6b6f99da473513209d495707d20397b0"
+source = "git+https://github.com/BP-WG/bp-core?branch=refactor/consensus#1645008e3aa31c762747a159877a2cd4550de933"
 dependencies = [
  "amplify",
  "baid64",
@@ -738,8 +734,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 [[package]]
 name = "ultrasonic"
 version = "0.12.0-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6881096bf32a9a2beee8171df572de24d549c02c257814fb901089b7c9dc1fc4"
+source = "git+https://github.com/AluVM/ultrasonic?branch=refactor/consensus#e214dcb8955604c044f238aaf8a74b4413b02d0e"
 dependencies = [
  "amplify",
  "baid64",

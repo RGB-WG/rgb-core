@@ -38,7 +38,7 @@ extern crate serde;
 mod verify;
 mod seals;
 
-pub use seals::*;
+pub use seals::{RgbSeal, SealAuthToken};
 pub use single_use_seals::*;
 pub use verify::{ContractApi, ContractVerify, OperationSeals, ReadOperation, ReadWitness, Step, VerificationError};
 
