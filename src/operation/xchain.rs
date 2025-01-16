@@ -41,7 +41,7 @@ pub const XCHAIN_LIQUID_PREFIX: &str = "lq";
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(lowercase)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
 #[cfg_attr(
     feature = "serde",
@@ -49,8 +49,9 @@ pub const XCHAIN_LIQUID_PREFIX: &str = "lq";
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[repr(u8)]
+#[derive(Default)]
 pub enum Layer1 {
-    #[strict_type(dumb)]
+    #[default]
     Bitcoin = 0,
     Liquid = 1,
 }

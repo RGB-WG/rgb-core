@@ -1,5 +1,5 @@
 {-
-  Id: stl:IJ8ChpTj-XMVz1y3-z15BDBB-huKjqsO-YswXmFV-XxCnB0Y#pamela-polka-corona
+  Id: stl:0OQ7gS8R-XmQg8MV-smgBZ5o-B$ZJvp5-S4xxB51-PpdNPZU#julius-square-inch
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -177,11 +177,12 @@ data AttachId          : [Byte ^ 32]
 @mnemonic(harvard-burma-bicycle)
 data AttachState       : id AttachId, mediaType MediaType
 
-@mnemonic(europe-basil-compare)
+@mnemonic(chess-rabbit-aztec)
 data BaseCommitment    : flags CommitVerify.ReservedBytes1
                        , schemaId SchemaId
                        , timestamp I64
                        , issuer CommitVerify.StrictHash
+                       , layer1 Layer1
                        , testnet Std.Bool
                        , closeMethod BPCore.Method
                        , assetTags CommitVerify.StrictHash
@@ -238,12 +239,13 @@ data FungibleState     : bits64#8 U64 | (|)
 data FungibleType      : unsigned64Bit#8 | (|)
 
 
-@mnemonic(havana-motor-nina)
+@mnemonic(amigo-vatican-happy)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , flags CommitVerify.ReservedBytes1
                        , timestamp I64
                        , issuer Identity
+                       , layer1 Layer1
                        , testnet Std.Bool
                        , closeMethod BPCore.Method
                        , assetTags AssetTags
@@ -285,6 +287,10 @@ data InputMap          : {Bitcoin.Vout -> ^ 1.. OpId}
 
 @mnemonic(sector-charlie-diagram)
 data Inputs            : {Input}
+
+@mnemonic(camilla-basket-justin)
+data Layer1            : bitcoin | liquid
+
 
 @mnemonic(isabel-heaven-north)
 data MediaType         : any#255 | (|)

@@ -40,7 +40,7 @@ use strict_encoding::StrictDumb;
 use crate::{
     impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ConcealedAttach,
     ConcealedData, ConcealedState, ConfidentialState, DataState, ExposedSeal, ExposedState,
-    Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Operation,
+    Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Layer1, Operation,
     PedersenCommitment, Redeemed, SchemaId, SecretSeal, Transition, TransitionBundle,
     TransitionType, TypedAssigns, XChain, LIB_NAME_RGB_COMMIT,
 };
@@ -237,6 +237,7 @@ pub struct BaseCommitment {
     pub schema_id: SchemaId,
     pub timestamp: i64,
     pub issuer: StrictHash,
+    pub layer1: Layer1,
     pub testnet: bool,
     pub close_method: CloseMethod,
     pub asset_tags: StrictHash,
@@ -281,6 +282,7 @@ impl Genesis {
             flags: self.flags,
             schema_id: self.schema_id,
             timestamp: self.timestamp,
+            layer1: self.layer1,
             testnet: self.testnet,
             close_method: self.close_method,
             issuer: self.issuer.commit_id(),

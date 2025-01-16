@@ -134,7 +134,7 @@ pub struct Validator<
 
     schema_id: SchemaId,
     contract_id: ContractId,
-    layer1: Option<Layer1>,
+    layer1: Layer1,
     close_method: CloseMethod,
 
     contract_state: Rc<RefCell<S>>,
@@ -162,13 +162,12 @@ impl<
         let genesis = consignment.genesis();
         let contract_id = genesis.contract_id();
         let schema_id = genesis.schema_id;
+        let layer1 = genesis.layer1;
         let close_method = genesis.close_method;
 
         // Prevent repeated validation of single-use seals
         let validated_op_seals = RefCell::new(BTreeSet::<OpId>::new());
         let input_transitions = RefCell::new(BTreeSet::<Opout>::new());
-
-        let layer1 = genesis.layer1();
 
         Self {
             consignment,
@@ -601,10 +600,10 @@ impl<
                         });
                     continue;
                 }
-                if self.layer1 != Some(seal.layer1()) {
+                if self.layer1 != seal.layer1() {
                     self.status
                         .borrow_mut()
-                        .add_failure(Failure::SealLayerMismatch(seal.layer1(), seal));
+                        .add_failure(Failure::SealLayerMismatch(seal, seal.layer1(), self.layer1));
                     continue;
                 }
 

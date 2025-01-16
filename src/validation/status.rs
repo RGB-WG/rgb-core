@@ -291,9 +291,8 @@ pub enum Failure {
     SealNoPubWitness(BundleId, XWitnessId, WitnessResolverError),
     /// witness layer 1 {anchor} doesn't match seal definition {seal}.
     SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
-    /// seal {1} is defined on {0} which is not in the set of layers allowed
-    /// by the contract genesis.
-    SealLayerMismatch(Layer1, XGraphSeal),
+    /// seal {0} is defined on {1} which is not the layer 1 defined by the contract genesis ({2}).
+    SealLayerMismatch(XGraphSeal, Layer1, Layer1),
     /// transition bundle {0} doesn't close seal with the witness {1}. Details:
     /// {2}
     SealsInvalid(BundleId, XWitnessId, String),

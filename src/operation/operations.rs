@@ -360,6 +360,7 @@ pub struct Genesis {
     pub flags: ReservedBytes<1, 0>,
     pub timestamp: i64,
     pub issuer: Identity,
+    pub layer1: Layer1,
     pub testnet: bool,
     pub close_method: CloseMethod,
     pub asset_tags: AssetTags,
@@ -372,19 +373,6 @@ pub struct Genesis {
 
 impl StrictSerialize for Genesis {}
 impl StrictDeserialize for Genesis {}
-
-impl Genesis {
-    pub fn layer1(&self) -> Option<Layer1> {
-        if let Some((_, typed_assigns)) = self.assignments.iter().next() {
-            typed_assigns
-                .to_confidential_seals()
-                .first()
-                .map(|cs| cs.layer1())
-        } else {
-            None
-        }
-    }
-}
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
