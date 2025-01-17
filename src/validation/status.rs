@@ -266,13 +266,6 @@ pub enum Failure {
     /// which is an input of the state transition {3}.
     BundleInvalidCommitment(BundleId, Vin, XWitnessId, OpId),
 
-    // Errors checking asset tags
-    /// asset type provided in genesis references unknown fungible state of type
-    /// {0}.
-    AssetTagNoState(schema::AssignmentType),
-    /// fungible state {0} has no asset tag defined.
-    FungibleStateNoTag(schema::AssignmentType),
-
     // Errors checking seal closing
     /// transition {opid} references state type {state_type} absent in the
     /// outputs of previous state transition {prev_id}.
@@ -352,8 +345,6 @@ pub enum Failure {
         expected: schema::FungibleType,
         found: schema::FungibleType,
     },
-    /// invalid bulletproofs in {0}:{1}: {2}
-    BulletproofsInvalid(OpId, schema::AssignmentType, String),
     /// evaluation of AluVM script for operation {0} has failed with the code
     /// {1:?} and message {2:?}.
     ScriptFailure(OpId, Option<u8>, Option<String>),

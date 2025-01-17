@@ -38,10 +38,10 @@ use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize}
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    AssetTag, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
-    ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
-    GenesisSeal, GlobalState, GraphSeal, Layer1, Metadata, OpDisclose, OpId, SecretSeal,
-    TypedAssigns, VoidState, XChain, LIB_NAME_RGB_COMMIT,
+    Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ConcealedAttach,
+    ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv, GenesisSeal,
+    GlobalState, GraphSeal, Layer1, Metadata, OpDisclose, OpId, SecretSeal, TypedAssigns,
+    VoidState, XChain, LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -95,20 +95,6 @@ impl FromStr for Opout {
         }
     }
 }
-
-#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
-#[wrapper(Deref)]
-#[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict, id = StrictHash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct AssetTags(TinyOrdMap<AssignmentType, AssetTag>);
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
 #[wrapper(Deref)]
@@ -300,9 +286,7 @@ pub trait Operation {
         OpDisclose {
             id: self.id(),
             seals: Confined::from_checked(seals),
-            fungible: Confined::from_iter_checked(
-                fungible.into_iter().map(|(k, s)| (k, s.commitment)),
-            ),
+            fungible: Confined::from_iter_checked(fungible),
             data: Confined::from_checked(data),
             attach: Confined::from_checked(attach),
         }
@@ -363,7 +347,6 @@ pub struct Genesis {
     pub layer1: Layer1,
     pub testnet: bool,
     pub close_method: CloseMethod,
-    pub asset_tags: AssetTags,
     pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,

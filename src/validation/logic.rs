@@ -39,7 +39,7 @@ use crate::{
     validation, Assign, AssignmentType, Assignments, AssignmentsRef, ConcealedState,
     ConfidentialState, ExposedSeal, ExposedState, Extension, GlobalState, GlobalStateSchema,
     GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId, Operation, Opout,
-    OwnedStateSchema, RevealedState, Schema, StateType, Transition, TypedAssigns, Valencies,
+    OwnedStateSchema, RevealedState, Schema, Transition, TypedAssigns, Valencies,
 };
 
 impl Schema {
@@ -69,31 +69,16 @@ impl Schema {
             validator,
             ty,
         ) = match op {
-            OrdOpRef::Genesis(genesis) => {
-                for id in genesis.asset_tags.keys() {
-                    if !matches!(self.owned_types.get(id), Some(OwnedStateSchema::Fungible(_))) {
-                        status.add_failure(validation::Failure::AssetTagNoState(*id));
-                    }
-                }
-                for (id, ss) in &self.owned_types {
-                    if ss.state_type() == StateType::Fungible
-                        && !genesis.asset_tags.contains_key(id)
-                    {
-                        status.add_failure(validation::Failure::FungibleStateNoTag(*id));
-                    }
-                }
-
-                (
-                    &self.genesis.metadata,
-                    &self.genesis.globals,
-                    &empty_assign_schema,
-                    &empty_valency_schema,
-                    &self.genesis.assignments,
-                    &self.genesis.valencies,
-                    self.genesis.validator,
-                    None::<u16>,
-                )
-            }
+            OrdOpRef::Genesis(_) => (
+                &self.genesis.metadata,
+                &self.genesis.globals,
+                &empty_assign_schema,
+                &empty_valency_schema,
+                &self.genesis.assignments,
+                &self.genesis.valencies,
+                self.genesis.validator,
+                None::<u16>,
+            ),
             OrdOpRef::Transition(
                 Transition {
                     transition_type, ..
@@ -199,7 +184,6 @@ impl Schema {
         let op_info = OpInfo::with(opid, &op, &prev_state, &redeemed);
         let context = VmContext {
             contract_id: genesis.contract_id(),
-            asset_tags: &genesis.asset_tags,
             op_info,
             contract_state,
         };
@@ -584,16 +568,7 @@ impl OwnedStateSchema {
             Assign::Confidential { state, .. } | Assign::ConfidentialState { state, .. } => {
                 match (self, state.state_commitment()) {
                     (OwnedStateSchema::Declarative, ConcealedState::Void) => {}
-                    (OwnedStateSchema::Fungible(_), ConcealedState::Fungible(value)) => {
-                        // [SECURITY-CRITICAL]: Bulletproofs validation
-                        if let Err(err) = value.verify_range_proof() {
-                            status.add_failure(validation::Failure::BulletproofsInvalid(
-                                opid,
-                                state_type,
-                                err.to_string(),
-                            ));
-                        }
-                    }
+                    (OwnedStateSchema::Fungible(_), ConcealedState::Fungible(_)) => {}
                     (OwnedStateSchema::Structured(_), ConcealedState::Structured(_)) => {
                         status.add_warning(validation::Warning::UncheckableConfidentialState(
                             opid, state_type,

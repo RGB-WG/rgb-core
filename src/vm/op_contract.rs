@@ -33,14 +33,10 @@ use aluvm::library::{CodeEofError, IsaSeg, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg, Reg16, Reg32, RegA, RegS};
 use amplify::num::{u24, u3, u4};
 use amplify::Wrapper;
-use commit_verify::CommitVerify;
 
 use super::opcodes::*;
 use super::{ContractStateAccess, VmContext};
-use crate::{
-    Assign, AssignmentType, BlindingFactor, GlobalStateType, MetaType, PedersenCommitment,
-    RevealedValue, TypedAssigns,
-};
+use crate::{Assign, AssignmentType, GlobalStateType, MetaType, TypedAssigns};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum ContractOp<S: ContractStateAccess> {
@@ -137,7 +133,7 @@ pub enum ContractOp<S: ContractStateAccess> {
     #[display("ldm     {0},{1}")]
     LdM(MetaType, RegS),
 
-    /// Verify sum of pedersen commitments from inputs and outputs.
+    /// Verify sum of inputs and outputs are equal.
     ///
     /// The only argument specifies owned state type for the sum operation. If
     /// this state does not exist, or either inputs or outputs does not have
@@ -145,11 +141,10 @@ pub enum ContractOp<S: ContractStateAccess> {
     ///
     /// If verification succeeds, doesn't change `st0` value; otherwise sets it
     /// to `false` and stops execution.
-    #[display("pcvs    {0}")]
-    Pcvs(AssignmentType),
+    #[display("svs     {0}")]
+    Svs(AssignmentType),
 
-    /// Verifies equivalence of a sum of pedersen commitments for the list of
-    /// assignment outputs to a value from `a64[0]` register.
+    /// Verify sum of outputs and value in `a64[0]` register are equal.
     ///
     /// The first argument specifies owned state type for the sum operation. If
     /// this state does not exist, or either inputs or outputs does not have
@@ -159,11 +154,10 @@ pub enum ContractOp<S: ContractStateAccess> {
     ///
     /// If verification succeeds, doesn't change `st0` value; otherwise sets it
     /// to `false` and stops execution.
-    #[display("pcas    {0}")]
-    Pcas(/** owned state type */ AssignmentType),
+    #[display("sas     {0}")]
+    Sas(/** owned state type */ AssignmentType),
 
-    /// Verifies equivalence of a sum of pedersen commitments for the list of
-    /// inputs to a value from `a64[0]` register.
+    /// Verify sum of inputs and value in `a64[0]` register are equal.
     ///
     /// The first argument specifies owned state type for the sum operation. If
     /// this state does not exist, or either inputs or outputs does not have
@@ -173,8 +167,8 @@ pub enum ContractOp<S: ContractStateAccess> {
     ///
     /// If verification succeeds, doesn't change `st0` value; otherwise sets it
     /// to `false` and stops execution.
-    #[display("pcps    {0}")]
-    Pcps(/** owned state type */ AssignmentType),
+    #[display("sps     {0}")]
+    Sps(/** owned state type */ AssignmentType),
 
     /// All other future unsupported operations, which must set `st0` to
     /// `false` and stop the execution.
@@ -200,8 +194,8 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             | ContractOp::CnG(_, _)
             | ContractOp::CnC(_, _)
             | ContractOp::LdM(_, _) => bset![],
-            ContractOp::Pcvs(_) => bset![],
-            ContractOp::Pcas(_) | ContractOp::Pcps(_) => bset![Reg::A(RegA::A64, Reg32::Reg0)],
+            ContractOp::Svs(_) => bset![],
+            ContractOp::Sas(_) | ContractOp::Sps(_) => bset![Reg::A(RegA::A64, Reg32::Reg0)],
             ContractOp::Fail(_, _) => bset![],
         }
     }
@@ -224,7 +218,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             | ContractOp::LdM(_, reg) => {
                 bset![Reg::S(*reg)]
             }
-            ContractOp::Pcvs(_) | ContractOp::Pcas(_) | ContractOp::Pcps(_) => {
+            ContractOp::Svs(_) | ContractOp::Sas(_) | ContractOp::Sps(_) => {
                 bset![]
             }
             ContractOp::Fail(_, _) => bset![],
@@ -243,8 +237,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             | ContractOp::LdG(_, _, _)
             | ContractOp::LdC(_, _, _) => 8,
             ContractOp::LdM(_, _) => 6,
-            ContractOp::Pcvs(_) => 1024,
-            ContractOp::Pcas(_) | ContractOp::Pcps(_) => 512,
+            ContractOp::Svs(_) | ContractOp::Sas(_) | ContractOp::Sps(_) => 20,
             ContractOp::Fail(_, _) => u64::MAX,
         }
     }
@@ -256,32 +249,42 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 return ExecStep::Stop;
             }};
         }
-        macro_rules! load_inputs {
+        macro_rules! load_revealed_inputs {
             ($state_type:ident) => {{
                 let Some(prev_state) = context.op_info.prev_state.get($state_type) else {
                     fail!()
                 };
                 match prev_state {
-                    TypedAssigns::Fungible(state) => state
-                        .iter()
-                        .map(Assign::to_confidential_state)
-                        .map(|s| s.commitment.into_inner())
-                        .collect::<Vec<_>>(),
+                    TypedAssigns::Fungible(state) => {
+                        let mut values = vec![];
+                        for assign in state.iter().map(Assign::as_revealed_state) {
+                            match assign {
+                                Some(rev) => values.push(rev.value.as_u64()),
+                                None => fail!(),
+                            }
+                        }
+                        values
+                    }
                     _ => fail!(),
                 }
             }};
         }
-        macro_rules! load_outputs {
+        macro_rules! load_revealed_outputs {
             ($state_type:ident) => {{
                 let Some(new_state) = context.op_info.owned_state.get(*$state_type) else {
                     fail!()
                 };
                 match new_state {
-                    TypedAssigns::Fungible(state) => state
-                        .iter()
-                        .map(Assign::to_confidential_state)
-                        .map(|s| s.commitment.into_inner())
-                        .collect::<Vec<_>>(),
+                    TypedAssigns::Fungible(state) => {
+                        let mut values = vec![];
+                        for assign in state.iter().map(Assign::as_revealed_state) {
+                            match assign {
+                                Some(rev) => values.push(rev.value.as_u64()),
+                                None => fail!(),
+                            }
+                        }
+                        values
+                    }
                     _ => fail!(),
                 }
             }};
@@ -423,61 +426,54 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 };
                 regs.set_s16(*reg, meta.to_inner());
             }
-
-            ContractOp::Pcvs(state_type) => {
-                let inputs = load_inputs!(state_type);
-                let outputs = load_outputs!(state_type);
-                if !secp256k1_zkp::verify_commitments_sum_to_equal(
-                    secp256k1_zkp::SECP256K1,
-                    &inputs,
-                    &outputs,
-                ) {
+            ContractOp::Svs(state_type) => {
+                let Some(input_amt) = load_revealed_inputs!(state_type)
+                    .iter()
+                    .try_fold(0u64, |acc, &x| acc.checked_add(x))
+                else {
+                    fail!()
+                };
+                let Some(output_amt) = load_revealed_outputs!(state_type)
+                    .iter()
+                    .try_fold(0u64, |acc, &x| acc.checked_add(x))
+                else {
+                    fail!()
+                };
+                if input_amt != output_amt {
                     fail!()
                 }
             }
-
-            ContractOp::Pcas(owned_state) => {
+            ContractOp::Sas(owned_state) => {
                 let Some(sum) = *regs.get_n(RegA::A64, Reg32::Reg0) else {
                     fail!()
                 };
                 let sum = u64::from(sum);
 
-                let Some(tag) = context.asset_tags.get(owned_state) else {
+                let Some(output_amt) = load_revealed_outputs!(owned_state)
+                    .iter()
+                    .try_fold(0u64, |acc, &x| acc.checked_add(x))
+                else {
                     fail!()
                 };
-                let sum = RevealedValue::with_blinding(sum, BlindingFactor::EMPTY, *tag);
 
-                let inputs = [PedersenCommitment::commit(&sum).into_inner()];
-                let outputs = load_outputs!(owned_state);
-
-                if !secp256k1_zkp::verify_commitments_sum_to_equal(
-                    secp256k1_zkp::SECP256K1,
-                    &inputs,
-                    &outputs,
-                ) {
+                if sum != output_amt {
                     fail!()
                 }
             }
-
-            ContractOp::Pcps(owned_state) => {
+            ContractOp::Sps(owned_state) => {
                 let Some(sum) = *regs.get_n(RegA::A64, Reg32::Reg0) else {
                     fail!()
                 };
                 let sum = u64::from(sum);
 
-                let Some(tag) = context.asset_tags.get(owned_state) else {
+                let Some(input_amt) = load_revealed_inputs!(owned_state)
+                    .iter()
+                    .try_fold(0u64, |acc, &x| acc.checked_add(x))
+                else {
                     fail!()
                 };
-                let sum = RevealedValue::with_blinding(sum, BlindingFactor::EMPTY, *tag);
 
-                let inputs = [PedersenCommitment::commit(&sum).into_inner()];
-                let outputs = load_inputs!(owned_state);
-
-                if !secp256k1_zkp::verify_commitments_sum_to_equal(
-                    secp256k1_zkp::SECP256K1,
-                    &inputs,
-                    &outputs,
-                ) {
+                if sum != input_amt {
                     fail!()
                 }
             }
@@ -505,9 +501,9 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
             ContractOp::LdC(_, _, _) => INSTR_LDC,
             ContractOp::LdM(_, _) => INSTR_LDM,
 
-            ContractOp::Pcvs(_) => INSTR_PCVS,
-            ContractOp::Pcas(_) => INSTR_PCAS,
-            ContractOp::Pcps(_) => INSTR_PCPS,
+            ContractOp::Svs(_) => INSTR_SVS,
+            ContractOp::Sas(_) => INSTR_SAS,
+            ContractOp::Sps(_) => INSTR_SPS,
 
             ContractOp::Fail(other, _) => *other,
         }
@@ -567,9 +563,9 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
                 writer.write_u4(u4::ZERO)?;
             }
 
-            ContractOp::Pcvs(state_type) => writer.write_u16(*state_type)?,
-            ContractOp::Pcas(owned_type) => writer.write_u16(*owned_type)?,
-            ContractOp::Pcps(owned_type) => writer.write_u16(*owned_type)?,
+            ContractOp::Svs(state_type) => writer.write_u16(*state_type)?,
+            ContractOp::Sas(owned_type) => writer.write_u16(*owned_type)?,
+            ContractOp::Sps(owned_type) => writer.write_u16(*owned_type)?,
 
             ContractOp::Fail(_, _) => {}
         }
@@ -634,9 +630,9 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
                 i
             }
 
-            INSTR_PCVS => Self::Pcvs(reader.read_u16()?.into()),
-            INSTR_PCAS => Self::Pcas(reader.read_u16()?.into()),
-            INSTR_PCPS => Self::Pcps(reader.read_u16()?.into()),
+            INSTR_SVS => Self::Svs(reader.read_u16()?.into()),
+            INSTR_SAS => Self::Sas(reader.read_u16()?.into()),
+            INSTR_SPS => Self::Sps(reader.read_u16()?.into()),
 
             x => Self::Fail(x, PhantomData),
         })
@@ -658,7 +654,7 @@ mod test {
     #[test]
     fn encoding() {
         let code =
-            [Instr::ExtensionCodes(RgbIsa::Contract(ContractOp::Pcvs(AssignmentType::from(4000))))];
+            [Instr::ExtensionCodes(RgbIsa::Contract(ContractOp::Svs(AssignmentType::from(4000))))];
         let alu_lib = Lib::assemble(&code).unwrap();
         eprintln!("{alu_lib}");
         let alu_id = alu_lib.id();

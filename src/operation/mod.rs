@@ -44,15 +44,12 @@ pub use commit::{
     DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
 };
 pub use data::{ConcealedData, DataState, RevealedData, VoidState};
-pub use fungible::{
-    AssetTag, BlindingFactor, BlindingParseError, ConcealedValue, FungibleState,
-    InvalidFieldElement, NoiseDumb, PedersenCommitment, RangeProof, RangeProofError, RevealedValue,
-};
+pub use fungible::{ConcealedValue, FungibleState, RevealedValue};
 pub use global::{GlobalState, GlobalValues};
 pub use meta::{MetaValue, Metadata, MetadataError};
 pub use operations::{
-    AssetTags, Extension, Genesis, Identity, Input, Inputs, Operation, Opout, OpoutParseError,
-    Redeemed, Transition, Valencies,
+    Extension, Genesis, Identity, Input, Inputs, Operation, Opout, OpoutParseError, Redeemed,
+    Transition, Valencies,
 };
 pub use seal::{
     ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, XGenesisSeal, XGraphSeal,

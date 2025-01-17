@@ -65,8 +65,7 @@ pub enum StateType {
     /// No state data
     Void,
 
-    /// Value-based state, i.e. which can be committed to with a Pedersen
-    /// commitment
+    /// Value-based state
     Fungible,
 
     /// State defined with custom data

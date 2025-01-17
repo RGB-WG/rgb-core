@@ -37,11 +37,11 @@ use single_use_seals::SealWitness;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    AssetTags, AssignmentType, Assignments, AssignmentsRef, AttachState, BundleId, ContractId,
-    DataState, ExposedSeal, Extension, ExtensionType, FungibleState, Genesis, GlobalState,
-    GlobalStateType, GraphSeal, Impossible, Inputs, Layer1, Metadata, OpFullType, OpId, OpType,
-    Operation, Transition, TransitionType, TxoSeal, TypedAssigns, Valencies, XChain, XOutpoint,
-    XOutputSeal, LIB_NAME_RGB_LOGIC,
+    AssignmentType, Assignments, AssignmentsRef, AttachState, BundleId, ContractId, DataState,
+    ExposedSeal, Extension, ExtensionType, FungibleState, Genesis, GlobalState, GlobalStateType,
+    GraphSeal, Impossible, Inputs, Layer1, Metadata, OpFullType, OpId, OpType, Operation,
+    Transition, TransitionType, TxoSeal, TypedAssigns, Valencies, XChain, XOutpoint, XOutputSeal,
+    LIB_NAME_RGB_LOGIC,
 };
 
 pub type XWitnessId = XChain<Txid>;
@@ -703,7 +703,6 @@ pub trait ContractStateEvolve {
 
 pub struct VmContext<'op, S: ContractStateAccess> {
     pub contract_id: ContractId,
-    pub asset_tags: &'op AssetTags,
     pub op_info: OpInfo<'op>,
     pub contract_state: Rc<RefCell<S>>,
 }

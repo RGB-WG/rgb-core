@@ -1,5 +1,5 @@
 {-
-  Id: stl:0OQ7gS8R-XmQg8MV-smgBZ5o-B$ZJvp5-S4xxB51-PpdNPZU#julius-square-inch
+  Id: stl:mh8Ebzz!-9Trq2j8-Q2kUCyh-L4P1E80-HNp6Uct-LDLlJNo#victor-guru-philips
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -43,12 +43,6 @@ import Bitcoin#signal-color-cipher
   use Vout#brush-gloria-heroic
   use Txid#shallow-light-reverse
 
-
-@mnemonic(slang-amber-club)
-data AssetTag          : [Byte ^ 32]
-
-@mnemonic(crash-singer-corner)
-data AssetTags         : {AssignmentType -> ^ ..0xff AssetTag}
 
 @mnemonic(airport-ladder-joseph)
 data AssignRevealedAttachBlindSealTxPtr : confidential (seal XChainSecretSeal
@@ -177,7 +171,7 @@ data AttachId          : [Byte ^ 32]
 @mnemonic(harvard-burma-bicycle)
 data AttachState       : id AttachId, mediaType MediaType
 
-@mnemonic(chess-rabbit-aztec)
+@mnemonic(status-magnum-school)
 data BaseCommitment    : flags CommitVerify.ReservedBytes1
                        , schemaId SchemaId
                        , timestamp I64
@@ -185,10 +179,6 @@ data BaseCommitment    : flags CommitVerify.ReservedBytes1
                        , layer1 Layer1
                        , testnet Std.Bool
                        , closeMethod BPCore.Method
-                       , assetTags CommitVerify.StrictHash
-
-@mnemonic(animal-plume-minus)
-data BlindingFactor    : [Byte ^ 32]
 
 @mnemonic(meter-arizona-albino)
 data ConcealedAttach   : [Byte ^ 32]
@@ -196,8 +186,8 @@ data ConcealedAttach   : [Byte ^ 32]
 @mnemonic(ivan-tripod-young)
 data ConcealedData     : [Byte ^ 32]
 
-@mnemonic(arizona-basic-moment)
-data ConcealedFungible : commitment PedersenCommitment, rangeProof PedersenCommitment
+@mnemonic(justice-border-griffin)
+data ConcealedFungible : value FungibleState, concealedDummy ()
 
 @mnemonic(uniform-welcome-papa)
 data ContractId        : [Byte ^ 32]
@@ -239,7 +229,7 @@ data FungibleState     : bits64#8 U64 | (|)
 data FungibleType      : unsigned64Bit#8 | (|)
 
 
-@mnemonic(amigo-vatican-happy)
+@mnemonic(letter-tribal-father)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , flags CommitVerify.ReservedBytes1
@@ -248,7 +238,6 @@ data Genesis           : ffv Ffv
                        , layer1 Layer1
                        , testnet Std.Bool
                        , closeMethod BPCore.Method
-                       , assetTags AssetTags
                        , metadata Metadata
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
@@ -335,9 +324,6 @@ data OwnedStateSchema  : declarative ()
                        | structured StrictTypes.SemId
                        | attachment MediaType
 
-@mnemonic(pupil-scale-jerome)
-data PedersenCommitment : [Byte ^ 33]
-
 @mnemonic(anita-vega-pirate)
 data Redeemed          : {ValencyType -> ^ ..0xff OpId}
 
@@ -347,10 +333,8 @@ data RevealedAttach    : file AttachState, salt U64
 @mnemonic(sleep-source-figure)
 data RevealedData      : value DataState, salt U128
 
-@mnemonic(source-contact-member)
+@mnemonic(escape-nylon-client)
 data RevealedFungible  : value FungibleState
-                       , blinding BlindingFactor
-                       , tag AssetTag
 
 @mnemonic(corona-igloo-sierra)
 data Schema            : ffv Ffv

@@ -39,10 +39,10 @@ use strict_encoding::StrictDumb;
 
 use crate::{
     impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ConcealedAttach,
-    ConcealedData, ConcealedState, ConfidentialState, DataState, ExposedSeal, ExposedState,
-    Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Layer1, Operation,
-    PedersenCommitment, Redeemed, SchemaId, SecretSeal, Transition, TransitionBundle,
-    TransitionType, TypedAssigns, XChain, LIB_NAME_RGB_COMMIT,
+    ConcealedData, ConcealedState, ConcealedValue, ConfidentialState, DataState, ExposedSeal,
+    ExposedState, Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Layer1,
+    Operation, Redeemed, SchemaId, SecretSeal, Transition, TransitionBundle, TransitionType,
+    TypedAssigns, XChain, LIB_NAME_RGB_COMMIT,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -190,7 +190,7 @@ impl AssignmentIndex {
 pub struct OpDisclose {
     pub id: OpId,
     pub seals: MediumOrdMap<AssignmentIndex, XChain<SecretSeal>>,
-    pub fungible: MediumOrdMap<AssignmentIndex, PedersenCommitment>,
+    pub fungible: MediumOrdMap<AssignmentIndex, ConcealedValue>,
     pub data: MediumOrdMap<AssignmentIndex, ConcealedData>,
     pub attach: MediumOrdMap<AssignmentIndex, ConcealedAttach>,
 }
@@ -240,7 +240,6 @@ pub struct BaseCommitment {
     pub layer1: Layer1,
     pub testnet: bool,
     pub close_method: CloseMethod,
-    pub asset_tags: StrictHash,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -286,7 +285,6 @@ impl Genesis {
             testnet: self.testnet,
             close_method: self.close_method,
             issuer: self.issuer.commit_id(),
-            asset_tags: self.asset_tags.commit_id(),
         };
         OpCommitment {
             ffv: self.ffv,
@@ -346,7 +344,7 @@ impl ConcealedState {
     fn commit_encode(&self, e: &mut CommitEngine) {
         match self {
             ConcealedState::Void => {}
-            ConcealedState::Fungible(val) => e.commit_to_serialized(&val.commitment),
+            ConcealedState::Fungible(val) => e.commit_to_serialized(&val),
             ConcealedState::Structured(dat) => e.commit_to_serialized(dat),
             ConcealedState::Attachment(att) => e.commit_to_serialized(att),
         }
