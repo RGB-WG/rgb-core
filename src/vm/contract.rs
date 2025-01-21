@@ -412,6 +412,8 @@ impl Display for WitnessPos {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub enum WitnessOrd {
+    /// Witness transaction must be ignored by the update witnesses process.
+    Ignored,
     /// Witness transaction must be excluded from the state processing.
     ///
     /// Cases for the exclusion:
