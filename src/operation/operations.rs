@@ -41,7 +41,7 @@ use crate::{
     Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ConcealedAttach,
     ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv, GenesisSeal,
     GlobalState, GraphSeal, Layer1, Metadata, OpDisclose, OpId, SecretSeal, TypedAssigns,
-    VoidState, XChain, LIB_NAME_RGB_COMMIT,
+    VoidState, LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -248,7 +248,7 @@ pub trait Operation {
         fn proc_seals<State: ExposedState>(
             ty: AssignmentType,
             a: &[Assign<State, GraphSeal>],
-            seals: &mut BTreeMap<AssignmentIndex, XChain<SecretSeal>>,
+            seals: &mut BTreeMap<AssignmentIndex, SecretSeal>,
             state: &mut BTreeMap<AssignmentIndex, State::Concealed>,
         ) {
             for (index, assignment) in a.iter().enumerate() {
@@ -261,7 +261,7 @@ pub trait Operation {
             }
         }
 
-        let mut seals: BTreeMap<AssignmentIndex, XChain<SecretSeal>> = bmap!();
+        let mut seals: BTreeMap<AssignmentIndex, SecretSeal> = bmap!();
         let mut void: BTreeMap<AssignmentIndex, VoidState> = bmap!();
         let mut fungible: BTreeMap<AssignmentIndex, ConcealedValue> = bmap!();
         let mut data: BTreeMap<AssignmentIndex, ConcealedData> = bmap!();

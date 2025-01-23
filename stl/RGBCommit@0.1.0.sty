@@ -1,5 +1,5 @@
 {-
-  Id: stl:mh8Ebzz!-9Trq2j8-Q2kUCyh-L4P1E80-HNp6Uct-LDLlJNo#victor-guru-philips
+  Id: stl:nX8j7yoL-WB1gVNN-JHgJDvZ-UL8177c-Hexose2-JYJs1Bs#level-exodus-final
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -44,115 +44,115 @@ import Bitcoin#signal-color-cipher
   use Txid#shallow-light-reverse
 
 
-@mnemonic(airport-ladder-joseph)
-data AssignRevealedAttachBlindSealTxPtr : confidential (seal XChainSecretSeal
+@mnemonic(credit-cycle-panama)
+data AssignRevealedAttachBlindSealTxPtr : confidential (seal BPCore.SecretSeal
                        , state ConcealedAttach
                        , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxPtr
+                       | confidentialState (seal BPCore.BlindSealTxPtr
                        , state ConcealedAttach
                        , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
+                       | confidentialSeal (seal BPCore.SecretSeal
                        , state RevealedAttach
                        , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxPtr
-                       , state RevealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-
-@mnemonic(member-camera-parking)
-data AssignRevealedAttachBlindSealTxid : confidential (seal XChainSecretSeal
-                       , state ConcealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxid
-                       , state ConcealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
-                       , state RevealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxid
+                       | revealed (seal BPCore.BlindSealTxPtr
                        , state RevealedAttach
                        , lock CommitVerify.ReservedBytes2)
 
-@mnemonic(genius-editor-formula)
-data AssignRevealedDataBlindSealTxPtr : confidential (seal XChainSecretSeal
+@mnemonic(volcano-chariot-plastic)
+data AssignRevealedAttachBlindSealTxid : confidential (seal BPCore.SecretSeal
+                       , state ConcealedAttach
+                       , lock CommitVerify.ReservedBytes2)
+                       | confidentialState (seal BPCore.BlindSealTxid
+                       , state ConcealedAttach
+                       , lock CommitVerify.ReservedBytes2)
+                       | confidentialSeal (seal BPCore.SecretSeal
+                       , state RevealedAttach
+                       , lock CommitVerify.ReservedBytes2)
+                       | revealed (seal BPCore.BlindSealTxid
+                       , state RevealedAttach
+                       , lock CommitVerify.ReservedBytes2)
+
+@mnemonic(sweden-alpine-quality)
+data AssignRevealedDataBlindSealTxPtr : confidential (seal BPCore.SecretSeal
                        , state ConcealedData
                        , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxPtr
+                       | confidentialState (seal BPCore.BlindSealTxPtr
                        , state ConcealedData
                        , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
+                       | confidentialSeal (seal BPCore.SecretSeal
                        , state RevealedData
                        , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxPtr
+                       | revealed (seal BPCore.BlindSealTxPtr
                        , state RevealedData
                        , lock CommitVerify.ReservedBytes2)
 
-@mnemonic(soda-edison-music)
-data AssignRevealedDataBlindSealTxid : confidential (seal XChainSecretSeal
+@mnemonic(break-python-verona)
+data AssignRevealedDataBlindSealTxid : confidential (seal BPCore.SecretSeal
                        , state ConcealedData
                        , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxid
+                       | confidentialState (seal BPCore.BlindSealTxid
                        , state ConcealedData
                        , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
+                       | confidentialSeal (seal BPCore.SecretSeal
                        , state RevealedData
                        , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxid
+                       | revealed (seal BPCore.BlindSealTxid
                        , state RevealedData
                        , lock CommitVerify.ReservedBytes2)
 
-@mnemonic(rachel-unique-logic)
-data AssignRevealedValueBlindSealTxPtr : confidential (seal XChainSecretSeal
+@mnemonic(basic-elastic-digital)
+data AssignRevealedValueBlindSealTxPtr : confidential (seal BPCore.SecretSeal
                        , state ConcealedFungible
                        , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxPtr
+                       | confidentialState (seal BPCore.BlindSealTxPtr
                        , state ConcealedFungible
                        , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
+                       | confidentialSeal (seal BPCore.SecretSeal
                        , state RevealedFungible
                        , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxPtr
-                       , state RevealedFungible
-                       , lock CommitVerify.ReservedBytes2)
-
-@mnemonic(cadet-book-pablo)
-data AssignRevealedValueBlindSealTxid : confidential (seal XChainSecretSeal
-                       , state ConcealedFungible
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxid
-                       , state ConcealedFungible
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
-                       , state RevealedFungible
-                       , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxid
+                       | revealed (seal BPCore.BlindSealTxPtr
                        , state RevealedFungible
                        , lock CommitVerify.ReservedBytes2)
 
-@mnemonic(cycle-panther-cave)
-data AssignVoidStateBlindSealTxPtr : confidential (seal XChainSecretSeal
+@mnemonic(example-reply-lorenzo)
+data AssignRevealedValueBlindSealTxid : confidential (seal BPCore.SecretSeal
+                       , state ConcealedFungible
+                       , lock CommitVerify.ReservedBytes2)
+                       | confidentialState (seal BPCore.BlindSealTxid
+                       , state ConcealedFungible
+                       , lock CommitVerify.ReservedBytes2)
+                       | confidentialSeal (seal BPCore.SecretSeal
+                       , state RevealedFungible
+                       , lock CommitVerify.ReservedBytes2)
+                       | revealed (seal BPCore.BlindSealTxid
+                       , state RevealedFungible
+                       , lock CommitVerify.ReservedBytes2)
+
+@mnemonic(snow-adrian-cadet)
+data AssignVoidStateBlindSealTxPtr : confidential (seal BPCore.SecretSeal
                        , state VoidState
                        , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxPtr
+                       | confidentialState (seal BPCore.BlindSealTxPtr
                        , state VoidState
                        , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
+                       | confidentialSeal (seal BPCore.SecretSeal
                        , state VoidState
                        , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxPtr
+                       | revealed (seal BPCore.BlindSealTxPtr
                        , state VoidState
                        , lock CommitVerify.ReservedBytes2)
 
-@mnemonic(dynasty-iron-athena)
-data AssignVoidStateBlindSealTxid : confidential (seal XChainSecretSeal
+@mnemonic(drum-cover-between)
+data AssignVoidStateBlindSealTxid : confidential (seal BPCore.SecretSeal
                        , state VoidState
                        , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxid
+                       | confidentialState (seal BPCore.BlindSealTxid
                        , state VoidState
                        , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
+                       | confidentialSeal (seal BPCore.SecretSeal
                        , state VoidState
                        , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxid
+                       | revealed (seal BPCore.BlindSealTxid
                        , state VoidState
                        , lock CommitVerify.ReservedBytes2)
 
@@ -408,21 +408,5 @@ data ValencyType       : U16
 
 @mnemonic(email-snow-safari)
 data VoidState         : ()
-
-@mnemonic(poem-heaven-chicken)
-data XChainBlindSealTxPtr : bitcoin BPCore.BlindSealTxPtr
-                       | liquid BPCore.BlindSealTxPtr
-
-@mnemonic(vision-promise-user)
-data XChainBlindSealTxid : bitcoin BPCore.BlindSealTxid
-                       | liquid BPCore.BlindSealTxid
-
-@mnemonic(alex-griffin-left)
-data XChainSecretSeal  : bitcoin BPCore.SecretSeal
-                       | liquid BPCore.SecretSeal
-
-@mnemonic(liquid-river-absorb)
-data XChainTxid        : bitcoin Bitcoin.Txid
-                       | liquid Bitcoin.Txid
 
 

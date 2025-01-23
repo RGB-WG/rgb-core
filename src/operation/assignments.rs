@@ -33,7 +33,7 @@ use super::ExposedState;
 use crate::operation::seal::GenesisSeal;
 use crate::{
     AssignmentType, ExposedSeal, GraphSeal, RevealedAttach, RevealedData, RevealedValue,
-    SecretSeal, StateType, VoidState, XChain, LIB_NAME_RGB_COMMIT,
+    SecretSeal, StateType, VoidState, LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
@@ -71,25 +71,25 @@ pub type AssignAttach<Seal> = Assign<RevealedAttach, Seal>;
 pub enum Assign<State: ExposedState, Seal: ExposedSeal> {
     #[strict_type(tag = 0x00)]
     Confidential {
-        seal: XChain<SecretSeal>,
+        seal: SecretSeal,
         state: State::Confidential,
         lock: ReservedBytes<2, 0>,
     },
     #[strict_type(tag = 0x03)]
     Revealed {
-        seal: XChain<Seal>,
+        seal: Seal,
         state: State,
         lock: ReservedBytes<2, 0>,
     },
     #[strict_type(tag = 0x02)]
     ConfidentialSeal {
-        seal: XChain<SecretSeal>,
+        seal: SecretSeal,
         state: State,
         lock: ReservedBytes<2, 0>,
     },
     #[strict_type(tag = 0x01)]
     ConfidentialState {
-        seal: XChain<Seal>,
+        seal: Seal,
         state: State::Confidential,
         lock: ReservedBytes<2, 0>,
     },
@@ -120,7 +120,7 @@ impl<State: ExposedState, Seal: ExposedSeal> PartialEq for Assign<State, Seal> {
 impl<State: ExposedState, Seal: ExposedSeal> Eq for Assign<State, Seal> {}
 
 impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
-    pub fn revealed(seal: XChain<Seal>, state: State) -> Self {
+    pub fn revealed(seal: Seal, state: State) -> Self {
         Assign::Revealed {
             seal,
             state,
@@ -128,7 +128,7 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
         }
     }
 
-    pub fn with_seal_replaced(assignment: &Self, seal: XChain<Seal>) -> Self {
+    pub fn with_seal_replaced(assignment: &Self, seal: Seal) -> Self {
         match assignment {
             Assign::Confidential {
                 seal: _,
@@ -161,7 +161,7 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
         }
     }
 
-    pub fn to_confidential_seal(&self) -> XChain<SecretSeal> {
+    pub fn to_confidential_seal(&self) -> SecretSeal {
         match self {
             Assign::Revealed { seal, .. } | Assign::ConfidentialState { seal, .. } => {
                 seal.conceal()
@@ -170,7 +170,7 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
         }
     }
 
-    pub fn revealed_seal(&self) -> Option<XChain<Seal>> {
+    pub fn revealed_seal(&self) -> Option<Seal> {
         match self {
             Assign::Revealed { seal, .. } | Assign::ConfidentialState { seal, .. } => Some(*seal),
             Assign::Confidential { .. } | Assign::ConfidentialSeal { .. } => None,
@@ -207,21 +207,21 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
         }
     }
 
-    pub fn as_revealed(&self) -> Option<(&XChain<Seal>, &State)> {
+    pub fn as_revealed(&self) -> Option<(&Seal, &State)> {
         match self {
             Assign::Revealed { seal, state, .. } => Some((seal, state)),
             _ => None,
         }
     }
 
-    pub fn to_revealed(&self) -> Option<(XChain<Seal>, State)> {
+    pub fn to_revealed(&self) -> Option<(Seal, State)> {
         match self {
             Assign::Revealed { seal, state, .. } => Some((*seal, state.clone())),
             _ => None,
         }
     }
 
-    pub fn into_revealed(self) -> Option<(XChain<Seal>, State)> {
+    pub fn into_revealed(self) -> Option<(Seal, State)> {
         match self {
             Assign::Revealed { seal, state, .. } => Some((seal, state)),
             _ => None,
@@ -445,7 +445,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     /// If seal definition does not exist, returns [`UnknownDataError`]. If the
     /// seal is confidential, returns `Ok(None)`; otherwise returns revealed
     /// seal data packed as `Ok(Some(`[`Seal`]`))`
-    pub fn revealed_seal_at(&self, index: u16) -> Result<Option<XChain<Seal>>, UnknownDataError> {
+    pub fn revealed_seal_at(&self, index: u16) -> Result<Option<Seal>, UnknownDataError> {
         Ok(match self {
             TypedAssigns::Declarative(vec) => vec
                 .get(index as usize)
@@ -466,7 +466,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         })
     }
 
-    pub fn to_confidential_seals(&self) -> Vec<XChain<SecretSeal>> {
+    pub fn to_confidential_seals(&self) -> Vec<SecretSeal> {
         match self {
             TypedAssigns::Declarative(s) => s
                 .iter()

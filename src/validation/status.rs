@@ -25,16 +25,13 @@ use std::fmt::{self, Display, Formatter};
 
 use amplify::num::u24;
 use bp::seals::txout::CloseMethod;
+use bp::Txid;
 use commit_verify::mpc::InvalidProof;
 use strict_types::SemId;
 
 use crate::schema::{self, SchemaId};
 use crate::validation::WitnessResolverError;
-use crate::vm::XWitnessId;
-use crate::{
-    BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, Opout, StateType, Vin,
-    XGraphSeal,
-};
+use crate::{BundleId, ContractId, OccurrencesMismatch, OpFullType, OpId, Opout, StateType, Vin};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[repr(u8)]
@@ -249,7 +246,7 @@ pub enum Failure {
     /// bundle {0} public witness {1} is not known to the resolver; validation
     /// stopped since operations can't be consensus-ordered. The resolver
     /// responded with error {2}
-    WitnessUnresolved(BundleId, XWitnessId, WitnessResolverError),
+    WitnessUnresolved(BundleId, Txid, WitnessResolverError),
     /// operation {0} is under a different contract {1}.
     ContractMismatch(OpId, ContractId),
     /// opout {0} appears more than once as input
@@ -261,10 +258,10 @@ pub enum Failure {
     BundleExtraTransition(BundleId, OpId),
     /// transition bundle {0} references non-existing input in witness {2} for
     /// the state transition {1}.
-    BundleInvalidInput(BundleId, OpId, XWitnessId),
+    BundleInvalidInput(BundleId, OpId, Txid),
     /// transition bundle {0} doesn't commit to the input {1} in the witness {2}
     /// which is an input of the state transition {3}.
-    BundleInvalidCommitment(BundleId, Vin, XWitnessId, OpId),
+    BundleInvalidCommitment(BundleId, Vin, Txid, OpId),
 
     // Errors checking seal closing
     /// transition {opid} references state type {state_type} absent in the
@@ -281,14 +278,10 @@ pub enum Failure {
     ConfidentialSeal(Opout),
     /// bundle {0} public witness {1} is not known to the resolver. Resolver
     /// reported error {2}
-    SealNoPubWitness(BundleId, XWitnessId, WitnessResolverError),
-    /// witness layer 1 {anchor} doesn't match seal definition {seal}.
-    SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
-    /// seal {0} is defined on {1} which is not the layer 1 defined by the contract genesis ({2}).
-    SealLayerMismatch(XGraphSeal, Layer1, Layer1),
+    SealNoPubWitness(BundleId, Txid, WitnessResolverError),
     /// transition bundle {0} doesn't close seal with the witness {1}. Details:
     /// {2}
-    SealsInvalid(BundleId, XWitnessId, String),
+    SealsInvalid(BundleId, Txid, String),
     /// single-use seals for the operation {0} were not validated, which
     /// probably indicates unanchored state transition.
     SealsUnvalidated(OpId),
@@ -297,7 +290,7 @@ pub enum Failure {
     AnchorMethodMismatch(BundleId),
     /// transition bundle {0} is not properly anchored to the witness {1}.
     /// Details: {2}
-    MpcInvalid(BundleId, XWitnessId, InvalidProof),
+    MpcInvalid(BundleId, Txid, InvalidProof),
 
     /// anchor close method {0} is different from the one of the contract {1}
     AnchorInvalidMethod(CloseMethod, CloseMethod),

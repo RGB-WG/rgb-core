@@ -30,7 +30,7 @@ pub mod seal;
 pub mod assignments;
 mod operations;
 mod bundle;
-mod xchain;
+mod layer1;
 mod commit;
 
 pub use assignments::{
@@ -46,17 +46,11 @@ pub use commit::{
 pub use data::{ConcealedData, DataState, RevealedData, VoidState};
 pub use fungible::{ConcealedValue, FungibleState, RevealedValue};
 pub use global::{GlobalState, GlobalValues};
+pub use layer1::Layer1;
 pub use meta::{MetaValue, Metadata, MetadataError};
 pub use operations::{
     Extension, Genesis, Identity, Input, Inputs, Operation, Opout, OpoutParseError, Redeemed,
     Transition, Valencies,
 };
-pub use seal::{
-    ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal, XGenesisSeal, XGraphSeal,
-    XOutputSeal,
-};
+pub use seal::{ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal};
 pub use state::{ConcealedState, ConfidentialState, ExposedState, RevealedState, StateType};
-pub use xchain::{
-    Impossible, Layer1, XChain, XChainParseError, XOutpoint, XCHAIN_BITCOIN_PREFIX,
-    XCHAIN_LIQUID_PREFIX,
-};

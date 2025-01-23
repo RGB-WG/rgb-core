@@ -20,24 +20,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! API for interfacing different virtual machines
-//!
-//! Concrete virtual machine implementations must be wrapped into this API
+use strict_encoding::{StrictDecode, StrictEncode, StrictType};
 
-pub mod opcodes;
-mod isa;
-mod op_contract;
-mod op_timechain;
-#[macro_use]
-mod macroasm;
-mod contract;
+use crate::LIB_NAME_RGB_COMMIT;
 
-pub use aluvm::aluasm_isa;
-pub use contract::{
-    ContractStateAccess, ContractStateEvolve, GlobalContractState, GlobalOrd, GlobalStateIter,
-    OpOrd, OrdOpRef, UnknownGlobalStateType, WitnessOrd, WitnessPos,
-};
-pub(crate) use contract::{OpInfo, VmContext};
-pub use isa::RgbIsa;
-pub use op_contract::ContractOp;
-pub use op_timechain::TimechainOp;
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[display(lowercase)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[repr(u8)]
+#[derive(Default)]
+pub enum Layer1 {
+    #[default]
+    Bitcoin = 0,
+    Liquid = 1,
+}

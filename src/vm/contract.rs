@@ -29,103 +29,16 @@ use std::rc::Rc;
 
 use amplify::confinement;
 use amplify::num::u24;
-use bp::seals::txout::{ExplicitSeal, VerifyError, Witness};
-use bp::{dbc, Tx, Txid};
+use bp::{Outpoint, Txid};
 use chrono::{MappedLocalTime, TimeZone, Utc};
-use commit_verify::mpc;
-use single_use_seals::SealWitness;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
     AssignmentType, Assignments, AssignmentsRef, AttachState, BundleId, ContractId, DataState,
-    ExposedSeal, Extension, ExtensionType, FungibleState, Genesis, GlobalState, GlobalStateType,
-    GraphSeal, Impossible, Inputs, Layer1, Metadata, OpFullType, OpId, OpType, Operation,
-    Transition, TransitionType, TxoSeal, TypedAssigns, Valencies, XChain, XOutpoint, XOutputSeal,
-    LIB_NAME_RGB_LOGIC,
+    Extension, ExtensionType, FungibleState, Genesis, GlobalState, GlobalStateType, GraphSeal,
+    Inputs, Layer1, Metadata, OpFullType, OpId, OpType, Operation, Transition, TransitionType,
+    TypedAssigns, Valencies, LIB_NAME_RGB_LOGIC,
 };
-
-pub type XWitnessId = XChain<Txid>;
-
-pub type XWitnessTx<X = Impossible> = XChain<Tx, X>;
-
-impl XWitnessTx {
-    pub fn witness_id(&self) -> XWitnessId {
-        match self {
-            Self::Bitcoin(tx) => XWitnessId::Bitcoin(tx.txid()),
-            Self::Liquid(tx) => XWitnessId::Liquid(tx.txid()),
-            Self::Other(_) => unreachable!(),
-        }
-    }
-}
-
-impl<Dbc: dbc::Proof> XChain<Witness<Dbc>> {
-    pub fn witness_id(&self) -> XWitnessId {
-        match self {
-            Self::Bitcoin(w) => XWitnessId::Bitcoin(w.txid),
-            Self::Liquid(w) => XWitnessId::Liquid(w.txid),
-            Self::Other(_) => unreachable!(),
-        }
-    }
-}
-
-impl<Dbc: dbc::Proof, Seal: TxoSeal> SealWitness<Seal> for XChain<Witness<Dbc>> {
-    type Message = mpc::Commitment;
-    type Error = VerifyError<Dbc::Error>;
-
-    fn verify_seal(&self, seal: &Seal, msg: &Self::Message) -> Result<(), Self::Error> {
-        match self {
-            Self::Bitcoin(witness) | Self::Liquid(witness) => witness.verify_seal(seal, msg),
-            Self::Other(_) => unreachable!(),
-        }
-    }
-
-    fn verify_many_seals<'seal>(
-        &self,
-        seals: impl IntoIterator<Item = &'seal Seal>,
-        msg: &Self::Message,
-    ) -> Result<(), Self::Error>
-    where
-        Seal: 'seal,
-    {
-        match self {
-            Self::Bitcoin(witness) | Self::Liquid(witness) => witness.verify_many_seals(seals, msg),
-            Self::Other(_) => unreachable!(),
-        }
-    }
-}
-
-impl<U: ExposedSeal> XChain<U> {
-    #[inline]
-    pub fn to_output_seal(self) -> Option<XOutputSeal>
-    where U: TxoSeal {
-        Some(match self {
-            XChain::Bitcoin(seal) => {
-                let outpoint = seal.outpoint()?;
-                XChain::Bitcoin(ExplicitSeal::new(outpoint))
-            }
-            XChain::Liquid(seal) => {
-                let outpoint = seal.outpoint()?;
-                XChain::Liquid(ExplicitSeal::new(outpoint))
-            }
-            XChain::Other(_) => unreachable!(),
-        })
-    }
-
-    pub fn try_to_output_seal(self, witness_id: XWitnessId) -> Result<XOutputSeal, Self>
-    where U: TxoSeal {
-        self.to_output_seal()
-            .or(match (self, witness_id) {
-                (XChain::Bitcoin(seal), XWitnessId::Bitcoin(txid)) => {
-                    Some(XChain::Bitcoin(ExplicitSeal::new(seal.outpoint_or(txid))))
-                }
-                (XChain::Liquid(seal), XWitnessId::Liquid(txid)) => {
-                    Some(XChain::Liquid(ExplicitSeal::new(seal.outpoint_or(txid))))
-                }
-                _ => None,
-            })
-            .ok_or(self)
-    }
-}
 
 /// The type is used during validation and computing a contract state. It
 /// combines both the operation with the information required for its ordering
@@ -135,8 +48,8 @@ impl<U: ExposedSeal> XChain<U> {
 pub enum OrdOpRef<'op> {
     #[from]
     Genesis(&'op Genesis),
-    Transition(&'op Transition, XWitnessId, WitnessOrd, BundleId),
-    Extension(&'op Extension, XWitnessId, WitnessOrd),
+    Transition(&'op Transition, Txid, WitnessOrd, BundleId),
+    Extension(&'op Extension, Txid, WitnessOrd),
 }
 
 impl PartialOrd for OrdOpRef<'_> {
@@ -148,7 +61,7 @@ impl Ord for OrdOpRef<'_> {
 }
 
 impl OrdOpRef<'_> {
-    pub fn witness_id(&self) -> Option<XWitnessId> {
+    pub fn witness_id(&self) -> Option<Txid> {
         match self {
             OrdOpRef::Genesis(_) => None,
             OrdOpRef::Transition(_, witness_id, ..) | OrdOpRef::Extension(_, witness_id, ..) => {
@@ -674,23 +587,23 @@ pub trait ContractStateAccess: Debug {
         ty: GlobalStateType,
     ) -> Result<GlobalContractState<impl GlobalStateIter>, UnknownGlobalStateType>;
 
-    fn rights(&self, outpoint: XOutpoint, ty: AssignmentType) -> u32;
+    fn rights(&self, outpoint: Outpoint, ty: AssignmentType) -> u32;
 
     fn fungible(
         &self,
-        outpoint: XOutpoint,
+        outpoint: Outpoint,
         ty: AssignmentType,
     ) -> impl DoubleEndedIterator<Item = FungibleState>;
 
     fn data(
         &self,
-        outpoint: XOutpoint,
+        outpoint: Outpoint,
         ty: AssignmentType,
     ) -> impl DoubleEndedIterator<Item = impl Borrow<DataState>>;
 
     fn attach(
         &self,
-        outpoint: XOutpoint,
+        outpoint: Outpoint,
         ty: AssignmentType,
     ) -> impl DoubleEndedIterator<Item = impl Borrow<AttachState>>;
 }

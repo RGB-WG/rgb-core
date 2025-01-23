@@ -26,10 +26,10 @@
 
 use aluvm::library::{Lib, LibId};
 use amplify::confinement::ConfinedOrdMap;
+use bp::Txid;
 use strict_types::TypeSystem;
 
 use super::EAnchor;
-use crate::vm::XWitnessId;
 use crate::{
     AssignmentType, AssignmentsRef, BundleId, ContractId, Extension, ExtensionType, Genesis,
     GlobalState, GraphSeal, Inputs, Metadata, OpFullType, OpId, OpType, Operation, Schema,
@@ -183,11 +183,9 @@ impl<C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'_, C> {
             .filter(|b| b.bundle_id() == bundle_id)
     }
 
-    fn anchor(&self, bundle_id: BundleId) -> Option<(XWitnessId, &EAnchor)> {
-        self.0.anchor(bundle_id)
-    }
+    fn anchor(&self, bundle_id: BundleId) -> Option<(Txid, &EAnchor)> { self.0.anchor(bundle_id) }
 
-    fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId> { self.0.op_witness_id(opid) }
+    fn op_witness_id(&self, opid: OpId) -> Option<Txid> { self.0.op_witness_id(opid) }
 }
 
 /// Trait defining common data access API for all storage-related RGB structures
@@ -222,8 +220,8 @@ pub trait ConsignmentApi {
     fn bundle(&self, bundle_id: BundleId) -> Option<&TransitionBundle>;
 
     /// Returns a grip given a bundle id.
-    fn anchor(&self, bundle_id: BundleId) -> Option<(XWitnessId, &EAnchor)>;
+    fn anchor(&self, bundle_id: BundleId) -> Option<(Txid, &EAnchor)>;
 
     /// Returns witness id for a given operation.
-    fn op_witness_id(&self, opid: OpId) -> Option<XWitnessId>;
+    fn op_witness_id(&self, opid: OpId) -> Option<Txid>;
 }

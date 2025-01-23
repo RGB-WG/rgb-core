@@ -42,7 +42,7 @@ use crate::{
     ConcealedData, ConcealedState, ConcealedValue, ConfidentialState, DataState, ExposedSeal,
     ExposedState, Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Layer1,
     Operation, Redeemed, SchemaId, SecretSeal, Transition, TransitionBundle, TransitionType,
-    TypedAssigns, XChain, LIB_NAME_RGB_COMMIT,
+    TypedAssigns, LIB_NAME_RGB_COMMIT,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -189,7 +189,7 @@ impl AssignmentIndex {
 #[commit_encode(strategy = strict, id = DiscloseHash)]
 pub struct OpDisclose {
     pub id: OpId,
-    pub seals: MediumOrdMap<AssignmentIndex, XChain<SecretSeal>>,
+    pub seals: MediumOrdMap<AssignmentIndex, SecretSeal>,
     pub fungible: MediumOrdMap<AssignmentIndex, ConcealedValue>,
     pub data: MediumOrdMap<AssignmentIndex, ConcealedData>,
     pub attach: MediumOrdMap<AssignmentIndex, ConcealedAttach>,
@@ -355,7 +355,7 @@ impl ConcealedState {
 pub struct AssignmentCommitment {
     pub ty: AssignmentType,
     pub state: ConcealedState,
-    pub seal: XChain<SecretSeal>,
+    pub seal: SecretSeal,
     pub lock: ReservedBytes<2, 0>,
 }
 
