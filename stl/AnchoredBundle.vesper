@@ -8,7 +8,6 @@
 Bundles vesper lexicon=types+commitments
 
 BundleId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:bundle#2024-02-03
-  Method serialized
   InputMap serialized
 
 DbcProof union

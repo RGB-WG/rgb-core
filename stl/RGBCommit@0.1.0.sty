@@ -1,5 +1,5 @@
 {-
-  Id: stl:nX8j7yoL-WB1gVNN-JHgJDvZ-UL8177c-Hexose2-JYJs1Bs#level-exodus-final
+  Id: stl:FjjU0$$o-dgf5dmK-ohaEobc-Y6Vz3rp-TqLj3kS-8F7NMQQ#capsule-arthur-quest
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -13,7 +13,6 @@ typelib RGBCommit
 
 import BPCore#symbol-tropic-grand
   use BlindSealTxid#halt-crash-valid
-  use Method#bali-boris-plasma
   use SecretSeal#dollar-iris-wizard
   use BlindSealTxPtr#content-paradox-dominic
   use TxPtr#italian-july-eddie
@@ -171,14 +170,13 @@ data AttachId          : [Byte ^ 32]
 @mnemonic(harvard-burma-bicycle)
 data AttachState       : id AttachId, mediaType MediaType
 
-@mnemonic(status-magnum-school)
+@mnemonic(bagel-ground-provide)
 data BaseCommitment    : flags CommitVerify.ReservedBytes1
                        , schemaId SchemaId
                        , timestamp I64
                        , issuer CommitVerify.StrictHash
                        , layer1 Layer1
                        , testnet Std.Bool
-                       , closeMethod BPCore.Method
 
 @mnemonic(meter-arizona-albino)
 data ConcealedAttach   : [Byte ^ 32]
@@ -229,7 +227,7 @@ data FungibleState     : bits64#8 U64 | (|)
 data FungibleType      : unsigned64Bit#8 | (|)
 
 
-@mnemonic(letter-tribal-father)
+@mnemonic(friday-cliff-ticket)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , flags CommitVerify.ReservedBytes1
@@ -237,7 +235,6 @@ data Genesis           : ffv Ffv
                        , issuer Identity
                        , layer1 Layer1
                        , testnet Std.Bool
-                       , closeMethod BPCore.Method
                        , metadata Metadata
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
@@ -367,10 +364,8 @@ data Transition        : ffv Ffv
                        , validator CommitVerify.ReservedBytes1
                        , witness CommitVerify.ReservedBytes2
 
-@mnemonic(antonio-adios-analyze)
-data TransitionBundle  : closeMethod BPCore.Method
-                       , inputMap InputMap
-                       , knownTransitions {OpId -> ^ 1.. Transition}
+@mnemonic(rider-serpent-algebra)
+data TransitionBundle  : inputMap InputMap, knownTransitions {OpId -> ^ 1.. Transition}
 
 @mnemonic(pirate-lithium-side)
 data TransitionSchema  : metadata {MetaType ^ ..0xff}

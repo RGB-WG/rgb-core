@@ -28,7 +28,6 @@ use std::str::FromStr;
 
 use amplify::confinement::{Confined, SmallOrdSet, TinyOrdMap, TinyOrdSet};
 use amplify::{hex, Wrapper};
-use bp::seals::txout::CloseMethod;
 use commit_verify::{
     CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, ReservedBytes,
     StrictHash,
@@ -346,7 +345,6 @@ pub struct Genesis {
     pub issuer: Identity,
     pub layer1: Layer1,
     pub testnet: bool,
-    pub close_method: CloseMethod,
     pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,

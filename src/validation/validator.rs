@@ -24,7 +24,7 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
-use bp::dbc::{Anchor, Proof};
+use bp::dbc::Anchor;
 use bp::seals::txout::{CloseMethod, Witness};
 use bp::{dbc, Outpoint, Tx, Txid};
 use commit_verify::mpc;
@@ -119,7 +119,6 @@ pub struct Validator<
 
     schema_id: SchemaId,
     contract_id: ContractId,
-    close_method: CloseMethod,
 
     contract_state: Rc<RefCell<S>>,
     validated_op_seals: RefCell<BTreeSet<OpId>>,
@@ -146,7 +145,6 @@ impl<
         let genesis = consignment.genesis();
         let contract_id = genesis.contract_id();
         let schema_id = genesis.schema_id;
-        let close_method = genesis.close_method;
 
         // Prevent repeated validation of single-use seals
         let validated_op_seals = RefCell::new(BTreeSet::<OpId>::new());
@@ -157,7 +155,6 @@ impl<
             status: RefCell::new(status),
             schema_id,
             contract_id,
-            close_method,
             validated_op_seals,
             input_assignments: input_transitions,
             resolver: CheckedWitnessResolver::from(resolver),
@@ -381,31 +378,6 @@ impl<
             // [VALIDATION]: We validate that the seals were properly defined on BP-type layer
             let (seals, input_map) = self.validate_seal_definitions(bundle);
 
-            if self.close_method != anchor.dbc_proof.method() {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::AnchorInvalidMethod(
-                        anchor.dbc_proof.method(),
-                        self.close_method,
-                    ));
-                continue;
-            }
-            if self.close_method != bundle.close_method {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::BundleInvalidMethod(
-                        bundle.close_method,
-                        self.close_method,
-                    ));
-                continue;
-            }
-            if anchor.dbc_proof.method() != bundle.close_method {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::AnchorMethodMismatch(bundle_id));
-                continue;
-            }
-
             // [VALIDATION]: We validate that the seals were properly closed on BP-type layer
             let Some(witness_tx) =
                 self.validate_seal_commitments(&seals, bundle_id, witness_id, anchor)
@@ -624,6 +596,28 @@ impl<
                     .add_failure(Failure::MpcInvalid(bundle_id, witness_id, err));
             }
             Ok(commitment) => {
+                // [VALIDATION]: Verify commitment
+                let Some(output) = witness
+                    .tx
+                    .outputs()
+                    .find(|out| out.script_pubkey.is_op_return() || out.script_pubkey.is_p2tr())
+                else {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::NoDbcOutput(witness_id));
+                    return;
+                };
+                let output_method = if output.script_pubkey.is_op_return() {
+                    CloseMethod::OpretFirst
+                } else {
+                    CloseMethod::TapretFirst
+                };
+                let proof_method = witness.proof.method();
+                if proof_method != output_method {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::InvalidProofType(witness_id, proof_method));
+                }
                 // [VALIDATION]: CHECKING SINGLE-USE-SEALS
                 witness
                     .verify_many_seals(seals, &commitment)

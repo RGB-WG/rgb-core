@@ -285,17 +285,14 @@ pub enum Failure {
     /// single-use seals for the operation {0} were not validated, which
     /// probably indicates unanchored state transition.
     SealsUnvalidated(OpId),
-    /// anchor provides different type of DBC proof than required by the bundle
-    /// {0}.
-    AnchorMethodMismatch(BundleId),
     /// transition bundle {0} is not properly anchored to the witness {1}.
     /// Details: {2}
     MpcInvalid(BundleId, Txid, InvalidProof),
-
-    /// anchor close method {0} is different from the one of the contract {1}
-    AnchorInvalidMethod(CloseMethod, CloseMethod),
-    /// bundle close method {0} is different from the one of the contract {1}
-    BundleInvalidMethod(CloseMethod, CloseMethod),
+    /// witness transaction {0} has no taproot or OP_RETURN output.
+    NoDbcOutput(Txid),
+    /// first DBC-compatible output of witness transaction {0} doesn't match the provided proof
+    /// type ({1})
+    InvalidProofType(Txid, CloseMethod),
 
     // State extensions errors
     /// valency {valency} redeemed by state extension {opid} references
