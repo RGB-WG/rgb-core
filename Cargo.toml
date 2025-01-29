@@ -54,8 +54,8 @@ wasm-bindgen-test = "0.3"
 features = ["all"]
 
 [patch.crates-io]
-ultrasonic = { git = "https://github.com/AluVM/ultrasonic", branch = "refactor/consensus" }
-bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "refactor/consensus" }
-bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "refactor/consensus" }
-bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "refactor/consensus" }
-bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "refactor/consensus" }
+ultrasonic = { git = "https://github.com/AluVM/ultrasonic", branch = "master" }
+bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "wtxoseal" }
+bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "wtxoseal" }
+bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "wtxoseal" }
+bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "wtxoseal" }

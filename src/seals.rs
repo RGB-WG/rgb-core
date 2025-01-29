@@ -22,28 +22,36 @@
 // or implied. See the License for the specific language governing permissions and limitations under
 // the License.
 
+use core::fmt::{Debug, Display};
+
 use bp::seals::mmb;
 use single_use_seals::SingleUseSeal;
+use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use ultrasonic::AuthToken;
 
-pub trait SealAuthToken {
+pub trait RgbSealDef: Clone + Debug + Display + StrictDumb + StrictEncode + StrictDecode {
+    type Src: RgbSealSrc;
     fn auth_token(&self) -> AuthToken;
+    fn resolve(&self, witness: &<Self::Src as SingleUseSeal>::PubWitness) -> Self::Src;
 }
 
-pub trait RgbSeal: SingleUseSeal<Message = mmb::Message> + SealAuthToken {}
+pub trait RgbSealSrc: SingleUseSeal<Message = mmb::Message> + Ord {}
 
 // Below are capabilities constants used in the standard library:
 
 #[cfg(any(feature = "bitcoin", feature = "liquid"))]
 pub mod bitcoin {
-    use bp::seals::TxoSeal;
+    use bp::seals::{TxoSeal, WOutpoint, WTxoSeal};
+    use bp::Outpoint;
     use commit_verify::CommitId;
 
     use super::*;
 
-    impl RgbSeal for TxoSeal {}
+    impl RgbSealSrc for TxoSeal {}
 
-    impl SealAuthToken for TxoSeal {
+    impl RgbSealDef for WTxoSeal {
+        type Src = TxoSeal;
+
         // SECURITY: Here we cut SHA256 tagged hash of a single-use seal definition to 30 bytes in order
         // to fit it into a field element with no overflows. This must be a secure operation since we
         // still have a sufficient 120-bit collision resistance.
@@ -52,6 +60,17 @@ pub mod bitcoin {
             let mut shortened_id = [0u8; 30];
             shortened_id.copy_from_slice(&id[0..30]);
             AuthToken::from_byte_array(shortened_id)
+        }
+
+        fn resolve(&self, witness: &<Self::Src as SingleUseSeal>::PubWitness) -> Self::Src {
+            let primary = match self.primary {
+                WOutpoint::Wout(wout) => {
+                    debug_assert!(witness.outputs.len() > wout.to_usize());
+                    Outpoint::new(witness.txid(), wout)
+                }
+                WOutpoint::Extern(outpoint) => outpoint,
+            };
+            TxoSeal { primary, secondary: self.secondary }
         }
     }
 }
