@@ -25,7 +25,7 @@
 use alloc::collections::BTreeMap;
 use std::collections::BTreeSet;
 
-use amplify::confinement::SmallVec;
+use amplify::confinement::SmallOrdMap;
 use amplify::ByteArray;
 use bp::seals::mmb;
 use single_use_seals::{PublishedWitness, SealError, SealWitness};
@@ -55,7 +55,7 @@ pub struct OperationSeals<Seal: RgbSeal> {
     pub operation: Operation,
     /// Operation itself contains only AuthToken's, which are a commitments to the seals. Hence, we
     /// have to separately include a full seal definitions next to the operation data.
-    pub defined_seals: SmallVec<Seal>,
+    pub defined_seals: SmallOrdMap<u16, Seal>,
 }
 
 pub trait ReadOperation: Sized {
@@ -120,8 +120,7 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
             let iter = header
                 .defined_seals
                 .iter()
-                .enumerate()
-                .map(|(pos, seal)| (CellAddr::new(opid, pos as u16), seal.clone()));
+                .map(|(pos, seal)| (CellAddr::new(opid, *pos), seal.clone()));
 
             // We need to check that all seal definitions strictly match operation-defined destructible cells
             let defined = header
