@@ -137,7 +137,11 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
             // This convoluted logic happens since we use a state machine which ensures the client can't lie to
             // the verifier
             let mut witness_count = 0usize;
-            let mut seal_sources = BTreeSet::new();
+            let mut seal_sources: BTreeSet<_> = header
+                .defined_seals
+                .iter()
+                .filter_map(|(pos, seal)| seal.to_src().map(|seal| (CellAddr::new(opid, *pos), seal)))
+                .collect();
             loop {
                 // An operation may have multiple witnesses (like multiple commitment transactions in lightning
                 // channel).
@@ -152,6 +156,7 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
                         let iter = header
                             .defined_seals
                             .iter()
+                            .filter(|(_, seal)| seal.to_src().is_none())
                             .map(|(pos, seal)| (CellAddr::new(opid, *pos), seal.resolve(witness.published.pub_id())));
                         seal_sources.extend(iter);
 
