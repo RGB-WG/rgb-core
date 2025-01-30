@@ -28,10 +28,10 @@ use alloc::vec::Vec;
 use amplify::confinement::SmallOrdMap;
 use amplify::ByteArray;
 use bp::seals::mmb;
-use single_use_seals::{PublishedWitness, SealError, SealWitness, SingleUseSeal};
+use single_use_seals::{PublishedWitness, SealError, SealWitness};
 use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
-use crate::{RgbSealDef, LIB_NAME_RGB_CORE};
+use crate::{RgbSealDef, RgbSealSrc, LIB_NAME_RGB_CORE};
 
 // TODO: Move to amplify crate
 pub enum Step<A, B> {
@@ -86,7 +86,7 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
     fn evaluate<R: ReadOperation<SealDef = SealDef>>(
         &mut self,
         mut reader: R,
-    ) -> Result<(), VerificationError<SealDef>> {
+    ) -> Result<(), VerificationError<SealDef::Src>> {
         let contract_id = self.contract_id();
 
         let mut first = true;
@@ -187,7 +187,7 @@ impl<SealDef: RgbSealDef, C: ContractApi<SealDef>> ContractVerify<SealDef> for C
 // TODO: Find a way to do Debug and Clone implementation
 #[derive(Debug, Display, From)]
 #[display(doc_comments)]
-pub enum VerificationError<Seal: RgbSealDef> {
+pub enum VerificationError<SealSrc: RgbSealSrc> {
     /// genesis does not commit to the codex id; a wrong contract genesis is used.
     NoCodexCommitment,
 
@@ -197,11 +197,7 @@ pub enum VerificationError<Seal: RgbSealDef> {
     /// single-use seals are not closed properly with witness {0} for operation {1}.
     ///
     /// Details: {2}
-    SealsNotClosed(
-        <<Seal::Src as SingleUseSeal>::PubWitness as PublishedWitness<Seal::Src>>::PubId,
-        Opid,
-        SealError<Seal::Src>,
-    ),
+    SealsNotClosed(<SealSrc::PubWitness as PublishedWitness<SealSrc>>::PubId, Opid, SealError<SealSrc>),
 
     /// unknown seal definition for cell address {0}.
     SealUnknown(CellAddr),
