@@ -19,8 +19,7 @@ OpCommitment rec
       schemaId bytes len=32 aka=SchemaId
       timestamp is I64
       issuer bytes len=32 aka=StrictHash
-      layer1 enum Layer1 bitcoin=0 liquid=1
-      testnet enum Bool false=0 true=1
+      chainNet enum ChainNet bitcoinMainnet=0 bitcoinTestnet3=1 bitcoinTestnet4=2 bitcoinSignet=3 bitcoinRegtest=4 liquidMainnet=5 liquidTestnet=6
     transition tuple tag=1
       _ bytes len=32 aka=ContractId
       _ is U16 aka=TransitionType

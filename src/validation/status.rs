@@ -31,7 +31,9 @@ use strict_types::SemId;
 
 use crate::schema::{self, SchemaId};
 use crate::validation::WitnessResolverError;
-use crate::{BundleId, ContractId, OccurrencesMismatch, OpFullType, OpId, Opout, StateType, Vin};
+use crate::{
+    BundleId, ChainNet, ContractId, OccurrencesMismatch, OpFullType, OpId, Opout, StateType, Vin,
+};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[repr(u8)]
@@ -160,9 +162,13 @@ impl Status {
 )]
 #[display(doc_comments)]
 pub enum Failure {
-    /// the contract network doesn't match (validator runs in testnet={0}
+    /// the contract chain-network pair doesn't match (validator runs in chain_net={0}
     /// configuration).
-    NetworkMismatch(bool),
+    ContractChainNetMismatch(ChainNet),
+
+    /// the resolver chain-network pair doesn't match (validator runs in chain_net={0}
+    /// configuration).
+    ResolverChainNetMismatch(ChainNet),
 
     /// schema {actual} provided for the consignment validation doesn't match
     /// schema {expected} used by the contract. This means that the consignment

@@ -35,8 +35,8 @@ use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, OpRef, Status
 use crate::operation::seal::ExposedSeal;
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd};
 use crate::{
-    validation, BundleId, ContractId, OpId, OpType, Operation, Opout, OutputSeal, Schema, SchemaId,
-    TransitionBundle,
+    validation, BundleId, ChainNet, ContractId, OpId, OpType, Operation, Opout, OutputSeal, Schema,
+    SchemaId, TransitionBundle,
 };
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
@@ -53,6 +53,8 @@ pub enum WitnessResolverError {
     Unknown(Txid),
     /// unable to retrieve witness {0}, {1}
     Other(Txid, String),
+    /// resolver is for another chain-network pair
+    WrongChainNet,
 }
 
 pub trait ResolveWitness {
@@ -61,6 +63,8 @@ pub trait ResolveWitness {
 
     fn resolve_pub_witness_ord(&self, witness_id: Txid)
         -> Result<WitnessOrd, WitnessResolverError>;
+
+    fn check_chain_net(&self, chain_net: ChainNet) -> Result<(), WitnessResolverError>;
 }
 
 impl<T: ResolveWitness> ResolveWitness for &T {
@@ -73,6 +77,10 @@ impl<T: ResolveWitness> ResolveWitness for &T {
         witness_id: Txid,
     ) -> Result<WitnessOrd, WitnessResolverError> {
         ResolveWitness::resolve_pub_witness_ord(*self, witness_id)
+    }
+
+    fn check_chain_net(&self, chain_net: ChainNet) -> Result<(), WitnessResolverError> {
+        ResolveWitness::check_chain_net(*self, chain_net)
     }
 }
 
@@ -104,6 +112,10 @@ impl<R: ResolveWitness> ResolveWitness for CheckedWitnessResolver<R> {
     ) -> Result<WitnessOrd, WitnessResolverError> {
         self.inner.resolve_pub_witness_ord(witness_id)
     }
+
+    fn check_chain_net(&self, chain_net: ChainNet) -> Result<(), WitnessResolverError> {
+        self.inner.check_chain_net(chain_net)
+    }
 }
 
 pub struct Validator<
@@ -119,6 +131,7 @@ pub struct Validator<
 
     schema_id: SchemaId,
     contract_id: ContractId,
+    chain_net: ChainNet,
 
     contract_state: Rc<RefCell<S>>,
     validated_op_seals: RefCell<BTreeSet<OpId>>,
@@ -145,6 +158,7 @@ impl<
         let genesis = consignment.genesis();
         let contract_id = genesis.contract_id();
         let schema_id = genesis.schema_id;
+        let chain_net = genesis.chain_net;
 
         // Prevent repeated validation of single-use seals
         let validated_op_seals = RefCell::new(BTreeSet::<OpId>::new());
@@ -155,6 +169,7 @@ impl<
             status: RefCell::new(status),
             schema_id,
             contract_id,
+            chain_net,
             validated_op_seals,
             input_assignments: input_transitions,
             resolver: CheckedWitnessResolver::from(resolver),
@@ -174,17 +189,24 @@ impl<
     pub fn validate(
         consignment: &'consignment C,
         resolver: &'resolver R,
-        testnet: bool,
+        chain_net: ChainNet,
         context: S::Context<'_>,
     ) -> Status {
         let mut validator = Self::init(consignment, resolver, context);
-        // If the network mismatches there is no point in validating the contract since
-        // all witness transactions will be missed.
-        if testnet != validator.consignment.genesis().testnet {
+        // If the chain-network pair doesn't match there is no point in validating the contract
+        // since all witness transactions will be missed.
+        if validator.chain_net != chain_net {
             validator
                 .status
                 .borrow_mut()
-                .add_failure(Failure::NetworkMismatch(testnet));
+                .add_failure(Failure::ContractChainNetMismatch(chain_net));
+            return validator.status.into_inner();
+        }
+        if resolver.check_chain_net(chain_net).is_err() {
+            validator
+                .status
+                .borrow_mut()
+                .add_failure(Failure::ResolverChainNetMismatch(chain_net));
             return validator.status.into_inner();
         }
 

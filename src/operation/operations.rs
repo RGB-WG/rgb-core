@@ -37,9 +37,9 @@ use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize}
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ConcealedAttach,
-    ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv, GenesisSeal,
-    GlobalState, GraphSeal, Layer1, Metadata, OpDisclose, OpId, SecretSeal, TypedAssigns,
+    Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ChainNet,
+    ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
+    GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose, OpId, SecretSeal, TypedAssigns,
     VoidState, LIB_NAME_RGB_COMMIT,
 };
 
@@ -343,8 +343,7 @@ pub struct Genesis {
     pub flags: ReservedBytes<1, 0>,
     pub timestamp: i64,
     pub issuer: Identity,
-    pub layer1: Layer1,
-    pub testnet: bool,
+    pub chain_net: ChainNet,
     pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,

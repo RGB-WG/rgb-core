@@ -1,5 +1,5 @@
 {-
-  Id: stl:FjjU0$$o-dgf5dmK-ohaEobc-Y6Vz3rp-TqLj3kS-8F7NMQQ#capsule-arthur-quest
+  Id: stl:n4BoS9Kd-oZ1mUgb-6Hqg9hY-q$JXa84-YoWed1a-!6AZCTM#raymond-open-organic
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -34,7 +34,6 @@ import CommitVerify#miller-pancake-elastic
 
 import Std#ralph-blue-lucky
   use AsciiPrintable#ultra-sunset-format
-  use Bool#oxygen-complex-duet
   use AlphaNumLodash#percent-bingo-caesar
   use AlphaCapsLodash#duet-hammer-labor
 
@@ -170,13 +169,17 @@ data AttachId          : [Byte ^ 32]
 @mnemonic(harvard-burma-bicycle)
 data AttachState       : id AttachId, mediaType MediaType
 
-@mnemonic(bagel-ground-provide)
+@mnemonic(stadium-stadium-vacuum)
 data BaseCommitment    : flags CommitVerify.ReservedBytes1
                        , schemaId SchemaId
                        , timestamp I64
                        , issuer CommitVerify.StrictHash
-                       , layer1 Layer1
-                       , testnet Std.Bool
+                       , chainNet ChainNet
+
+@mnemonic(ringo-fashion-enrico)
+data ChainNet          : bitcoinMainnet | bitcoinTestnet3 | bitcoinTestnet4 | bitcoinSignet
+                       | bitcoinRegtest | liquidMainnet | liquidTestnet
+
 
 @mnemonic(meter-arizona-albino)
 data ConcealedAttach   : [Byte ^ 32]
@@ -227,14 +230,13 @@ data FungibleState     : bits64#8 U64 | (|)
 data FungibleType      : unsigned64Bit#8 | (|)
 
 
-@mnemonic(friday-cliff-ticket)
+@mnemonic(bazooka-couple-summer)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , flags CommitVerify.ReservedBytes1
                        , timestamp I64
                        , issuer Identity
-                       , layer1 Layer1
-                       , testnet Std.Bool
+                       , chainNet ChainNet
                        , metadata Metadata
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
@@ -273,10 +275,6 @@ data InputMap          : {Bitcoin.Vout -> ^ 1.. OpId}
 
 @mnemonic(sector-charlie-diagram)
 data Inputs            : {Input}
-
-@mnemonic(camilla-basket-justin)
-data Layer1            : bitcoin | liquid
-
 
 @mnemonic(isabel-heaven-north)
 data MediaType         : any#255 | (|)

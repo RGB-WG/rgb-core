@@ -37,11 +37,11 @@ use commit_verify::{
 use strict_encoding::StrictDumb;
 
 use crate::{
-    impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ConcealedAttach,
+    impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ChainNet, ConcealedAttach,
     ConcealedData, ConcealedState, ConcealedValue, ConfidentialState, DataState, ExposedSeal,
-    ExposedState, Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Layer1,
-    Operation, Redeemed, SchemaId, SecretSeal, Transition, TransitionBundle, TransitionType,
-    TypedAssigns, LIB_NAME_RGB_COMMIT,
+    ExposedState, Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Operation,
+    Redeemed, SchemaId, SecretSeal, Transition, TransitionBundle, TransitionType, TypedAssigns,
+    LIB_NAME_RGB_COMMIT,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -236,8 +236,7 @@ pub struct BaseCommitment {
     pub schema_id: SchemaId,
     pub timestamp: i64,
     pub issuer: StrictHash,
-    pub layer1: Layer1,
-    pub testnet: bool,
+    pub chain_net: ChainNet,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -279,8 +278,7 @@ impl Genesis {
             flags: self.flags,
             schema_id: self.schema_id,
             timestamp: self.timestamp,
-            layer1: self.layer1,
-            testnet: self.testnet,
+            chain_net: self.chain_net,
             issuer: self.issuer.commit_id(),
         };
         OpCommitment {

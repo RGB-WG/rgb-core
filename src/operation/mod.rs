@@ -46,7 +46,7 @@ pub use commit::{
 pub use data::{ConcealedData, DataState, RevealedData, VoidState};
 pub use fungible::{ConcealedValue, FungibleState, RevealedValue};
 pub use global::{GlobalState, GlobalValues};
-pub use layer1::Layer1;
+pub use layer1::{ChainNet, Layer1};
 pub use meta::{MetaValue, Metadata, MetadataError};
 pub use operations::{
     Extension, Genesis, Identity, Input, Inputs, Operation, Opout, OpoutParseError, Redeemed,
