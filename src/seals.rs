@@ -85,3 +85,20 @@ pub mod bitcoin {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use bp::seals::{TxoSealExt, WOutpoint, WTxoSeal};
+    use bp::Outpoint;
+
+    use super::*;
+
+    #[test]
+    fn auth_token() {
+        let seal = WTxoSeal {
+            primary: WOutpoint::Wout(0u32.into()),
+            secondary: TxoSealExt::Fallback(Outpoint::coinbase()),
+        };
+        assert_eq!(seal.auth_token().to_string(), "at:lIIfSD7P-RQi0r3kA-7gZdmE7Q-S66QSwzG-NCxNnh7V-225u4Q");
+    }
+}
