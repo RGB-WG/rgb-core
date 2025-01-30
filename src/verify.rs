@@ -31,7 +31,7 @@ use bp::seals::mmb;
 use single_use_seals::{PublishedWitness, SealError, SealWitness, SingleUseSeal};
 use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
-use crate::{RgbSealDef, RgbSealSrc, LIB_NAME_RGB_CORE};
+use crate::{RgbSealDef, LIB_NAME_RGB_CORE};
 
 // TODO: Move to amplify crate
 pub enum Step<A, B> {
@@ -55,15 +55,15 @@ pub struct OperationSeals<Seal: RgbSealDef> {
 }
 
 pub trait ReadOperation: Sized {
-    type Seal: RgbSealDef;
-    type WitnessReader: ReadWitness<Seal = <Self::Seal as RgbSealDef>::Src, OpReader = Self>;
-    fn read_operation(self) -> Option<(OperationSeals<Self::Seal>, Self::WitnessReader)>;
+    type SealDef: RgbSealDef;
+    type WitnessReader: ReadWitness<SealDef = Self::SealDef, OperationReader = Self>;
+    fn read_operation(self) -> Option<(OperationSeals<Self::SealDef>, Self::WitnessReader)>;
 }
 
 pub trait ReadWitness: Sized {
-    type Seal: RgbSealSrc;
-    type OpReader: ReadOperation<Seal = Self::Seal, WitnessReader = Self>;
-    fn read_witness(self) -> Step<(SealWitness<Self::Seal>, Self), Self::OpReader>;
+    type SealDef: RgbSealDef;
+    type OperationReader: ReadOperation<SealDef = Self::SealDef, WitnessReader = Self>;
+    fn read_witness(self) -> Step<(SealWitness<<Self::SealDef as RgbSealDef>::Src>, Self), Self::OperationReader>;
 }
 
 /// API exposed by the contract required for evaluating and verifying the contract state (see
@@ -81,13 +81,16 @@ pub trait ContractApi<Seal: RgbSealDef> {
 
 // We use dedicated trait here in order to prevent overriding of the implementation in client
 // libraries
-pub trait ContractVerify<Seal: RgbSealDef>: ContractApi<Seal> {
+pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
-    fn evaluate<R: ReadOperation<Seal = Seal>>(&mut self, mut reader: R) -> Result<(), VerificationError<Seal>> {
+    fn evaluate<R: ReadOperation<SealDef = SealDef>>(
+        &mut self,
+        mut reader: R,
+    ) -> Result<(), VerificationError<SealDef>> {
         let contract_id = self.contract_id();
 
         let mut first = true;
-        let mut seals = BTreeMap::<CellAddr, Seal::Src>::new();
+        let mut seals = BTreeMap::<CellAddr, SealDef::Src>::new();
         while let Some((mut header, mut witness_reader)) = reader.read_operation() {
             // Genesis can't commit to the contract id since the contract doesn't exist yet; thus, we have to
             // apply this little trick
@@ -105,7 +108,7 @@ pub trait ContractVerify<Seal: RgbSealDef>: ContractApi<Seal> {
             // Next we verify its single-use seals
             let opid = header.operation.opid();
 
-            let mut closed_seals = Vec::<Seal::Src>::new();
+            let mut closed_seals = Vec::<SealDef::Src>::new();
             for input in &header.operation.destroying {
                 let seal = seals
                     .remove(&input.addr)
@@ -179,7 +182,7 @@ pub trait ContractVerify<Seal: RgbSealDef>: ContractApi<Seal> {
     }
 }
 
-impl<Seal: RgbSealDef, C: ContractApi<Seal>> ContractVerify<Seal> for C {}
+impl<SealDef: RgbSealDef, C: ContractApi<SealDef>> ContractVerify<SealDef> for C {}
 
 // TODO: Find a way to do Debug and Clone implementation
 #[derive(Debug, Display, From)]
