@@ -116,6 +116,24 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
                 closed_seals.push(seal);
             }
 
+            // We need to check that all seal definitions strictly match operation-defined destructible cells
+            let defined = header
+                .operation
+                .destructible
+                .iter()
+                .map(|cell| cell.auth.to_byte_array())
+                .collect::<BTreeSet<_>>();
+            let sealed = header
+                .defined_seals
+                .values()
+                .map(|seal| seal.auth_token().to_byte_array())
+                .collect::<BTreeSet<_>>();
+            // It is a subset and not equal set since some of the seals might be unknown to us: we know their
+            // commitment auth token, but do not know definition.
+            if !sealed.is_subset(&defined) {
+                return Err(VerificationError::SealsDefinitionMismatch(opid));
+            }
+
             // This convoluted logic happens since we use a state machine which ensures the client can't lie to
             // the verifier
             let mut witness_count = 0usize;
@@ -146,24 +164,6 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
                     }
                 }
                 witness_count += 1;
-            }
-
-            // We need to check that all seal definitions strictly match operation-defined destructible cells
-            let defined = header
-                .operation
-                .destructible
-                .iter()
-                .map(|cell| cell.auth.to_byte_array())
-                .collect::<BTreeSet<_>>();
-            let sealed = header
-                .defined_seals
-                .values()
-                .map(|seal| seal.auth_token().to_byte_array())
-                .collect::<BTreeSet<_>>();
-            // It is a subset and not equal set since some of the seals might be unknown to us: we know their
-            // commitment auth token, but do not know definition.
-            if !sealed.is_subset(&defined) {
-                return Err(VerificationError::SealsDefinitionMismatch(opid));
             }
 
             if !closed_seals.is_empty() && witness_count == 0 {
