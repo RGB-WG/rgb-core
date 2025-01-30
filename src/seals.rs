@@ -36,6 +36,7 @@ pub trait RgbSealDef: Clone + Debug + Display + StrictDumb + StrictEncode + Stri
         &self,
         witness_id: <<Self::Src as SingleUseSeal>::PubWitness as PublishedWitness<Self::Src>>::PubId,
     ) -> Self::Src;
+    fn to_src(&self) -> Option<Self::Src>;
 }
 
 pub trait RgbSealSrc: SingleUseSeal<Message = mmb::Message> + Ord {}
@@ -74,6 +75,14 @@ pub mod bitcoin {
                 WOutpoint::Extern(outpoint) => outpoint,
             };
             TxoSeal { primary, secondary: self.secondary }
+        }
+
+        fn to_src(&self) -> Option<Self::Src> {
+            let primary = match self.primary {
+                WOutpoint::Wout(_) => return None,
+                WOutpoint::Extern(outpoint) => outpoint,
+            };
+            Some(TxoSeal { primary, secondary: self.secondary })
         }
     }
 }
