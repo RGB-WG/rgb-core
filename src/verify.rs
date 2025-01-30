@@ -27,7 +27,6 @@ use alloc::vec::Vec;
 
 use amplify::confinement::SmallOrdMap;
 use amplify::ByteArray;
-use bp::seals::mmb;
 use single_use_seals::{PublishedWitness, SealError, SealWitness};
 use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
@@ -144,9 +143,9 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
                 // channel).
                 match witness_reader.read_witness() {
                     Step::Next((witness, w)) => {
-                        let msg = mmb::Message::from_byte_array(opid.to_byte_array());
+                        let msg = opid.to_byte_array();
                         witness
-                            .verify_seals_closing(&closed_seals, msg)
+                            .verify_seals_closing(&closed_seals, msg.into())
                             .map_err(|e| VerificationError::SealsNotClosed(witness.published.pub_id(), opid, e))?;
 
                         //  Each witness actually produces its own set of witness-output based seal sources.

@@ -24,7 +24,6 @@
 
 use core::fmt::{Debug, Display};
 
-use bp::seals::mmb;
 use single_use_seals::{PublishedWitness, SingleUseSeal};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use ultrasonic::AuthToken;
@@ -39,7 +38,7 @@ pub trait RgbSealDef: Clone + Debug + Display + StrictDumb + StrictEncode + Stri
     fn to_src(&self) -> Option<Self::Src>;
 }
 
-pub trait RgbSealSrc: SingleUseSeal<Message = mmb::Message> + Ord {}
+pub trait RgbSealSrc: SingleUseSeal<Message: From<[u8; 32]>> + Ord {}
 
 // Below are capabilities constants used in the standard library:
 
