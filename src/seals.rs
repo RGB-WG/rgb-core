@@ -25,14 +25,17 @@
 use core::fmt::{Debug, Display};
 
 use bp::seals::mmb;
-use single_use_seals::SingleUseSeal;
+use single_use_seals::{PublishedWitness, SingleUseSeal};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use ultrasonic::AuthToken;
 
 pub trait RgbSealDef: Clone + Debug + Display + StrictDumb + StrictEncode + StrictDecode {
     type Src: RgbSealSrc;
     fn auth_token(&self) -> AuthToken;
-    fn resolve(&self, witness: &<Self::Src as SingleUseSeal>::PubWitness) -> Self::Src;
+    fn resolve(
+        &self,
+        witness_id: <<Self::Src as SingleUseSeal>::PubWitness as PublishedWitness<Self::Src>>::PubId,
+    ) -> Self::Src;
 }
 
 pub trait RgbSealSrc: SingleUseSeal<Message = mmb::Message> + Ord {}
@@ -62,12 +65,12 @@ pub mod bitcoin {
             AuthToken::from_byte_array(shortened_id)
         }
 
-        fn resolve(&self, witness: &<Self::Src as SingleUseSeal>::PubWitness) -> Self::Src {
+        fn resolve(
+            &self,
+            witness_id: <<Self::Src as SingleUseSeal>::PubWitness as PublishedWitness<Self::Src>>::PubId,
+        ) -> Self::Src {
             let primary = match self.primary {
-                WOutpoint::Wout(wout) => {
-                    debug_assert!(witness.outputs.len() > wout.to_usize());
-                    Outpoint::new(witness.txid(), wout)
-                }
+                WOutpoint::Wout(wout) => Outpoint::new(witness_id, wout),
                 WOutpoint::Extern(outpoint) => outpoint,
             };
             TxoSeal { primary, secondary: self.secondary }

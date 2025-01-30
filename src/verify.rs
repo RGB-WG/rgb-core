@@ -134,7 +134,7 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
                         let iter = header
                             .defined_seals
                             .iter()
-                            .map(|(pos, seal)| (CellAddr::new(opid, *pos), seal.resolve(&witness.published)));
+                            .map(|(pos, seal)| (CellAddr::new(opid, *pos), seal.resolve(witness.published.pub_id())));
                         seal_sources.extend(iter);
 
                         self.apply_witness(opid, witness);
