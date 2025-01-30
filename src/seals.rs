@@ -22,28 +22,39 @@
 // or implied. See the License for the specific language governing permissions and limitations under
 // the License.
 
-use bp::seals::mmb;
-use single_use_seals::SingleUseSeal;
+use core::fmt::{Debug, Display};
+
+use single_use_seals::{PublishedWitness, SingleUseSeal};
+use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use ultrasonic::AuthToken;
 
-pub trait SealAuthToken {
+pub trait RgbSealDef: Clone + Debug + Display + StrictDumb + StrictEncode + StrictDecode {
+    type Src: RgbSealSrc;
     fn auth_token(&self) -> AuthToken;
+    fn resolve(
+        &self,
+        witness_id: <<Self::Src as SingleUseSeal>::PubWitness as PublishedWitness<Self::Src>>::PubId,
+    ) -> Self::Src;
+    fn to_src(&self) -> Option<Self::Src>;
 }
 
-pub trait RgbSeal: SingleUseSeal<Message = mmb::Message> + SealAuthToken {}
+pub trait RgbSealSrc: SingleUseSeal<Message: From<[u8; 32]>> + Ord {}
 
 // Below are capabilities constants used in the standard library:
 
 #[cfg(any(feature = "bitcoin", feature = "liquid"))]
 pub mod bitcoin {
-    use bp::seals::TxoSeal;
+    use bp::seals::{TxoSeal, WOutpoint, WTxoSeal};
+    use bp::Outpoint;
     use commit_verify::CommitId;
 
     use super::*;
 
-    impl RgbSeal for TxoSeal {}
+    impl RgbSealSrc for TxoSeal {}
 
-    impl SealAuthToken for TxoSeal {
+    impl RgbSealDef for WTxoSeal {
+        type Src = TxoSeal;
+
         // SECURITY: Here we cut SHA256 tagged hash of a single-use seal definition to 30 bytes in order
         // to fit it into a field element with no overflows. This must be a secure operation since we
         // still have a sufficient 120-bit collision resistance.
@@ -53,5 +64,41 @@ pub mod bitcoin {
             shortened_id.copy_from_slice(&id[0..30]);
             AuthToken::from_byte_array(shortened_id)
         }
+
+        fn resolve(
+            &self,
+            witness_id: <<Self::Src as SingleUseSeal>::PubWitness as PublishedWitness<Self::Src>>::PubId,
+        ) -> Self::Src {
+            let primary = match self.primary {
+                WOutpoint::Wout(wout) => Outpoint::new(witness_id, wout),
+                WOutpoint::Extern(outpoint) => outpoint,
+            };
+            TxoSeal { primary, secondary: self.secondary }
+        }
+
+        fn to_src(&self) -> Option<Self::Src> {
+            let primary = match self.primary {
+                WOutpoint::Wout(_) => return None,
+                WOutpoint::Extern(outpoint) => outpoint,
+            };
+            Some(TxoSeal { primary, secondary: self.secondary })
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bp::seals::{TxoSealExt, WOutpoint, WTxoSeal};
+    use bp::Outpoint;
+
+    use super::*;
+
+    #[test]
+    fn auth_token() {
+        let seal = WTxoSeal {
+            primary: WOutpoint::Wout(0u32.into()),
+            secondary: TxoSealExt::Fallback(Outpoint::coinbase()),
+        };
+        assert_eq!(seal.auth_token().to_string(), "at:lIIfSD7P-RQi0r3kA-7gZdmE7Q-S66QSwzG-NCxNnh7V-225u4Q");
     }
 }

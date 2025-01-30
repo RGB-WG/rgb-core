@@ -22,16 +22,15 @@
 // or implied. See the License for the specific language governing permissions and limitations under
 // the License.
 
-use alloc::collections::BTreeMap;
-use std::collections::BTreeSet;
+use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::vec::Vec;
 
-use amplify::confinement::SmallVec;
+use amplify::confinement::SmallOrdMap;
 use amplify::ByteArray;
-use bp::seals::mmb;
 use single_use_seals::{PublishedWitness, SealError, SealWitness};
 use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
-use crate::{RgbSeal, LIB_NAME_RGB_CORE};
+use crate::{RgbSealDef, RgbSealSrc, LIB_NAME_RGB_CORE};
 
 // TODO: Move to amplify crate
 pub enum Step<A, B> {
@@ -45,53 +44,53 @@ pub enum Step<A, B> {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(
-        rename_all = "camelCase",
-        bound = "Seal: serde::Serialize + for<'d> serde::Deserialize<'d>, Seal::PubWitness: serde::Serialize + \
-                 for<'d> serde::Deserialize<'d>, Seal::CliWitness: serde::Serialize + for<'d> serde::Deserialize<'d>"
-    )
+    serde(rename_all = "camelCase", bound = "Seal: serde::Serialize + for<'d> serde::Deserialize<'d>")
 )]
-pub struct OperationSeals<Seal: RgbSeal> {
+pub struct OperationSeals<Seal: RgbSealDef> {
     pub operation: Operation,
     /// Operation itself contains only AuthToken's, which are a commitments to the seals. Hence, we
     /// have to separately include a full seal definitions next to the operation data.
-    pub defined_seals: SmallVec<Seal>,
+    pub defined_seals: SmallOrdMap<u16, Seal>,
 }
 
 pub trait ReadOperation: Sized {
-    type Seal: RgbSeal;
-    type WitnessReader: ReadWitness<Seal = Self::Seal, OpReader = Self>;
-    fn read_operation(self) -> Option<(OperationSeals<Self::Seal>, Self::WitnessReader)>;
+    type SealDef: RgbSealDef;
+    type WitnessReader: ReadWitness<SealDef = Self::SealDef, OperationReader = Self>;
+    fn read_operation(self) -> Option<(OperationSeals<Self::SealDef>, Self::WitnessReader)>;
 }
 
 pub trait ReadWitness: Sized {
-    type Seal: RgbSeal;
-    type OpReader: ReadOperation<Seal = Self::Seal, WitnessReader = Self>;
-    fn read_witness(self) -> Step<(SealWitness<Self::Seal>, Self), Self::OpReader>;
+    type SealDef: RgbSealDef;
+    type OperationReader: ReadOperation<SealDef = Self::SealDef, WitnessReader = Self>;
+    #[allow(clippy::type_complexity)]
+    fn read_witness(self) -> Step<(SealWitness<<Self::SealDef as RgbSealDef>::Src>, Self), Self::OperationReader>;
 }
 
 /// API exposed by the contract required for evaluating and verifying the contract state (see
 /// [`ContractVerify`]).
 ///
 /// NB: `apply_operation` is called only after `apply_witness`.
-pub trait ContractApi<Seal: RgbSeal> {
+pub trait ContractApi<Seal: RgbSealDef> {
     fn contract_id(&self) -> ContractId;
     fn codex(&self) -> &Codex;
     fn repo(&self) -> &impl LibRepo;
     fn memory(&self) -> &impl Memory;
     fn apply_operation(&mut self, header: OperationSeals<Seal>);
-    fn apply_witness(&mut self, opid: Opid, witness: SealWitness<Seal>);
+    fn apply_witness(&mut self, opid: Opid, witness: SealWitness<Seal::Src>);
 }
 
 // We use dedicated trait here in order to prevent overriding of the implementation in client
 // libraries
-pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
+pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
-    fn evaluate<R: ReadOperation<Seal = Seal>>(&mut self, mut reader: R) -> Result<(), VerificationError<Seal>> {
+    fn evaluate<R: ReadOperation<SealDef = SealDef>>(
+        &mut self,
+        mut reader: R,
+    ) -> Result<(), VerificationError<SealDef::Src>> {
         let contract_id = self.contract_id();
 
         let mut first = true;
-        let mut seals = BTreeMap::<CellAddr, Seal>::new();
+        let mut seals = BTreeMap::<CellAddr, SealDef::Src>::new();
         while let Some((mut header, mut witness_reader)) = reader.read_operation() {
             // Genesis can't commit to the contract id since the contract doesn't exist yet; thus, we have to
             // apply this little trick
@@ -109,19 +108,13 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
             // Next we verify its single-use seals
             let opid = header.operation.opid();
 
-            let mut closed_seals = alloc::vec![];
+            let mut closed_seals = Vec::<SealDef::Src>::new();
             for input in &header.operation.destroying {
-                let Some(seal) = seals.remove(&input.addr) else {
-                    return Err(VerificationError::SealUnknown(input.addr));
-                };
+                let seal = seals
+                    .remove(&input.addr)
+                    .ok_or(VerificationError::SealUnknown(input.addr))?;
                 closed_seals.push(seal);
             }
-
-            let iter = header
-                .defined_seals
-                .iter()
-                .enumerate()
-                .map(|(pos, seal)| (CellAddr::new(opid, pos as u16), seal.clone()));
 
             // We need to check that all seal definitions strictly match operation-defined destructible cells
             let defined = header
@@ -130,10 +123,13 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
                 .iter()
                 .map(|cell| cell.auth.to_byte_array())
                 .collect::<BTreeSet<_>>();
-            let sealed = iter
-                .clone()
-                .map(|(_, seal)| seal.auth_token().to_byte_array())
+            let sealed = header
+                .defined_seals
+                .values()
+                .map(|seal| seal.auth_token().to_byte_array())
                 .collect::<BTreeSet<_>>();
+            // It is a subset and not equal set since some of the seals might be unknown to us: we know their
+            // commitment auth token, but do not know definition.
             if !sealed.is_subset(&defined) {
                 return Err(VerificationError::SealsDefinitionMismatch(opid));
             }
@@ -141,12 +137,29 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
             // This convoluted logic happens since we use a state machine which ensures the client can't lie to
             // the verifier
             let mut witness_count = 0usize;
+            let mut seal_sources: BTreeSet<_> = header
+                .defined_seals
+                .iter()
+                .filter_map(|(pos, seal)| seal.to_src().map(|seal| (CellAddr::new(opid, *pos), seal)))
+                .collect();
             loop {
+                // An operation may have multiple witnesses (like multiple commitment transactions in lightning
+                // channel).
                 match witness_reader.read_witness() {
                     Step::Next((witness, w)) => {
+                        let msg = opid.to_byte_array();
                         witness
-                            .verify_seals_closing(&closed_seals, mmb::Message::from_byte_array(opid.to_byte_array()))
+                            .verify_seals_closing(&closed_seals, msg.into())
                             .map_err(|e| VerificationError::SealsNotClosed(witness.published.pub_id(), opid, e))?;
+
+                        //  Each witness actually produces its own set of witness-output based seal sources.
+                        let iter = header
+                            .defined_seals
+                            .iter()
+                            .filter(|(_, seal)| seal.to_src().is_none())
+                            .map(|(pos, seal)| (CellAddr::new(opid, *pos), seal.resolve(witness.published.pub_id())));
+                        seal_sources.extend(iter);
+
                         self.apply_witness(opid, witness);
                         witness_reader = w;
                     }
@@ -162,7 +175,7 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
                 return Err(VerificationError::NoWitness(opid));
             }
 
-            seals.extend(iter);
+            seals.extend(seal_sources);
             if first {
                 first = false
             } else {
@@ -174,12 +187,12 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
     }
 }
 
-impl<Seal: RgbSeal, C: ContractApi<Seal>> ContractVerify<Seal> for C {}
+impl<SealDef: RgbSealDef, C: ContractApi<SealDef>> ContractVerify<SealDef> for C {}
 
 // TODO: Find a way to do Debug and Clone implementation
 #[derive(Debug, Display, From)]
 #[display(doc_comments)]
-pub enum VerificationError<Seal: RgbSeal> {
+pub enum VerificationError<SealSrc: RgbSealSrc> {
     /// genesis does not commit to the codex id; a wrong contract genesis is used.
     NoCodexCommitment,
 
@@ -189,7 +202,7 @@ pub enum VerificationError<Seal: RgbSeal> {
     /// single-use seals are not closed properly with witness {0} for operation {1}.
     ///
     /// Details: {2}
-    SealsNotClosed(<Seal::PubWitness as PublishedWitness<Seal>>::PubId, Opid, SealError<Seal>),
+    SealsNotClosed(<SealSrc::PubWitness as PublishedWitness<SealSrc>>::PubId, Opid, SealError<SealSrc>),
 
     /// unknown seal definition for cell address {0}.
     SealUnknown(CellAddr),
