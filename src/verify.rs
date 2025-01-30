@@ -63,6 +63,7 @@ pub trait ReadOperation: Sized {
 pub trait ReadWitness: Sized {
     type SealDef: RgbSealDef;
     type OperationReader: ReadOperation<SealDef = Self::SealDef, WitnessReader = Self>;
+    #[allow(clippy::type_complexity)]
     fn read_witness(self) -> Step<(SealWitness<<Self::SealDef as RgbSealDef>::Src>, Self), Self::OperationReader>;
 }
 
