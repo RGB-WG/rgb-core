@@ -31,7 +31,7 @@ default = ["bitcoin"]
 all = ["bitcoin", "liquid", "prime", "serde"]
 
 bitcoin = ["bp-core"]
-liquid = []
+liquid = ["bp-core"]
 prime = []
 
 serde = [
