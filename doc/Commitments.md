@@ -220,8 +220,7 @@ flowchart LR
 
   subgraph "Genesis"
     schemaId --> BaseCommitment
-    testnet --> BaseCommitment
-    closeMethod --> BaseCommitment
+    chainNet --> BaseCommitment
   end
 
   subgraph "Transition"
