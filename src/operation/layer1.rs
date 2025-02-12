@@ -23,7 +23,6 @@
 use std::str::FromStr;
 
 use bp::BlockHash;
-use bpstd::{AddressNetwork, Network};
 use strict_encoding::{StrictDecode, StrictEncode, StrictType};
 
 use crate::LIB_NAME_RGB_COMMIT;
@@ -91,18 +90,6 @@ impl ChainNet {
         }
     }
 
-    pub fn address_network(&self) -> AddressNetwork {
-        match self {
-            ChainNet::BitcoinMainnet => AddressNetwork::Mainnet,
-            ChainNet::BitcoinTestnet3 | ChainNet::BitcoinTestnet4 | ChainNet::BitcoinSignet => {
-                AddressNetwork::Testnet
-            }
-            ChainNet::BitcoinRegtest => AddressNetwork::Regtest,
-            ChainNet::LiquidMainnet => AddressNetwork::Mainnet,
-            ChainNet::LiquidTestnet => AddressNetwork::Testnet,
-        }
-    }
-
     pub fn genesis_block_hash(&self) -> BlockHash {
         BlockHash::from_str(match self {
             ChainNet::BitcoinMainnet => {
@@ -128,18 +115,6 @@ impl ChainNet {
             }
         })
         .unwrap()
-    }
-}
-
-impl From<Network> for ChainNet {
-    fn from(value: Network) -> Self {
-        match value {
-            Network::Mainnet => ChainNet::BitcoinMainnet,
-            Network::Regtest => ChainNet::BitcoinRegtest,
-            Network::Signet => ChainNet::BitcoinSignet,
-            Network::Testnet3 => ChainNet::BitcoinTestnet3,
-            Network::Testnet4 => ChainNet::BitcoinTestnet4,
-        }
     }
 }
 
