@@ -28,7 +28,7 @@ use alloc::vec::Vec;
 use amplify::confinement::SmallOrdMap;
 use amplify::ByteArray;
 use single_use_seals::{PublishedWitness, SealError, SealWitness};
-use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
+use ultrasonic::{AuthToken, CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
 use crate::{RgbSealDef, RgbSealSrc, LIB_NAME_RGB_CORE};
 
@@ -110,17 +110,22 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
                 .operation
                 .destructible
                 .iter()
-                .map(|cell| cell.auth.to_byte_array())
+                .map(|cell| cell.auth)
                 .collect::<BTreeSet<_>>();
-            let sealed = header
+            let reported = header
                 .defined_seals
                 .values()
-                .map(|seal| seal.auth_token().to_byte_array())
+                .map(|seal| seal.auth_token())
                 .collect::<BTreeSet<_>>();
             // It is a subset and not equal set since some of the seals might be unknown to us: we know their
             // commitment auth token, but do not know definition.
-            if !sealed.is_subset(&defined) {
-                return Err(VerificationError::SealsDefinitionMismatch(opid));
+            if !reported.is_subset(&defined) {
+                let sources = header
+                    .defined_seals
+                    .iter()
+                    .map(|(pos, seal)| (*pos, seal.to_string()))
+                    .collect();
+                return Err(VerificationError::SealsDefinitionMismatch { opid, reported, defined, sources });
             }
 
             // If the operation was validated before, we need to skip its validation, since its inputs are not a
@@ -217,9 +222,20 @@ pub enum VerificationError<SealSrc: RgbSealSrc> {
     /// unknown seal definition for cell address {0}.
     SealUnknown(CellAddr),
 
-    /// seals, reported to be defined by the operation {0}, do match the assignments in the
+    /// seals, reported to be defined by the operation {opid}, do match the assignments in the
     /// operation.
-    SealsDefinitionMismatch(Opid),
+    ///
+    /// Actual operation seals from the assignments: {defined:#?}
+    ///
+    /// Reported seals: {reported:#?}
+    ///
+    /// Sources for the reported seals: {sources:#?}
+    SealsDefinitionMismatch {
+        opid: Opid,
+        reported: BTreeSet<AuthToken>,
+        defined: BTreeSet<AuthToken>,
+        sources: BTreeMap<u16, String>,
+    },
 
     #[from]
     #[display(inner)]
