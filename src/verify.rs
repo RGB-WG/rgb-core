@@ -27,7 +27,7 @@ use alloc::vec::Vec;
 
 use amplify::confinement::SmallOrdMap;
 use amplify::ByteArray;
-use single_use_seals::{PublishedWitness, SealError, SealWitness};
+use single_use_seals::{PublishedWitness, SealError, SealWitness, SingleUseSeal};
 use ultrasonic::{CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
 
 use crate::{RgbSealDef, RgbSealSrc, LIB_NAME_RGB_CORE};
@@ -93,13 +93,31 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
 
         let mut first = true;
         let mut seals = BTreeMap::<CellAddr, SealDef::Src>::new();
+
         while let Some((mut header, mut witness_reader)) = reader.read_operation() {
             let opid = header.operation.opid();
+
+            let mut seal_sources: BTreeSet<_> = header
+                .defined_seals
+                .iter()
+                .filter_map(|(pos, seal)| seal.to_src().map(|seal| (CellAddr::new(opid, *pos), seal)))
+                .collect();
+            let mut seal_proc =
+                |pub_id: <<SealDef::Src as SingleUseSeal>::PubWitness as PublishedWitness<SealDef::Src>>::PubId| {
+                    let iter = header
+                        .defined_seals
+                        .iter()
+                        .filter(|(_, seal)| seal.to_src().is_none())
+                        .map(|(pos, seal)| (CellAddr::new(opid, *pos), seal.resolve(pub_id)));
+                    seal_sources.extend(iter);
+                };
+
             if self.is_known(opid) {
                 loop {
                     match witness_reader.read_witness() {
                         Step::Next((witness, w)) => {
                             // TODO: This might be a new witness (like in RBFs), so we need to handle and verify it
+                            seal_proc(witness.published.pub_id());
                             witness_reader = w;
                         }
                         Step::Complete(r) => {
@@ -154,11 +172,6 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
             // This convoluted logic happens since we use a state machine which ensures the client can't lie to
             // the verifier
             let mut witness_count = 0usize;
-            let mut seal_sources: BTreeSet<_> = header
-                .defined_seals
-                .iter()
-                .filter_map(|(pos, seal)| seal.to_src().map(|seal| (CellAddr::new(opid, *pos), seal)))
-                .collect();
             loop {
                 // An operation may have multiple witnesses (like multiple commitment transactions in lightning
                 // channel).
@@ -170,12 +183,7 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
                             .map_err(|e| VerificationError::SealsNotClosed(witness.published.pub_id(), opid, e))?;
 
                         //  Each witness actually produces its own set of witness-output based seal sources.
-                        let iter = header
-                            .defined_seals
-                            .iter()
-                            .filter(|(_, seal)| seal.to_src().is_none())
-                            .map(|(pos, seal)| (CellAddr::new(opid, *pos), seal.resolve(witness.published.pub_id())));
-                        seal_sources.extend(iter);
+                        seal_proc(witness.published.pub_id());
 
                         self.apply_witness(opid, witness);
                         witness_reader = w;
