@@ -97,38 +97,6 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
         while let Some((mut header, mut witness_reader)) = reader.read_operation() {
             let opid = header.operation.opid();
 
-            let mut seal_sources: BTreeSet<_> = header
-                .defined_seals
-                .iter()
-                .filter_map(|(pos, seal)| seal.to_src().map(|seal| (CellAddr::new(opid, *pos), seal)))
-                .collect();
-            let mut seal_proc =
-                |pub_id: <<SealDef::Src as SingleUseSeal>::PubWitness as PublishedWitness<SealDef::Src>>::PubId| {
-                    let iter = header
-                        .defined_seals
-                        .iter()
-                        .filter(|(_, seal)| seal.to_src().is_none())
-                        .map(|(pos, seal)| (CellAddr::new(opid, *pos), seal.resolve(pub_id)));
-                    seal_sources.extend(iter);
-                };
-
-            if self.is_known(opid) {
-                loop {
-                    match witness_reader.read_witness() {
-                        Step::Next((witness, w)) => {
-                            // TODO: This might be a new witness (like in RBFs), so we need to handle and verify it
-                            seal_proc(witness.published.pub_id());
-                            witness_reader = w;
-                        }
-                        Step::Complete(r) => {
-                            reader = r;
-                            break;
-                        }
-                    }
-                }
-                continue;
-            }
-
             // Genesis can't commit to the contract id since the contract doesn't exist yet; thus, we have to
             // apply this little trick
             if first {
@@ -136,19 +104,6 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
                     return Err(VerificationError::NoCodexCommitment);
                 }
                 header.operation.contract_id = contract_id;
-            }
-
-            // First, we verify the operation
-            self.codex()
-                .verify(contract_id, &header.operation, self.memory(), self.repo())?;
-
-            // Next we verify its single-use seals
-            let mut closed_seals = Vec::<SealDef::Src>::new();
-            for input in &header.operation.destroying {
-                let seal = seals
-                    .remove(&input.addr)
-                    .ok_or(VerificationError::SealUnknown(input.addr))?;
-                closed_seals.push(seal);
             }
 
             // We need to check that all seal definitions strictly match operation-defined destructible cells
@@ -167,6 +122,54 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
             // commitment auth token, but do not know definition.
             if !sealed.is_subset(&defined) {
                 return Err(VerificationError::SealsDefinitionMismatch(opid));
+            }
+
+            // Now we can add operation-defined seals to the set of known seals
+            let mut seal_sources: BTreeSet<_> = header
+                .defined_seals
+                .iter()
+                .filter_map(|(pos, seal)| seal.to_src().map(|seal| (CellAddr::new(opid, *pos), seal)))
+                .collect();
+            let mut seal_proc =
+                |pub_id: <<SealDef::Src as SingleUseSeal>::PubWitness as PublishedWitness<SealDef::Src>>::PubId| {
+                    let iter = header
+                        .defined_seals
+                        .iter()
+                        .filter(|(_, seal)| seal.to_src().is_none())
+                        .map(|(pos, seal)| (CellAddr::new(opid, *pos), seal.resolve(pub_id)));
+                    seal_sources.extend(iter);
+                };
+
+            // If the operation was validated before, we can skip its validation
+            if self.is_known(opid) {
+                loop {
+                    match witness_reader.read_witness() {
+                        Step::Next((witness, w)) => {
+                            // TODO: This might be a new witness (like in RBFs), so we need to handle and verify it
+                            seal_proc(witness.published.pub_id());
+                            witness_reader = w;
+                        }
+                        Step::Complete(r) => {
+                            reader = r;
+                            break;
+                        }
+                    }
+                }
+                seals.extend(seal_sources);
+                continue;
+            }
+
+            // Verify the operation
+            self.codex()
+                .verify(contract_id, &header.operation, self.memory(), self.repo())?;
+
+            // Next we verify single-use seal closings by the operation
+            let mut closed_seals = Vec::<SealDef::Src>::new();
+            for input in &header.operation.destroying {
+                let seal = seals
+                    .remove(&input.addr)
+                    .ok_or(VerificationError::SealUnknown(input.addr))?;
+                closed_seals.push(seal);
             }
 
             // This convoluted logic happens since we use a state machine which ensures the client can't lie to
