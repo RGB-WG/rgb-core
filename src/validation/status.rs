@@ -21,6 +21,7 @@
 // limitations under the License.
 
 use core::ops::AddAssign;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Display, Formatter};
 
 use amplify::num::u24;
@@ -34,6 +35,8 @@ use crate::validation::WitnessResolverError;
 use crate::{
     BundleId, ChainNet, ContractId, OccurrencesMismatch, OpFullType, OpId, Opout, StateType, Vin,
 };
+
+pub type UnsafeHistoryMap = HashMap<u32, HashSet<Txid>>;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[repr(u8)]
@@ -373,6 +376,9 @@ pub enum Warning {
 )]
 #[display(doc_comments)]
 pub enum Info {
+    /// Map of transfer history TXs with potentially unsafe height.
+    UnsafeHistory(UnsafeHistoryMap),
+
     /// Custom info by external services on top of RGB Core.
     #[display(inner)]
     Custom(String),

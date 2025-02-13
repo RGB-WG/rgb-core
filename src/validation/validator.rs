@@ -21,7 +21,8 @@
 // limitations under the License.
 
 use std::cell::RefCell;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::num::NonZeroU32;
 use std::rc::Rc;
 
 use bp::dbc::Anchor;
@@ -30,7 +31,7 @@ use bp::{dbc, Outpoint, Tx, Txid};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
-use super::status::Failure;
+use super::status::{Failure, Info};
 use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, OpRef, Status, Validity};
 use crate::operation::seal::ExposedSeal;
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd};
@@ -138,6 +139,7 @@ pub struct Validator<
     input_assignments: RefCell<BTreeSet<Opout>>,
 
     resolver: CheckedWitnessResolver<&'resolver R>,
+    safe_height: Option<NonZeroU32>,
 }
 
 impl<
@@ -148,7 +150,12 @@ impl<
         R: ResolveWitness,
     > Validator<'consignment, 'resolver, S, C, R>
 {
-    fn init(consignment: &'consignment C, resolver: &'resolver R, context: S::Context<'_>) -> Self {
+    fn init(
+        consignment: &'consignment C,
+        resolver: &'resolver R,
+        context: S::Context<'_>,
+        safe_height: Option<NonZeroU32>,
+    ) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
         let status = Status::default();
@@ -174,6 +181,7 @@ impl<
             input_assignments: input_transitions,
             resolver: CheckedWitnessResolver::from(resolver),
             contract_state: Rc::new(RefCell::new(S::init(context))),
+            safe_height,
         }
     }
 
@@ -191,8 +199,9 @@ impl<
         resolver: &'resolver R,
         chain_net: ChainNet,
         context: S::Context<'_>,
+        safe_height: Option<NonZeroU32>,
     ) -> Status {
-        let mut validator = Self::init(consignment, resolver, context);
+        let mut validator = Self::init(consignment, resolver, context, safe_height);
         // If the chain-network pair doesn't match there is no point in validating the contract
         // since all witness transactions will be missed.
         if validator.chain_net != chain_net {
@@ -264,6 +273,7 @@ impl<
         // [VALIDATION]: Iterating over all consignment operations, ordering them according to the
         //               consensus ordering rules.
         let mut ops = BTreeSet::<OrdOpRef>::new();
+        let mut unsafe_history_map: HashMap<u32, HashSet<Txid>> = HashMap::new();
         for bundle_id in self.consignment.bundle_ids() {
             let bundle = self
                 .consignment
@@ -284,6 +294,22 @@ impl<
                         return;
                     }
                 };
+            if let Some(safe_height) = self.safe_height {
+                match witness_ord {
+                    WitnessOrd::Mined(witness_pos) => {
+                        let witness_height = witness_pos.height();
+                        if witness_height > safe_height {
+                            unsafe_history_map
+                                .entry(witness_height.into())
+                                .or_default()
+                                .insert(witness_id);
+                        }
+                    }
+                    WitnessOrd::Tentative | WitnessOrd::Ignored | WitnessOrd::Archived => {
+                        unsafe_history_map.entry(0).or_default().insert(witness_id);
+                    }
+                }
+            }
             for op in bundle.known_transitions.values() {
                 ops.insert(OrdOpRef::Transition(op, witness_id, witness_ord, bundle_id));
                 for input in &op.inputs {
@@ -310,6 +336,11 @@ impl<
                     }
                 }
             }
+        }
+        if self.safe_height.is_some() {
+            self.status
+                .borrow_mut()
+                .add_info(Info::UnsafeHistory(unsafe_history_map));
         }
         for op in ops {
             // We do not skip validating archive operations since after a re-org they may
