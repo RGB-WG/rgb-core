@@ -75,6 +75,7 @@ pub trait ContractApi<Seal: RgbSealDef> {
     fn codex(&self) -> &Codex;
     fn repo(&self) -> &impl LibRepo;
     fn memory(&self) -> &impl Memory;
+    fn is_known(&self, opid: Opid) -> bool;
     fn apply_operation(&mut self, header: OperationSeals<Seal>);
     fn apply_witness(&mut self, opid: Opid, witness: SealWitness<Seal::Src>);
 }
@@ -88,14 +89,32 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
         mut reader: R,
     ) -> Result<(), VerificationError<SealDef::Src>> {
         let contract_id = self.contract_id();
+        let codex_id = self.codex().codex_id();
 
         let mut first = true;
         let mut seals = BTreeMap::<CellAddr, SealDef::Src>::new();
         while let Some((mut header, mut witness_reader)) = reader.read_operation() {
+            let opid = header.operation.opid();
+            if self.is_known(opid) {
+                loop {
+                    match witness_reader.read_witness() {
+                        Step::Next((witness, w)) => {
+                            // TODO: This might be a new witness (like in RBFs), so we need to handle and verify it
+                            witness_reader = w;
+                        }
+                        Step::Complete(r) => {
+                            reader = r;
+                            break;
+                        }
+                    }
+                }
+                continue;
+            }
+
             // Genesis can't commit to the contract id since the contract doesn't exist yet; thus, we have to
             // apply this little trick
             if first {
-                if header.operation.contract_id.to_byte_array() != self.codex().codex_id().to_byte_array() {
+                if header.operation.contract_id.to_byte_array() != codex_id.to_byte_array() {
                     return Err(VerificationError::NoCodexCommitment);
                 }
                 header.operation.contract_id = contract_id;
@@ -106,8 +125,6 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
                 .verify(contract_id, &header.operation, self.memory(), self.repo())?;
 
             // Next we verify its single-use seals
-            let opid = header.operation.opid();
-
             let mut closed_seals = Vec::<SealDef::Src>::new();
             for input in &header.operation.destroying {
                 let seal = seals
