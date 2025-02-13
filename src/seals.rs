@@ -28,7 +28,7 @@ use single_use_seals::{PublishedWitness, SingleUseSeal};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use ultrasonic::AuthToken;
 
-pub trait RgbSealDef: Clone + Debug + Display + StrictDumb + StrictEncode + StrictDecode {
+pub trait RgbSealDef: Clone + Eq + Debug + Display + StrictDumb + StrictEncode + StrictDecode {
     type Src: RgbSealSrc;
     fn auth_token(&self) -> AuthToken;
     fn resolve(
