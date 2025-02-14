@@ -36,10 +36,10 @@ use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OrdOpRef, RgbIsa, VmContext};
 use crate::{
-    validation, Assign, AssignmentType, Assignments, AssignmentsRef, ConcealedState,
-    ConfidentialState, ExposedSeal, ExposedState, Extension, GlobalState, GlobalStateSchema,
-    GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId, Operation, Opout,
-    OwnedStateSchema, RevealedState, Schema, Transition, TypedAssigns, Valencies,
+    validation, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal, ExposedState,
+    Extension, GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema,
+    Metadata, OpId, Operation, Opout, OwnedStateSchema, RevealedState, Schema, Transition,
+    TypedAssigns, Valencies,
 };
 
 impl Schema {
@@ -565,31 +565,6 @@ impl OwnedStateSchema {
     ) -> validation::Status {
         let mut status = validation::Status::new();
         match data {
-            Assign::Confidential { state, .. } | Assign::ConfidentialState { state, .. } => {
-                match (self, state.state_commitment()) {
-                    (OwnedStateSchema::Declarative, ConcealedState::Void) => {}
-                    (OwnedStateSchema::Fungible(_), ConcealedState::Fungible(_)) => {}
-                    (OwnedStateSchema::Structured(_), ConcealedState::Structured(_)) => {
-                        status.add_warning(validation::Warning::UncheckableConfidentialState(
-                            opid, state_type,
-                        ));
-                    }
-                    (OwnedStateSchema::Attachment(_), ConcealedState::Attachment(_)) => {
-                        status.add_warning(validation::Warning::UncheckableConfidentialState(
-                            opid, state_type,
-                        ));
-                    }
-                    // all other options are mismatches
-                    (state_schema, found) => {
-                        status.add_failure(validation::Failure::StateTypeMismatch {
-                            opid,
-                            state_type,
-                            expected: state_schema.state_type(),
-                            found: found.state_type(),
-                        });
-                    }
-                }
-            }
             Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
                 match (self, state.state_data()) {
                     (OwnedStateSchema::Declarative, RevealedState::Void) => {}

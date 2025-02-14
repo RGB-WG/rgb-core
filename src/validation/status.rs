@@ -360,10 +360,6 @@ pub enum Failure {
 )]
 #[display(doc_comments)]
 pub enum Warning {
-    /// operation {0} contains state in assignment {1} which is confidential and
-    /// thus was not validated.
-    UncheckableConfidentialState(OpId, schema::AssignmentType),
-
     /// Custom warning by external services on top of RGB Core.
     #[display(inner)]
     Custom(String),

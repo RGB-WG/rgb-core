@@ -37,10 +37,10 @@ use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize}
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ChainNet,
-    ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
-    GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose, OpId, SecretSeal, TypedAssigns,
-    VoidState, LIB_NAME_RGB_COMMIT,
+    Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ChainNet, ContractId,
+    DiscloseHash, ExposedState, Ffv, GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose,
+    OpId, RevealedAttach, RevealedData, RevealedValue, SecretSeal, TypedAssigns, VoidState,
+    LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -248,23 +248,24 @@ pub trait Operation {
             ty: AssignmentType,
             a: &[Assign<State, GraphSeal>],
             seals: &mut BTreeMap<AssignmentIndex, SecretSeal>,
-            state: &mut BTreeMap<AssignmentIndex, State::Concealed>,
+            state: &mut BTreeMap<AssignmentIndex, State>,
         ) {
             for (index, assignment) in a.iter().enumerate() {
                 if let Some(seal) = assignment.revealed_seal() {
                     seals.insert(AssignmentIndex::new(ty, index as u16), seal.to_secret_seal());
                 }
-                if let Some(revealed) = assignment.as_revealed_state() {
-                    state.insert(AssignmentIndex::new(ty, index as u16), revealed.conceal());
-                }
+                state.insert(
+                    AssignmentIndex::new(ty, index as u16),
+                    assignment.as_revealed_state().clone(),
+                );
             }
         }
 
         let mut seals: BTreeMap<AssignmentIndex, SecretSeal> = bmap!();
         let mut void: BTreeMap<AssignmentIndex, VoidState> = bmap!();
-        let mut fungible: BTreeMap<AssignmentIndex, ConcealedValue> = bmap!();
-        let mut data: BTreeMap<AssignmentIndex, ConcealedData> = bmap!();
-        let mut attach: BTreeMap<AssignmentIndex, ConcealedAttach> = bmap!();
+        let mut fungible: BTreeMap<AssignmentIndex, RevealedValue> = bmap!();
+        let mut data: BTreeMap<AssignmentIndex, RevealedData> = bmap!();
+        let mut attach: BTreeMap<AssignmentIndex, RevealedAttach> = bmap!();
         for (ty, assigns) in self.assignments().flat() {
             match assigns {
                 TypedAssigns::Declarative(a) => {

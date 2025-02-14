@@ -37,14 +37,14 @@ pub use assignments::{
     Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
     TypedAssigns,
 };
-pub use attachment::{AttachId, AttachState, ConcealedAttach, RevealedAttach};
+pub use attachment::{AttachId, AttachState, RevealedAttach};
 pub use bundle::{BundleId, InputMap, TransitionBundle, Vin};
 pub use commit::{
     AssignmentCommitment, AssignmentIndex, BaseCommitment, BundleDisclosure, ContractId,
     DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
 };
-pub use data::{ConcealedData, DataState, RevealedData, VoidState};
-pub use fungible::{ConcealedValue, FungibleState, RevealedValue};
+pub use data::{DataState, RevealedData, VoidState};
+pub use fungible::{FungibleState, RevealedValue};
 pub use global::{GlobalState, GlobalValues};
 pub use layer1::{ChainNet, Layer1};
 pub use meta::{MetaValue, Metadata, MetadataError};
@@ -53,4 +53,4 @@ pub use operations::{
     Transition, Valencies,
 };
 pub use seal::{ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal};
-pub use state::{ConcealedState, ConfidentialState, ExposedState, RevealedState, StateType};
+pub use state::{ExposedState, RevealedState, StateType};

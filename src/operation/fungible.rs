@@ -35,11 +35,10 @@ use core::num::ParseIntError;
 use core::str::FromStr;
 use std::hash::Hash;
 
-use commit_verify::Conceal;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
-use super::{ConfidentialState, ExposedState};
-use crate::{schema, ConcealedState, RevealedState, StateType, LIB_NAME_RGB_COMMIT};
+use super::ExposedState;
+use crate::{schema, RevealedState, StateType, LIB_NAME_RGB_COMMIT};
 
 /// An atom of an additive state, which thus can be monomorphically encrypted.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
@@ -112,38 +111,6 @@ impl RevealedValue {
 }
 
 impl ExposedState for RevealedValue {
-    type Confidential = ConcealedValue;
     fn state_type(&self) -> StateType { StateType::Fungible }
     fn state_data(&self) -> RevealedState { RevealedState::Fungible(*self) }
-}
-
-impl Conceal for RevealedValue {
-    type Concealed = ConcealedValue;
-
-    fn conceal(&self) -> Self::Concealed {
-        ConcealedValue {
-            value: self.value,
-            concealed_dummy: (),
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, rename = "ConcealedFungible")]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct ConcealedValue {
-    /// Original value in smallest indivisible units
-    pub value: FungibleState,
-    /// Field necessary only to avoid clash with RevealedValue during yaml deserialization
-    pub concealed_dummy: (),
-}
-
-impl ConfidentialState for ConcealedValue {
-    fn state_type(&self) -> StateType { StateType::Fungible }
-    fn state_commitment(&self) -> ConcealedState { ConcealedState::Fungible(*self) }
 }

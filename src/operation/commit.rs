@@ -37,11 +37,11 @@ use commit_verify::{
 use strict_encoding::StrictDumb;
 
 use crate::{
-    impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ChainNet, ConcealedAttach,
-    ConcealedData, ConcealedState, ConcealedValue, ConfidentialState, DataState, ExposedSeal,
-    ExposedState, Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Operation,
-    Redeemed, SchemaId, SecretSeal, Transition, TransitionBundle, TransitionType, TypedAssigns,
-    LIB_NAME_RGB_COMMIT,
+    impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ChainNet, DataState,
+    ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis, GlobalState,
+    GlobalStateType, Operation, Redeemed, RevealedAttach, RevealedData, RevealedState,
+    RevealedValue, SchemaId, SecretSeal, Transition, TransitionBundle, TransitionType,
+    TypedAssigns, LIB_NAME_RGB_COMMIT,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -189,9 +189,9 @@ impl AssignmentIndex {
 pub struct OpDisclose {
     pub id: OpId,
     pub seals: MediumOrdMap<AssignmentIndex, SecretSeal>,
-    pub fungible: MediumOrdMap<AssignmentIndex, ConcealedValue>,
-    pub data: MediumOrdMap<AssignmentIndex, ConcealedData>,
-    pub attach: MediumOrdMap<AssignmentIndex, ConcealedAttach>,
+    pub fungible: MediumOrdMap<AssignmentIndex, RevealedValue>,
+    pub data: MediumOrdMap<AssignmentIndex, RevealedData>,
+    pub attach: MediumOrdMap<AssignmentIndex, RevealedAttach>,
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -335,21 +335,21 @@ impl Extension {
     }
 }
 
-impl ConcealedState {
+impl RevealedState {
     fn commit_encode(&self, e: &mut CommitEngine) {
         match self {
-            ConcealedState::Void => {}
-            ConcealedState::Fungible(val) => e.commit_to_serialized(&val),
-            ConcealedState::Structured(dat) => e.commit_to_serialized(dat),
-            ConcealedState::Attachment(att) => e.commit_to_serialized(att),
+            Self::Void => {}
+            Self::Fungible(val) => e.commit_to_serialized(&val),
+            Self::Structured(dat) => e.commit_to_serialized(dat),
+            Self::Attachment(att) => e.commit_to_serialized(att),
         }
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct AssignmentCommitment {
     pub ty: AssignmentType,
-    pub state: ConcealedState,
+    pub state: RevealedState,
     pub seal: SecretSeal,
     pub lock: ReservedBytes<2, 0>,
 }
@@ -368,12 +368,12 @@ impl CommitEncode for AssignmentCommitment {
 
 impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
     pub fn commitment(&self, ty: AssignmentType) -> AssignmentCommitment {
-        let Self::Confidential { seal, state, lock } = self.conceal() else {
+        let Self::ConfidentialSeal { seal, state, lock } = self.conceal() else {
             unreachable!();
         };
         AssignmentCommitment {
             ty,
-            state: state.state_commitment(),
+            state: state.state_data(),
             seal,
             lock,
         }

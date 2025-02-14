@@ -258,10 +258,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                     TypedAssigns::Fungible(state) => {
                         let mut values = vec![];
                         for assign in state.iter().map(Assign::as_revealed_state) {
-                            match assign {
-                                Some(rev) => values.push(rev.value.as_u64()),
-                                None => fail!(),
-                            }
+                            values.push(assign.value.as_u64())
                         }
                         values
                     }
@@ -278,10 +275,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                     TypedAssigns::Fungible(state) => {
                         let mut values = vec![];
                         for assign in state.iter().map(Assign::as_revealed_state) {
-                            match assign {
-                                Some(rev) => values.push(rev.value.as_u64()),
-                                None => fail!(),
-                            }
+                            values.push(assign.value.as_u64())
                         }
                         values
                     }
@@ -342,12 +336,8 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 else {
                     fail!()
                 };
-                let state = state.map(|s| s.value.as_inner());
-                if let Some(state) = state {
-                    regs.set_s16(*reg, state);
-                } else {
-                    regs.clr_s16(*reg);
-                }
+                let state = state.value.as_inner();
+                regs.set_s16(*reg, state);
             }
             ContractOp::LdS(state_type, reg_32, reg) => {
                 let Some(reg_32) = *regs.get_n(RegA::A16, *reg_32) else {
@@ -363,12 +353,8 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 else {
                     fail!()
                 };
-                let state = state.map(|s| s.value.into_inner());
-                if let Some(state) = state {
-                    regs.set_s16(*reg, state);
-                } else {
-                    regs.clr_s16(*reg);
-                }
+                let state = state.value.into_inner();
+                regs.set_s16(*reg, state);
             }
             ContractOp::LdF(state_type, reg_32, reg) => {
                 let Some(reg_32) = *regs.get_n(RegA::A16, *reg_32) else {
@@ -384,7 +370,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 else {
                     fail!()
                 };
-                regs.set_n(RegA::A64, *reg, state.map(|s| s.value.as_u64()));
+                regs.set_n(RegA::A64, *reg, state.value.as_u64());
             }
             ContractOp::LdG(state_type, reg_8, reg_s) => {
                 let Some(reg_32) = *regs.get_n(RegA::A8, *reg_8) else {
