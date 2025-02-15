@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.12.0-beta.4"
+version = "0.12.0-beta.5"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -19,11 +19,11 @@ crate-type = ["cdylib", "rlib", "staticlib"] # We need this for WASM
 
 [dependencies]
 amplify = { version = "~4.8.0", default-features = false, features = ["alloc"] }
-ultrasonic = "0.12.0-beta.4"
+ultrasonic = "0.12.0-beta.5"
 strict_encoding = "2.8.1"
-commit_verify = "~0.12.0-beta.4"
-single_use_seals = { version = "~0.12.0-beta.4", features = ["strict_encoding"] }
-bp-core = { version = "0.12.0-beta.4", optional = true }
+commit_verify = "~0.12.0-beta.5"
+single_use_seals = { version = "~0.12.0-beta.5", features = ["strict_encoding"] }
+bp-core = { version = "0.12.0-beta.5", optional = true }
 serde = { version = "1", optional = true }
 
 [features]
@@ -52,10 +52,3 @@ wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = ["all"]
-
-[patch.crates-io]
-ultrasonic = { git = "https://github.com/AluVM/ultrasonic", branch = "master" }
-bp-consensus = { git = "https://github.com/BP-WG/bp-core", branch = "wtxoseal" }
-bp-dbc = { git = "https://github.com/BP-WG/bp-core", branch = "wtxoseal" }
-bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "wtxoseal" }
-bp-core = { git = "https://github.com/BP-WG/bp-core", branch = "wtxoseal" }
