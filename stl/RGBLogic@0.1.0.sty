@@ -1,5 +1,5 @@
 {-
-  Id: stl:mqltqlPk-O9$pYOd-BACRI70-DOMJ6cp-TFvhcK1-ibrOI9U#import-boxer-seminar
+  Id: stl:HffUFU0Z-oNyZXNs-O8u1dRc-Q4Z5mOo-3bqPppu-A0f5iTo#permit-helena-lorenzo
   Name: RGBLogic
   Version: 0.1.0
   Description: Consensus logic layer for RGB smart contracts
@@ -11,18 +11,18 @@
 @context
 typelib RGBLogic
 
-import RGBCommit#harvest-person-orion
-  use TransitionType#picture-reflex-brigade
-  use ExtensionType#apropos-scoop-viva
-  use Layer1#camilla-basket-justin
-  use OpId#picnic-single-gloria
-
-import BPCore#austin-story-retro
+import BPCore#symbol-tropic-grand
   use TapretNodePartner#roger-member-educate
   use TapretProof#marco-border-sample
   use TapretPathProof#kiwi-mirror-paris
   use TapretRightBranch#miracle-patriot-touch
   use OpretProof#good-village-flex
+
+import RGBCommit#raymond-open-organic
+  use TransitionType#picture-reflex-brigade
+  use ExtensionType#apropos-scoop-viva
+  use Layer1#camilla-basket-justin
+  use OpId#picnic-single-gloria
 
 import Bitcoin#signal-color-cipher
   use ScriptBytes#equator-cockpit-gong
@@ -51,8 +51,9 @@ data OpOrd             : genesis ()
                        , nonce U64
                        , opid RGBCommit.OpId)
 
-@mnemonic(orange-john-cyclone)
-data WitnessOrd        : archived ()
+@mnemonic(turtle-amadeus-hawaii)
+data WitnessOrd        : ignored ()
+                       | archived ()
                        | mined WitnessPos
                        | tentative ()
 

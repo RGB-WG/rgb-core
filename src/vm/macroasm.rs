@@ -33,14 +33,14 @@ macro_rules! rgbasm {
 
 #[macro_export]
 macro_rules! isa_instr {
-    (pcvs $no:ident) => {{
-        RgbIsa::Contract(ContractOp::Pcvs($no))
+    (svs $no:ident) => {{
+        RgbIsa::Contract(ContractOp::Svs($no))
     }};
-    (pcas $no:ident) => {{
-        RgbIsa::Contract(ContractOp::Pcas($no))
+    (sas $no:ident) => {{
+        RgbIsa::Contract(ContractOp::Sas($no))
     }};
-    (pcps $no:ident) => {{
-        RgbIsa::Contract(ContractOp::Pcps($no))
+    (sps $no:ident) => {{
+        RgbIsa::Contract(ContractOp::Sps($no))
     }};
     (cng $t:ident,a8[$a_idx:literal]) => {{
         RgbIsa::Contract(ContractOp::CnG($t, Reg32::from(u5::with($a_idx))))

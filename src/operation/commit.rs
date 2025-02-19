@@ -37,11 +37,11 @@ use commit_verify::{
 use strict_encoding::StrictDumb;
 
 use crate::{
-    impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ConcealedAttach,
-    ConcealedData, ConcealedState, ConfidentialState, DataState, ExposedSeal, ExposedState,
-    Extension, ExtensionType, Ffv, Genesis, GlobalState, GlobalStateType, Operation,
-    PedersenCommitment, Redeemed, SchemaId, SecretSeal, Transition, TransitionBundle,
-    TransitionType, TypedAssigns, XChain, LIB_NAME_RGB_COMMIT,
+    impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ChainNet, DataState,
+    ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis, GlobalState,
+    GlobalStateType, Operation, Redeemed, RevealedAttach, RevealedData, RevealedState,
+    RevealedValue, SchemaId, SecretSeal, Transition, TransitionBundle, TransitionType,
+    TypedAssigns, LIB_NAME_RGB_COMMIT,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -188,10 +188,10 @@ impl AssignmentIndex {
 #[commit_encode(strategy = strict, id = DiscloseHash)]
 pub struct OpDisclose {
     pub id: OpId,
-    pub seals: MediumOrdMap<AssignmentIndex, XChain<SecretSeal>>,
-    pub fungible: MediumOrdMap<AssignmentIndex, PedersenCommitment>,
-    pub data: MediumOrdMap<AssignmentIndex, ConcealedData>,
-    pub attach: MediumOrdMap<AssignmentIndex, ConcealedAttach>,
+    pub seals: MediumOrdMap<AssignmentIndex, SecretSeal>,
+    pub fungible: MediumOrdMap<AssignmentIndex, RevealedValue>,
+    pub data: MediumOrdMap<AssignmentIndex, RevealedData>,
+    pub attach: MediumOrdMap<AssignmentIndex, RevealedAttach>,
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -236,9 +236,7 @@ pub struct BaseCommitment {
     pub schema_id: SchemaId,
     pub timestamp: i64,
     pub issuer: StrictHash,
-    pub testnet: bool,
-    pub alt_layers1: StrictHash,
-    pub asset_tags: StrictHash,
+    pub chain_net: ChainNet,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -280,10 +278,8 @@ impl Genesis {
             flags: self.flags,
             schema_id: self.schema_id,
             timestamp: self.timestamp,
-            testnet: self.testnet,
-            alt_layers1: self.alt_layers1.commit_id(),
+            chain_net: self.chain_net,
             issuer: self.issuer.commit_id(),
-            asset_tags: self.asset_tags.commit_id(),
         };
         OpCommitment {
             ffv: self.ffv,
@@ -339,22 +335,22 @@ impl Extension {
     }
 }
 
-impl ConcealedState {
+impl RevealedState {
     fn commit_encode(&self, e: &mut CommitEngine) {
         match self {
-            ConcealedState::Void => {}
-            ConcealedState::Fungible(val) => e.commit_to_serialized(&val.commitment),
-            ConcealedState::Structured(dat) => e.commit_to_serialized(dat),
-            ConcealedState::Attachment(att) => e.commit_to_serialized(att),
+            Self::Void => {}
+            Self::Fungible(val) => e.commit_to_serialized(&val),
+            Self::Structured(dat) => e.commit_to_serialized(dat),
+            Self::Attachment(att) => e.commit_to_serialized(att),
         }
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct AssignmentCommitment {
     pub ty: AssignmentType,
-    pub state: ConcealedState,
-    pub seal: XChain<SecretSeal>,
+    pub state: RevealedState,
+    pub seal: SecretSeal,
     pub lock: ReservedBytes<2, 0>,
 }
 
@@ -372,12 +368,12 @@ impl CommitEncode for AssignmentCommitment {
 
 impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
     pub fn commitment(&self, ty: AssignmentType) -> AssignmentCommitment {
-        let Self::Confidential { seal, state, lock } = self.conceal() else {
+        let Self::ConfidentialSeal { seal, state, lock } = self.conceal() else {
             unreachable!();
         };
         AssignmentCommitment {
             ty,
-            state: state.state_commitment(),
+            state: state.state_data(),
             seal,
             lock,
         }

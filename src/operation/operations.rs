@@ -37,10 +37,10 @@ use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize}
 
 use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
-    AltLayer1Set, AssetTag, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
-    ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
-    GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose, OpId, SecretSeal, TypedAssigns,
-    VoidState, XChain, LIB_NAME_RGB_COMMIT,
+    Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ChainNet, ContractId,
+    DiscloseHash, ExposedState, Ffv, GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose,
+    OpId, RevealedAttach, RevealedData, RevealedValue, SecretSeal, TypedAssigns, VoidState,
+    LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -94,20 +94,6 @@ impl FromStr for Opout {
         }
     }
 }
-
-#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
-#[wrapper(Deref)]
-#[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict, id = StrictHash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct AssetTags(TinyOrdMap<AssignmentType, AssetTag>);
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
 #[wrapper(Deref)]
@@ -261,24 +247,25 @@ pub trait Operation {
         fn proc_seals<State: ExposedState>(
             ty: AssignmentType,
             a: &[Assign<State, GraphSeal>],
-            seals: &mut BTreeMap<AssignmentIndex, XChain<SecretSeal>>,
-            state: &mut BTreeMap<AssignmentIndex, State::Concealed>,
+            seals: &mut BTreeMap<AssignmentIndex, SecretSeal>,
+            state: &mut BTreeMap<AssignmentIndex, State>,
         ) {
             for (index, assignment) in a.iter().enumerate() {
                 if let Some(seal) = assignment.revealed_seal() {
                     seals.insert(AssignmentIndex::new(ty, index as u16), seal.to_secret_seal());
                 }
-                if let Some(revealed) = assignment.as_revealed_state() {
-                    state.insert(AssignmentIndex::new(ty, index as u16), revealed.conceal());
-                }
+                state.insert(
+                    AssignmentIndex::new(ty, index as u16),
+                    assignment.as_revealed_state().clone(),
+                );
             }
         }
 
-        let mut seals: BTreeMap<AssignmentIndex, XChain<SecretSeal>> = bmap!();
+        let mut seals: BTreeMap<AssignmentIndex, SecretSeal> = bmap!();
         let mut void: BTreeMap<AssignmentIndex, VoidState> = bmap!();
-        let mut fungible: BTreeMap<AssignmentIndex, ConcealedValue> = bmap!();
-        let mut data: BTreeMap<AssignmentIndex, ConcealedData> = bmap!();
-        let mut attach: BTreeMap<AssignmentIndex, ConcealedAttach> = bmap!();
+        let mut fungible: BTreeMap<AssignmentIndex, RevealedValue> = bmap!();
+        let mut data: BTreeMap<AssignmentIndex, RevealedData> = bmap!();
+        let mut attach: BTreeMap<AssignmentIndex, RevealedAttach> = bmap!();
         for (ty, assigns) in self.assignments().flat() {
             match assigns {
                 TypedAssigns::Declarative(a) => {
@@ -299,9 +286,7 @@ pub trait Operation {
         OpDisclose {
             id: self.id(),
             seals: Confined::from_checked(seals),
-            fungible: Confined::from_iter_checked(
-                fungible.into_iter().map(|(k, s)| (k, s.commitment)),
-            ),
+            fungible: Confined::from_iter_checked(fungible),
             data: Confined::from_checked(data),
             attach: Confined::from_checked(attach),
         }
@@ -359,9 +344,7 @@ pub struct Genesis {
     pub flags: ReservedBytes<1, 0>,
     pub timestamp: i64,
     pub issuer: Identity,
-    pub testnet: bool,
-    pub alt_layers1: AltLayer1Set,
-    pub asset_tags: AssetTags,
+    pub chain_net: ChainNet,
     pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,

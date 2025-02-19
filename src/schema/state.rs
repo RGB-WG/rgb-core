@@ -88,13 +88,6 @@ impl OwnedStateSchema {
     }
 }
 
-/// Today we support only a single format of confidential data, because of the
-/// limitations of the underlying secp256k1-zkp library: it works only with
-/// u64 numbers. Nevertheless, homomorphic commitments can be created to
-/// everything that has up to 256 bits and commutative arithmetics, so in the
-/// future we plan to support more types. We reserve this possibility by
-/// internally encoding [`ConfidentialFormat`] with the same type specification
-/// details as used for [`DateFormat`]
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Display)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]

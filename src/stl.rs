@@ -23,13 +23,14 @@
 pub use aluvm::stl::aluvm_stl;
 pub use bp::bc::stl::bp_tx_stl;
 pub use bp::stl::bp_core_stl;
+use bp::Txid;
 use commit_verify::stl::commit_verify_stl;
 use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
 
 use crate::validation::DbcProof;
-use crate::vm::{GlobalOrd, XWitnessId};
+use crate::vm::GlobalOrd;
 use crate::{
     Extension, Genesis, OpCommitment, Schema, TransitionBundle, LIB_NAME_RGB_COMMIT,
     LIB_NAME_RGB_LOGIC,
@@ -37,10 +38,10 @@ use crate::{
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_COMMIT: &str =
-    "stl:IFcnrPeI-TANxLfZ-feJax6Q-1TUM4Hq-AjI161s-3tbmxak#harvest-person-orion";
+    "stl:n4BoS9Kd-oZ1mUgb-6Hqg9hY-q$JXa84-YoWed1a-!6AZCTM#raymond-open-organic";
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_LOGIC: &str =
-    "stl:mqltqlPk-O9$pYOd-BACRI70-DOMJ6cp-TFvhcK1-ibrOI9U#import-boxer-seminar";
+    "stl:HffUFU0Z-oNyZXNs-O8u1dRc-Q4Z5mOo-3bqPppu-A0f5iTo#permit-helena-lorenzo";
 
 fn _rgb_commit_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB_COMMIT), tiny_bset! {
@@ -53,7 +54,7 @@ fn _rgb_commit_stl() -> Result<TypeLib, CompileError> {
     })
     .transpile::<Schema>()
     .transpile::<Genesis>()
-    .transpile::<XWitnessId>()
+    .transpile::<Txid>()
     .transpile::<TransitionBundle>()
     .transpile::<Extension>()
     .transpile::<OpCommitment>()
