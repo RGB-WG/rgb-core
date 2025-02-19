@@ -22,7 +22,7 @@
 
 use std::collections::{btree_map, BTreeMap};
 
-use amplify::confinement::{Confined, U16 as U16MAX};
+use amplify::confinement::{Confined, SmallOrdSet, U16 as U16MAX};
 use amplify::{Bytes32, Wrapper};
 use bp::Vout;
 use commit_verify::{mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
@@ -75,26 +75,28 @@ impl From<mpc::Message> for BundleId {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct InputMap(Confined<BTreeMap<Vin, OpId>, 1, U16MAX>);
+pub struct InputMap(Confined<BTreeMap<Vin, SmallOrdSet<OpId>>, 1, U16MAX>);
 
 impl StrictDumb for InputMap {
     fn strict_dumb() -> Self { Self(Confined::with_key_value(strict_dumb!(), strict_dumb!())) }
 }
 
 impl InputMap {
-    pub fn with(input: Vin, id: OpId) -> Self { InputMap(Confined::with((input, id))) }
+    pub fn with(input: Vin, ids: SmallOrdSet<OpId>) -> Self {
+        InputMap(Confined::with((input, ids)))
+    }
 }
 
 impl IntoIterator for InputMap {
-    type Item = (Vin, OpId);
-    type IntoIter = btree_map::IntoIter<Vin, OpId>;
+    type Item = (Vin, SmallOrdSet<OpId>);
+    type IntoIter = btree_map::IntoIter<Vin, SmallOrdSet<OpId>>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
 }
 
 impl<'a> IntoIterator for &'a InputMap {
-    type Item = (&'a Vin, &'a OpId);
-    type IntoIter = btree_map::Iter<'a, Vin, OpId>;
+    type Item = (&'a Vin, &'a SmallOrdSet<OpId>);
+    type IntoIter = btree_map::Iter<'a, Vin, SmallOrdSet<OpId>>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.iter() }
 }

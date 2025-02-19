@@ -58,7 +58,6 @@ impl Schema {
 
         let empty_assign_schema = AssignmentsSchema::default();
         let empty_valency_schema = ValencySchema::default();
-        let blank_transition = self.blank_transition();
         let (
             metadata_schema,
             global_schema,
@@ -95,7 +94,6 @@ impl Schema {
                  */
 
                 let transition_schema = match self.transitions.get(transition_type) {
-                    None if transition_type.is_blank() => &blank_transition,
                     None => {
                         return validation::Status::with_failure(
                             validation::Failure::SchemaUnknownTransitionType(

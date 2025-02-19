@@ -21,7 +21,8 @@ DbcProof union
 TransitionBundle rec
   inputMap map len=1..MAX16 aka=InputMap
     key is U32 aka=Vout
-    value bytes len=32 aka=OpId
+    value set len=0..MAX16
+      element bytes len=32 aka=OpId
   knownTransitions map len=1..MAX16
     key bytes len=32 aka=OpId
     value rec Transition

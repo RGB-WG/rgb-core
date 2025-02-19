@@ -39,9 +39,7 @@ use strict_types::SemId;
 use super::{
     AssignmentType, ExtensionSchema, GenesisSchema, OwnedStateSchema, TransitionSchema, ValencyType,
 };
-use crate::{
-    impl_serde_baid64, Ffv, GlobalStateSchema, Identity, Occurrences, LIB_NAME_RGB_COMMIT,
-};
+use crate::{impl_serde_baid64, Ffv, GlobalStateSchema, Identity, LIB_NAME_RGB_COMMIT};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -101,12 +99,6 @@ impl ExtensionType {
 pub struct TransitionType(u16);
 impl TransitionType {
     pub const fn with(ty: u16) -> Self { Self(ty) }
-}
-
-impl TransitionType {
-    pub const BLANK: Self = TransitionType(u16::MAX);
-    /// Easily check if the TransitionType is blank with convention method
-    pub fn is_blank(self) -> bool { self == Self::BLANK }
 }
 
 /// Schema identifier.
@@ -218,15 +210,6 @@ impl Schema {
     #[inline]
     pub fn schema_id(&self) -> SchemaId { self.commit_id() }
 
-    pub fn blank_transition(&self) -> TransitionSchema {
-        let mut schema = TransitionSchema::default();
-        for id in self.owned_types.keys() {
-            schema.inputs.insert(*id, Occurrences::NoneOrMore).ok();
-            schema.assignments.insert(*id, Occurrences::NoneOrMore).ok();
-        }
-        schema
-    }
-
     pub fn types(&self) -> impl Iterator<Item = SemId> + '_ {
         self.meta_types
             .values()
@@ -247,6 +230,32 @@ impl Schema {
             .chain(self.transitions.values().filter_map(|i| i.validator))
             .chain(self.extensions.values().filter_map(|i| i.validator))
             .map(|site| site.lib)
+    }
+
+    pub fn transition_for_assignment_type(
+        &self,
+        assignment_type: &AssignmentType,
+    ) -> Option<TransitionType> {
+        for (transition_type, transition_schema) in &self.transitions {
+            // for now we support only schemas defining transitions to move single assignments
+            if transition_schema.inputs.as_unconfined().len() == 1
+                && transition_schema.assignments.as_unconfined().len() == 1
+            {
+                let (input_ass_type, input_occurrences) =
+                    transition_schema.inputs.iter().next().unwrap();
+                let (out_ass_type, out_occurrences) =
+                    transition_schema.assignments.iter().next().unwrap();
+
+                if input_occurrences.check(1).is_ok()
+                    && out_occurrences.check(1).is_ok()
+                    && input_ass_type == assignment_type
+                    && out_ass_type == assignment_type
+                {
+                    return Some(*transition_type);
+                }
+            }
+        }
+        None
     }
 }
 

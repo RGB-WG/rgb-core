@@ -455,25 +455,27 @@ impl<
         input_map: BTreeMap<OpId, BTreeSet<Outpoint>>,
     ) {
         let witness_id = pub_witness.txid();
-        for (vin, opid) in &bundle.input_map {
-            let Some(outpoints) = input_map.get(opid) else {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::BundleExtraTransition(bundle_id, *opid));
-                continue;
-            };
-            let Some(input) = pub_witness.inputs.get(vin.to_usize()) else {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::BundleInvalidInput(bundle_id, *opid, witness_id));
-                continue;
-            };
-            if !outpoints.contains(&input.prev_output) {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::BundleInvalidCommitment(
-                        bundle_id, *vin, witness_id, *opid,
-                    ));
+        for (vin, opids) in &bundle.input_map {
+            for opid in opids {
+                let Some(outpoints) = input_map.get(opid) else {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::BundleExtraTransition(bundle_id, *opid));
+                    continue;
+                };
+                let Some(input) = pub_witness.inputs.get(vin.to_usize()) else {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::BundleInvalidInput(bundle_id, *opid, witness_id));
+                    continue;
+                };
+                if !outpoints.contains(&input.prev_output) {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::BundleInvalidCommitment(
+                            bundle_id, *vin, witness_id, *opid,
+                        ));
+                }
             }
         }
     }

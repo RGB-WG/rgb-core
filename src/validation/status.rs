@@ -182,8 +182,6 @@ pub enum Failure {
         /// Actual schema id provided by the consignment.
         actual: SchemaId,
     },
-    /// schema uses reserved type for the blank state transition.
-    SchemaBlankTransitionRedefined,
 
     /// schema global state #{0} uses semantic data type absent in type library
     /// ({1}).

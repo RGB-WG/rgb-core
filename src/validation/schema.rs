@@ -22,7 +22,7 @@
 
 use strict_types::TypeSystem;
 
-use crate::{validation, OpFullType, OpSchema, OwnedStateSchema, Schema, TransitionType};
+use crate::{validation, OpFullType, OpSchema, OwnedStateSchema, Schema};
 
 impl Schema {
     pub fn verify(&self, types: &TypeSystem) -> validation::Status {
@@ -34,10 +34,6 @@ impl Schema {
         }
         for (type_id, schema) in &self.extensions {
             status += self.verify_operation(OpFullType::StateExtension(*type_id), schema);
-        }
-        // Check that the schema doesn't contain reserved type ids
-        if self.transitions.contains_key(&TransitionType::BLANK) {
-            status.add_failure(validation::Failure::SchemaBlankTransitionRedefined);
         }
 
         for (type_id, sem_id) in &self.meta_types {
