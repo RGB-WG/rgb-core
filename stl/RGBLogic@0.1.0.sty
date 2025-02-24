@@ -1,5 +1,5 @@
 {-
-  Id: stl:5LehOU0m-g6h$ore-sH2a10I-bE8Z$5l-MMssex2-x$$9lF4#icon-think-learn
+  Id: stl:G2guZb4U-8s8wONt-zJNUyTV-vDZPiKq-r42C1In-s2jmYL8#marvin-lobby-sandra
   Name: RGBLogic
   Version: 0.1.0
   Description: Consensus logic layer for RGB smart contracts
@@ -51,11 +51,11 @@ data OpOrd             : genesis ()
                        , nonce U64
                        , opid RGBCommit.OpId)
 
-@mnemonic(turtle-amadeus-hawaii)
-data WitnessOrd        : ignored ()
-                       | archived ()
-                       | mined WitnessPos
+@mnemonic(forum-declare-market)
+data WitnessOrd        : mined WitnessPos
                        | tentative ()
+                       | ignored ()
+                       | archived ()
 
 @mnemonic(cliff-enrico-nominal)
 data WitnessPos        : layer1 RGBCommit.Layer1

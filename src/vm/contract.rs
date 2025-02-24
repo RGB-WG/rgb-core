@@ -325,20 +325,6 @@ impl Display for WitnessPos {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub enum WitnessOrd {
-    /// Witness transaction must be ignored by the update witnesses process.
-    Ignored,
-    /// Witness transaction must be excluded from the state processing.
-    ///
-    /// Cases for the exclusion:
-    /// - transaction was removed from blockchain after a re-org and its inputs were spent by other
-    ///   transaction;
-    /// - previous transaction(s) after RBF replacement, once it is excluded from the mempool and
-    ///   replaced by RBFed successors;
-    /// - past state channel transactions once a new channel state is signed (and until they may
-    ///   become valid once again due to an uncooperative channel closing).
-    #[strict_type(dumb)]
-    Archived,
-
     /// Transaction is included into layer 1 blockchain at a specific height and
     /// timestamp.
     ///
@@ -364,6 +350,21 @@ pub enum WitnessOrd {
     /// - transaction is an RBF replacement prepared to be broadcast (with the previous transaction
     ///   set to [`Self::Archived`] at the same moment).
     Tentative,
+
+    /// Witness transaction must be ignored by the update witnesses process.
+    Ignored,
+
+    /// Witness transaction must be excluded from the state processing.
+    ///
+    /// Cases for the exclusion:
+    /// - transaction was removed from blockchain after a re-org and its inputs were spent by other
+    ///   transaction;
+    /// - previous transaction(s) after RBF replacement, once it is excluded from the mempool and
+    ///   replaced by RBFed successors;
+    /// - past state channel transactions once a new channel state is signed (and until they may
+    ///   become valid once again due to an uncooperative channel closing).
+    #[strict_type(dumb)]
+    Archived,
 }
 
 impl WitnessOrd {
