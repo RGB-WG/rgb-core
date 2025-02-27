@@ -31,7 +31,7 @@ use bp::{dbc, Outpoint, Tx, Txid};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
-use super::status::{Failure, Info};
+use super::status::{Failure, Warning};
 use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, OpRef, Status, Validity};
 use crate::operation::seal::ExposedSeal;
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd};
@@ -340,7 +340,7 @@ impl<
         if self.safe_height.is_some() {
             self.status
                 .borrow_mut()
-                .add_info(Info::UnsafeHistory(unsafe_history_map));
+                .add_warning(Warning::UnsafeHistory(unsafe_history_map));
         }
         for op in ops {
             // We do not skip validating archive operations since after a re-org they may

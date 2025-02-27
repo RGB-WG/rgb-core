@@ -363,6 +363,9 @@ pub enum Failure {
 )]
 #[display(doc_comments)]
 pub enum Warning {
+    /// Map of transfer history TXs with potentially unsafe height.
+    UnsafeHistory(UnsafeHistoryMap),
+
     /// Custom warning by external services on top of RGB Core.
     #[display(inner)]
     Custom(String),
@@ -376,9 +379,6 @@ pub enum Warning {
 )]
 #[display(doc_comments)]
 pub enum Info {
-    /// Map of transfer history TXs with potentially unsafe height.
-    UnsafeHistory(UnsafeHistoryMap),
-
     /// Custom info by external services on top of RGB Core.
     #[display(inner)]
     Custom(String),
