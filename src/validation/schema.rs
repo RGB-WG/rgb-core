@@ -32,9 +32,6 @@ impl Schema {
         for (type_id, schema) in &self.transitions {
             status += self.verify_operation(OpFullType::StateTransition(*type_id), schema);
         }
-        for (type_id, schema) in &self.extensions {
-            status += self.verify_operation(OpFullType::StateExtension(*type_id), schema);
-        }
 
         for (type_id, sem_id) in &self.meta_types {
             if !types.contains_key(sem_id) {
@@ -75,9 +72,6 @@ impl Schema {
         if matches!(schema.inputs(), Some(inputs) if inputs.is_empty()) {
             status.add_failure(validation::Failure::SchemaOpEmptyInputs(op_type));
         }
-        if matches!(schema.redeems(), Some(inputs) if inputs.is_empty()) {
-            status.add_failure(validation::Failure::SchemaOpEmptyInputs(op_type));
-        }
         for type_id in schema.globals().keys() {
             if !self.global_types.contains_key(type_id) {
                 status
@@ -87,13 +81,6 @@ impl Schema {
         for type_id in schema.assignments().keys() {
             if !self.owned_types.contains_key(type_id) {
                 status.add_failure(validation::Failure::SchemaOpAssignmentTypeUnknown(
-                    op_type, *type_id,
-                ));
-            }
-        }
-        for type_id in schema.valencies() {
-            if !self.valency_types.contains(type_id) {
-                status.add_failure(validation::Failure::SchemaOpValencyTypeUnknown(
                     op_type, *type_id,
                 ));
             }

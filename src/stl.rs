@@ -32,16 +32,15 @@ use strict_types::{CompileError, TypeLib};
 use crate::validation::DbcProof;
 use crate::vm::GlobalOrd;
 use crate::{
-    Extension, Genesis, OpCommitment, Schema, TransitionBundle, LIB_NAME_RGB_COMMIT,
-    LIB_NAME_RGB_LOGIC,
+    Genesis, OpCommitment, Schema, TransitionBundle, LIB_NAME_RGB_COMMIT, LIB_NAME_RGB_LOGIC,
 };
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_COMMIT: &str =
-    "stl:N6SXCpvQ-tPzjGVN-pRMk9CN-qE0thG!-2mpTOLT-fOL4sRA#sunset-cherry-melody";
+    "stl:O97qYf!c-DQ5qDGf-DLQPobD-6u5bUjG-J8!Svk7-OIVz4fk#fossil-latin-random";
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_LOGIC: &str =
-    "stl:0wsJV4GJ-U$BRIX2-Mvvm2Db-aTx6jqR-CWzNyC9-S8TnMPE#program-june-motel";
+    "stl:cpfuZutw-7s$hkuI-Q8vaRf4-XCUiAKC-glMJM!0-8hV0Gvg#monarch-detect-paradox";
 
 fn _rgb_commit_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB_COMMIT), tiny_bset! {
@@ -56,7 +55,6 @@ fn _rgb_commit_stl() -> Result<TypeLib, CompileError> {
     .transpile::<Genesis>()
     .transpile::<Txid>()
     .transpile::<TransitionBundle>()
-    .transpile::<Extension>()
     .transpile::<OpCommitment>()
     .compile()
 }

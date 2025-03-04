@@ -35,9 +35,9 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
     AssignmentType, Assignments, AssignmentsRef, AttachState, BundleId, ContractId, DataState,
-    Extension, ExtensionType, FungibleState, Genesis, GlobalState, GlobalStateType, GraphSeal,
-    Inputs, Layer1, Metadata, OpFullType, OpId, OpType, Operation, Transition, TransitionType,
-    TypedAssigns, Valencies, LIB_NAME_RGB_LOGIC,
+    FungibleState, Genesis, GlobalState, GlobalStateType, GraphSeal, Inputs, Layer1, Metadata,
+    OpFullType, OpId, OpType, Operation, Transition, TransitionType, TypedAssigns,
+    LIB_NAME_RGB_LOGIC,
 };
 
 /// The type is used during validation and computing a contract state. It
@@ -49,7 +49,6 @@ pub enum OrdOpRef<'op> {
     #[from]
     Genesis(&'op Genesis),
     Transition(&'op Transition, Txid, WitnessOrd, BundleId),
-    Extension(&'op Extension, Txid, WitnessOrd),
 }
 
 impl PartialOrd for OrdOpRef<'_> {
@@ -64,15 +63,13 @@ impl OrdOpRef<'_> {
     pub fn witness_id(&self) -> Option<Txid> {
         match self {
             OrdOpRef::Genesis(_) => None,
-            OrdOpRef::Transition(_, witness_id, ..) | OrdOpRef::Extension(_, witness_id, ..) => {
-                Some(*witness_id)
-            }
+            OrdOpRef::Transition(_, witness_id, ..) => Some(*witness_id),
         }
     }
 
     pub fn bundle_id(&self) -> Option<BundleId> {
         match self {
-            OrdOpRef::Genesis(_) | OrdOpRef::Extension(..) => None,
+            OrdOpRef::Genesis(_) => None,
             OrdOpRef::Transition(_, _, _, bundle_id) => Some(*bundle_id),
         }
     }
@@ -86,12 +83,6 @@ impl OrdOpRef<'_> {
                 nonce: op.nonce,
                 opid: op.id(),
             },
-            OrdOpRef::Extension(op, _, witness_ord) => OpOrd::Extension {
-                witness: *witness_ord,
-                ty: op.extension_type,
-                nonce: op.nonce,
-                opid: op.id(),
-            },
         }
     }
 }
@@ -101,7 +92,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.op_type(),
             OrdOpRef::Transition(op, ..) => op.op_type(),
-            OrdOpRef::Extension(op, ..) => op.op_type(),
         }
     }
 
@@ -109,7 +99,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.full_type(),
             OrdOpRef::Transition(op, ..) => op.full_type(),
-            OrdOpRef::Extension(op, ..) => op.full_type(),
         }
     }
 
@@ -117,7 +106,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.id(),
             OrdOpRef::Transition(op, ..) => op.id(),
-            OrdOpRef::Extension(op, ..) => op.id(),
         }
     }
 
@@ -125,7 +113,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.contract_id(),
             OrdOpRef::Transition(op, ..) => op.contract_id(),
-            OrdOpRef::Extension(op, ..) => op.contract_id(),
         }
     }
 
@@ -133,7 +120,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.nonce(),
             OrdOpRef::Transition(op, ..) => op.nonce(),
-            OrdOpRef::Extension(op, ..) => op.nonce(),
         }
     }
 
@@ -141,15 +127,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.transition_type(),
             OrdOpRef::Transition(op, ..) => op.transition_type(),
-            OrdOpRef::Extension(op, ..) => op.transition_type(),
-        }
-    }
-
-    fn extension_type(&self) -> Option<ExtensionType> {
-        match self {
-            OrdOpRef::Genesis(op) => op.extension_type(),
-            OrdOpRef::Transition(op, ..) => op.extension_type(),
-            OrdOpRef::Extension(op, ..) => op.extension_type(),
         }
     }
 
@@ -157,7 +134,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.metadata(),
             OrdOpRef::Transition(op, ..) => op.metadata(),
-            OrdOpRef::Extension(op, ..) => op.metadata(),
         }
     }
 
@@ -165,15 +141,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.globals(),
             OrdOpRef::Transition(op, ..) => op.globals(),
-            OrdOpRef::Extension(op, ..) => op.globals(),
-        }
-    }
-
-    fn valencies(&self) -> &Valencies {
-        match self {
-            OrdOpRef::Genesis(op) => op.valencies(),
-            OrdOpRef::Transition(op, ..) => op.valencies(),
-            OrdOpRef::Extension(op, ..) => op.valencies(),
         }
     }
 
@@ -181,7 +148,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => (&op.assignments).into(),
             OrdOpRef::Transition(op, ..) => (&op.assignments).into(),
-            OrdOpRef::Extension(op, ..) => (&op.assignments).into(),
         }
     }
 
@@ -189,7 +155,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.assignments_by_type(t),
             OrdOpRef::Transition(op, ..) => op.assignments_by_type(t),
-            OrdOpRef::Extension(op, ..) => op.assignments_by_type(t),
         }
     }
 
@@ -197,7 +162,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.inputs(),
             OrdOpRef::Transition(op, ..) => op.inputs(),
-            OrdOpRef::Extension(op, ..) => op.inputs(),
         }
     }
 }
@@ -310,11 +274,9 @@ impl Display for WitnessPos {
     }
 }
 
-/// RGB consensus information about the status of a witness transaction. This
-/// information is used in ordering state transition and state extension
-/// processing in the AluVM during the validation, as well as consensus ordering
-/// of the contract global state data, as they are presented to all contract
-/// users.
+/// RGB consensus information about the status of a witness transaction. This information is used
+/// in ordering state transitions during the validation, as well as consensus ordering of the
+/// contract global state data, as they are presented to all contract users.
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, From)]
 #[display(lowercase)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -379,8 +341,6 @@ impl WitnessOrd {
 /// - Genesis is processed first.
 /// - Other operations are ordered according to their witness transactions (see [`WitnessOrd`] for
 ///   the details).
-/// - Extensions share witness transaction with the state transition which first to close one of the
-///   seals defined in the extension, but are processed before that state transition.
 /// - If two or more operations share the same witness transaction ordering, they are first ordered
 ///   basing on their `nonce` value, and if it is also the same, basing on their operation id value.
 ///
@@ -396,13 +356,6 @@ impl WitnessOrd {
 pub enum OpOrd {
     #[strict_type(tag = 0x00, dumb)]
     Genesis,
-    #[strict_type(tag = 0x01)]
-    Extension {
-        witness: WitnessOrd,
-        ty: ExtensionType,
-        nonce: u64,
-        opid: OpId,
-    },
     #[strict_type(tag = 0xFF)]
     Transition {
         witness: WitnessOrd,
@@ -415,16 +368,10 @@ pub enum OpOrd {
 impl OpOrd {
     #[inline]
     pub fn is_archived(&self) -> bool {
-        matches!(
-            self,
-            Self::Extension {
-                witness: WitnessOrd::Archived,
-                ..
-            } | Self::Transition {
-                witness: WitnessOrd::Archived,
-                ..
-            }
-        )
+        matches!(self, Self::Transition {
+            witness: WitnessOrd::Archived,
+            ..
+        })
     }
 }
 
@@ -458,23 +405,6 @@ impl GlobalOrd {
     ) -> Self {
         Self {
             op_ord: OpOrd::Transition {
-                witness,
-                ty,
-                nonce,
-                opid,
-            },
-            idx,
-        }
-    }
-    pub fn extension(
-        opid: OpId,
-        idx: u16,
-        ty: ExtensionType,
-        nonce: u64,
-        witness: WitnessOrd,
-    ) -> Self {
-        Self {
-            op_ord: OpOrd::Extension {
                 witness,
                 ty,
                 nonce,
@@ -629,26 +559,17 @@ pub struct OpInfo<'op> {
     pub metadata: &'op Metadata,
     pub prev_state: &'op Assignments<GraphSeal>,
     pub owned_state: AssignmentsRef<'op>,
-    pub redeemed: &'op Valencies,
-    pub valencies: &'op Valencies,
     pub global: &'op GlobalState,
 }
 
 impl<'op> OpInfo<'op> {
-    pub fn with(
-        id: OpId,
-        op: &'op OrdOpRef<'op>,
-        prev_state: &'op Assignments<GraphSeal>,
-        redeemed: &'op Valencies,
-    ) -> Self {
+    pub fn with(id: OpId, op: &'op OrdOpRef<'op>, prev_state: &'op Assignments<GraphSeal>) -> Self {
         OpInfo {
             id,
             ty: op.full_type(),
             metadata: op.metadata(),
             prev_state,
             owned_state: op.assignments(),
-            redeemed,
-            valencies: op.valencies(),
             global: op.globals(),
         }
     }

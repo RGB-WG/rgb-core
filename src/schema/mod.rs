@@ -28,8 +28,8 @@ mod occurrences;
 
 pub use occurrences::{Occurrences, OccurrencesMismatch};
 pub use operations::{
-    AssignmentType, AssignmentsSchema, ExtensionSchema, GenesisSchema, GlobalSchema, MetaSchema,
-    OpFullType, OpSchema, OpType, TransitionSchema, ValencySchema, ValencyType,
+    AssignmentType, AssignmentsSchema, GenesisSchema, GlobalSchema, MetaSchema, OpFullType,
+    OpSchema, OpType, TransitionSchema,
 };
-pub use schema::{ExtensionType, GlobalStateType, MetaType, Schema, SchemaId, TransitionType};
+pub use schema::{GlobalStateType, MetaType, Schema, SchemaId, TransitionType};
 pub use state::{FungibleType, GlobalStateSchema, MediaType, OwnedStateSchema};

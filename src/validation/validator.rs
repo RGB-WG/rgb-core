@@ -32,7 +32,7 @@ use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::{Failure, Warning};
-use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, OpRef, Status, Validity};
+use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Validity};
 use crate::operation::seal::ExposedSeal;
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd};
 use crate::{
@@ -312,29 +312,6 @@ impl<
             }
             for op in bundle.known_transitions.values() {
                 ops.insert(OrdOpRef::Transition(op, witness_id, witness_ord, bundle_id));
-                for input in &op.inputs {
-                    // We will error in `validate_operations` below on the absent extension from the
-                    // consignment.
-                    if let Some(OpRef::Extension(extension)) =
-                        self.consignment.operation(input.prev_out.op)
-                    {
-                        let ext = OrdOpRef::Extension(extension, witness_id, witness_ord);
-                        // Account only for the first time when extension seal was closed
-                        let prev = ops.iter().find(|r| matches!(r, OrdOpRef::Extension(ext, ..) if ext.id() == extension.id())).copied();
-                        match prev {
-                            Some(old) if old > ext => {
-                                ops.remove(&old);
-                                ops.insert(ext)
-                            }
-                            None => ops.insert(ext),
-                            _ => {
-                                /* the extension is already present in the queue and properly
-                                 * ordered, so we have nothing to add or change */
-                                true
-                            }
-                        };
-                    }
-                }
             }
         }
         if self.safe_height.is_some() {
@@ -381,31 +358,6 @@ impl<
                         self.status
                             .borrow_mut()
                             .add_failure(Failure::OperationAbsent(input.prev_out.op));
-                    }
-                }
-            }
-            OrdOpRef::Extension(extension, ..) => {
-                for (valency, prev_id) in &extension.redeemed {
-                    let Some(prev_op) = self.consignment.operation(*prev_id) else {
-                        self.status
-                            .borrow_mut()
-                            .add_failure(Failure::ValencyNoParent {
-                                opid,
-                                prev_id: *prev_id,
-                                valency: *valency,
-                            });
-                        continue;
-                    };
-
-                    if !prev_op.valencies().contains(valency) {
-                        self.status
-                            .borrow_mut()
-                            .add_failure(Failure::NoPrevValency {
-                                opid,
-                                prev_id: *prev_id,
-                                valency: *valency,
-                            });
-                        continue;
                     }
                 }
             }
@@ -606,7 +558,7 @@ impl<
                     seal.to_output_seal_or_default(witness_id)
                 } else {
                     seal.to_output_seal()
-                        .expect("genesis and state extensions must have explicit seals")
+                        .expect("genesis must have explicit seals")
                 };
 
                 seals.push(seal);

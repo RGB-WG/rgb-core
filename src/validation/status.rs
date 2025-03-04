@@ -201,11 +201,7 @@ pub enum Failure {
     SchemaOpGlobalTypeUnknown(OpFullType, schema::GlobalStateType),
     /// schema for {0} references undeclared owned state type {1}.
     SchemaOpAssignmentTypeUnknown(OpFullType, schema::AssignmentType),
-    /// schema for {0} references undeclared valency type {1}.
-    SchemaOpValencyTypeUnknown(OpFullType, schema::ValencyType),
 
-    /// operation {0} uses invalid state extension type {1}.
-    SchemaUnknownExtensionType(OpId, schema::ExtensionType),
     /// operation {0} uses invalid state transition type {1}.
     SchemaUnknownTransitionType(OpId, schema::TransitionType),
     /// operation {0} uses invalid metadata type {1}.
@@ -214,8 +210,6 @@ pub enum Failure {
     SchemaUnknownGlobalStateType(OpId, schema::GlobalStateType),
     /// operation {0} uses invalid assignment type {1}.
     SchemaUnknownAssignmentType(OpId, schema::AssignmentType),
-    /// operation {0} uses invalid valency type {1}.
-    SchemaUnknownValencyType(OpId, schema::ValencyType),
 
     /// invalid number of global state entries of type {1} in operation {0} -
     /// {2}
@@ -300,22 +294,6 @@ pub enum Failure {
     /// first DBC-compatible output of witness transaction {0} doesn't match the provided proof
     /// type ({1})
     InvalidProofType(Txid, CloseMethod),
-
-    // State extensions errors
-    /// valency {valency} redeemed by state extension {opid} references
-    /// non-existing operation {prev_id}
-    ValencyNoParent {
-        opid: OpId,
-        prev_id: OpId,
-        valency: schema::ValencyType,
-    },
-    /// state extension {opid} references valency {valency} absent in the parent
-    /// {prev_id}.
-    NoPrevValency {
-        opid: OpId,
-        prev_id: OpId,
-        valency: schema::ValencyType,
-    },
 
     // State check errors
     /// state in {opid}/{state_type} is of {found} type, while schema requires

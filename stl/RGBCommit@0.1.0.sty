@@ -1,5 +1,5 @@
 {-
-  Id: stl:N6SXCpvQ-tPzjGVN-pRMk9CN-qE0thG!-2mpTOLT-fOL4sRA#sunset-cherry-melody
+  Id: stl:O97qYf!c-DQ5qDGf-DLQPobD-6u5bUjG-J8!Svk7-OIVz4fk#fossil-latin-random
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -139,30 +139,6 @@ data ContractId        : [Byte ^ 32]
 @mnemonic(short-noise-postal)
 data DataState         : [Byte]
 
-@mnemonic(reform-garden-ballet)
-data Extension         : ffv Ffv
-                       , contractId ContractId
-                       , nonce U64
-                       , extensionType ExtensionType
-                       , metadata Metadata
-                       , globals GlobalState
-                       , assignments AssignmentsBlindSealTxid
-                       , redeemed Redeemed
-                       , valencies Valencies
-                       , validator CommitVerify.ReservedBytes1
-                       , witness CommitVerify.ReservedBytes2
-
-@mnemonic(delta-elastic-germany)
-data ExtensionSchema   : metadata {MetaType ^ ..0xff}
-                       , globals {GlobalStateType -> ^ ..0xff Occurrences}
-                       , redeems {ValencyType ^ ..0xff}
-                       , assignments {AssignmentType -> ^ ..0xff Occurrences}
-                       , valencies {ValencyType ^ ..0xff}
-                       , validator AluVM.LibSite?
-
-@mnemonic(apropos-scoop-viva)
-data ExtensionType     : U16
-
 @mnemonic(pigment-career-hippie)
 data Ffv               : U16
 
@@ -173,7 +149,7 @@ data FungibleState     : bits64#8 U64 | (|)
 data FungibleType      : unsigned64Bit#8 | (|)
 
 
-@mnemonic(bazooka-couple-summer)
+@mnemonic(melody-granite-cave)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , flags CommitVerify.ReservedBytes1
@@ -183,14 +159,12 @@ data Genesis           : ffv Ffv
                        , metadata Metadata
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
-                       , valencies Valencies
                        , validator CommitVerify.ReservedBytes1
 
-@mnemonic(concept-gloria-shock)
+@mnemonic(strong-mister-version)
 data GenesisSchema     : metadata {MetaType ^ ..0xff}
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
-                       , valencies {ValencyType ^ ..0xff}
                        , validator AluVM.LibSite?
 
 @mnemonic(initial-malta-sierra)
@@ -235,7 +209,7 @@ data Metadata          : {MetaType -> ^ ..0xff MetaValue}
 @mnemonic(source-olga-mirage)
 data Occurrences       : min U16, max U16
 
-@mnemonic(survive-citizen-harris)
+@mnemonic(tactic-china-order)
 data OpCommitment      : ffv Ffv
                        , nonce U64
                        , opType TypeCommitment
@@ -243,8 +217,6 @@ data OpCommitment      : ffv Ffv
                        , globals CommitVerify.MerkleHash
                        , inputs CommitVerify.MerkleHash
                        , assignments CommitVerify.MerkleHash
-                       , redeemed CommitVerify.StrictHash
-                       , valencies CommitVerify.StrictHash
                        , witness CommitVerify.MerkleHash
                        , validator CommitVerify.StrictHash
 
@@ -262,9 +234,6 @@ data OwnedStateSchema  : declarative ()
                        | structured StrictTypes.SemId
                        | attachment MediaType
 
-@mnemonic(anita-vega-pirate)
-data Redeemed          : {ValencyType -> ^ ..0xff OpId}
-
 @mnemonic(simple-bombay-salute)
 data RevealedAttach    : file AttachState, salt U64
 
@@ -274,7 +243,7 @@ data RevealedData      : value DataState, salt U128
 @mnemonic(escape-nylon-client)
 data RevealedFungible  : value FungibleState
 
-@mnemonic(corona-igloo-sierra)
+@mnemonic(ohio-carrot-grand)
 data Schema            : ffv Ffv
                        , flags CommitVerify.ReservedBytes1
                        , name StrictTypes.TypeName
@@ -283,16 +252,14 @@ data Schema            : ffv Ffv
                        , metaTypes {MetaType -> ^ ..0xff StrictTypes.SemId}
                        , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
                        , ownedTypes {AssignmentType -> ^ ..0xff OwnedStateSchema}
-                       , valencyTypes {ValencyType ^ ..0xff}
                        , genesis GenesisSchema
-                       , extensions {ExtensionType -> ^ ..0xff ExtensionSchema}
                        , transitions {TransitionType -> ^ ..0xff TransitionSchema}
                        , reserved CommitVerify.ReservedBytes8
 
 @mnemonic(ramirez-patron-simon)
 data SchemaId          : [Byte ^ 32]
 
-@mnemonic(michael-exact-eric)
+@mnemonic(gizmo-plastic-hazard)
 data Transition        : ffv Ffv
                        , contractId ContractId
                        , nonce U64
@@ -301,28 +268,25 @@ data Transition        : ffv Ffv
                        , globals GlobalState
                        , inputs Inputs
                        , assignments AssignmentsBlindSealTxPtr
-                       , valencies Valencies
                        , validator CommitVerify.ReservedBytes1
                        , witness CommitVerify.ReservedBytes2
 
 @mnemonic(rider-serpent-algebra)
 data TransitionBundle  : inputMap InputMap, knownTransitions {OpId -> ^ 1.. Transition}
 
-@mnemonic(pirate-lithium-side)
+@mnemonic(scratch-magnum-polaris)
 data TransitionSchema  : metadata {MetaType ^ ..0xff}
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , inputs {AssignmentType -> ^ ..0xff Occurrences}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
-                       , valencies {ValencyType ^ ..0xff}
                        , validator AluVM.LibSite?
 
 @mnemonic(picture-reflex-brigade)
 data TransitionType    : U16
 
-@mnemonic(biscuit-pandora-bagel)
+@mnemonic(yellow-young-stone)
 data TypeCommitment    : genesis BaseCommitment
                        | transition (ContractId, TransitionType)
-                       | extension (ContractId, ExtensionType)
 
 @mnemonic(giant-trinity-lagoon)
 data TypedAssignsBlindSealTxPtr : declarative [AssignVoidStateBlindSealTxPtr]
@@ -335,12 +299,6 @@ data TypedAssignsBlindSealTxid : declarative [AssignVoidStateBlindSealTxid]
                        | fungible [AssignRevealedValueBlindSealTxid]
                        | structured [AssignRevealedDataBlindSealTxid]
                        | attachment#255 [AssignRevealedAttachBlindSealTxid]
-
-@mnemonic(shock-jester-orion)
-data Valencies         : {ValencyType ^ ..0xff}
-
-@mnemonic(aloha-dublin-brush)
-data ValencyType       : U16
 
 @mnemonic(email-snow-safari)
 data VoidState         : ()

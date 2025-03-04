@@ -25,7 +25,7 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use aluvm::library::LibId;
-use amplify::confinement::{TinyOrdMap, TinyOrdSet};
+use amplify::confinement::TinyOrdMap;
 use amplify::{ByteArray, Bytes32};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use commit_verify::{
@@ -36,9 +36,7 @@ use strict_encoding::{
 };
 use strict_types::SemId;
 
-use super::{
-    AssignmentType, ExtensionSchema, GenesisSchema, OwnedStateSchema, TransitionSchema, ValencyType,
-};
+use super::{AssignmentType, GenesisSchema, OwnedStateSchema, TransitionSchema};
 use crate::{impl_serde_baid64, Ffv, GlobalStateSchema, Identity, LIB_NAME_RGB_COMMIT};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
@@ -68,21 +66,6 @@ impl MetaType {
 )]
 pub struct GlobalStateType(u16);
 impl GlobalStateType {
-    pub const fn with(ty: u16) -> Self { Self(ty) }
-}
-
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
-#[wrapper(FromStr, LowerHex, UpperHex)]
-#[display("0x{0:04X}")]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct ExtensionType(u16);
-impl ExtensionType {
     pub const fn with(ty: u16) -> Self { Self(ty) }
 }
 
@@ -160,9 +143,7 @@ pub struct Schema {
     pub meta_types: TinyOrdMap<MetaType, SemId>,
     pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
     pub owned_types: TinyOrdMap<AssignmentType, OwnedStateSchema>,
-    pub valency_types: TinyOrdSet<ValencyType>,
     pub genesis: GenesisSchema,
-    pub extensions: TinyOrdMap<ExtensionType, ExtensionSchema>,
     pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
 
     pub reserved: ReservedBytes<8, 0>,
@@ -182,9 +163,7 @@ impl CommitEncode for Schema {
         e.commit_to_map(&self.meta_types);
         e.commit_to_map(&self.global_types);
         e.commit_to_map(&self.owned_types);
-        e.commit_to_set(&self.valency_types);
         e.commit_to_serialized(&self.genesis);
-        e.commit_to_map(&self.extensions);
         e.commit_to_map(&self.transitions);
 
         e.commit_to_serialized(&self.reserved);
@@ -228,7 +207,6 @@ impl Schema {
             .iter()
             .copied()
             .chain(self.transitions.values().filter_map(|i| i.validator))
-            .chain(self.extensions.values().filter_map(|i| i.validator))
             .map(|site| site.lib)
     }
 

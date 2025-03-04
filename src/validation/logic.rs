@@ -32,14 +32,13 @@ use amplify::confinement::Confined;
 use amplify::Wrapper;
 use strict_types::TypeSystem;
 
-use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
+use crate::schema::{AssignmentsSchema, GlobalSchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OrdOpRef, RgbIsa, VmContext};
 use crate::{
     validation, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal, ExposedState,
-    Extension, GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema,
-    Metadata, OpId, Operation, Opout, OwnedStateSchema, RevealedState, Schema, Transition,
-    TypedAssigns, Valencies,
+    GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId,
+    Operation, Opout, OwnedStateSchema, RevealedState, Schema, Transition, TypedAssigns,
 };
 
 impl Schema {
@@ -57,24 +56,13 @@ impl Schema {
         let mut status = validation::Status::new();
 
         let empty_assign_schema = AssignmentsSchema::default();
-        let empty_valency_schema = ValencySchema::default();
-        let (
-            metadata_schema,
-            global_schema,
-            owned_schema,
-            redeem_schema,
-            assign_schema,
-            valency_schema,
-            validator,
-            ty,
-        ) = match op {
+        let (metadata_schema, global_schema, owned_schema, assign_schema, validator, ty) = match op
+        {
             OrdOpRef::Genesis(_) => (
                 &self.genesis.metadata,
                 &self.genesis.globals,
                 &empty_assign_schema,
-                &empty_valency_schema,
                 &self.genesis.assignments,
-                &self.genesis.valencies,
                 self.genesis.validator,
                 None::<u16>,
             ),
@@ -109,41 +97,9 @@ impl Schema {
                     &transition_schema.metadata,
                     &transition_schema.globals,
                     &transition_schema.inputs,
-                    &empty_valency_schema,
                     &transition_schema.assignments,
-                    &transition_schema.valencies,
                     transition_schema.validator,
                     Some(transition_type.into_inner()),
-                )
-            }
-            OrdOpRef::Extension(Extension { extension_type, .. }, ..) => {
-                // Right now we do not have actions to implement; but later
-                // we may have embedded procedures which must be verified
-                // here
-                /*
-                if let Some(procedure) = extension_type.abi.get(&ExtensionAction::NoOp) {
-
-                }
-                 */
-
-                let extension_schema = match self.extensions.get(extension_type) {
-                    None => {
-                        return validation::Status::with_failure(
-                            validation::Failure::SchemaUnknownExtensionType(opid, *extension_type),
-                        );
-                    }
-                    Some(extension_schema) => extension_schema,
-                };
-
-                (
-                    &extension_schema.metadata,
-                    &extension_schema.globals,
-                    &empty_assign_schema,
-                    &extension_schema.redeems,
-                    &extension_schema.assignments,
-                    &extension_schema.redeems,
-                    extension_schema.validator,
-                    Some(extension_type.into_inner()),
                 )
             }
         };
@@ -160,13 +116,6 @@ impl Schema {
         } else {
             Assignments::default()
         };
-        let mut redeemed = Valencies::default();
-        if let OrdOpRef::Extension(extension, ..) = op {
-            for valency in extension.redeemed.keys() {
-                redeemed.push(*valency).expect("same size");
-            }
-            status += self.validate_redeemed(opid, &redeemed, redeem_schema);
-        }
         status += match op.assignments() {
             AssignmentsRef::Genesis(assignments) => {
                 self.validate_owned_state(opid, assignments, assign_schema, consignment.types())
@@ -176,10 +125,8 @@ impl Schema {
             }
         };
 
-        status += self.validate_valencies(opid, op.valencies(), valency_schema);
-
         let genesis = consignment.genesis();
-        let op_info = OpInfo::with(opid, &op, &prev_state, &redeemed);
+        let op_info = OpInfo::with(opid, &op, &prev_state);
         let context = VmContext {
             contract_id: genesis.contract_id(),
             op_info,
@@ -370,26 +317,6 @@ impl Schema {
         status
     }
 
-    fn validate_redeemed(
-        &self,
-        id: OpId,
-        valencies: &Valencies,
-        valency_schema: &ValencySchema,
-    ) -> validation::Status {
-        let mut status = validation::Status::new();
-
-        valencies
-            .difference(valency_schema)
-            .for_each(|public_type_id| {
-                status.add_failure(validation::Failure::SchemaUnknownValencyType(
-                    id,
-                    *public_type_id,
-                ));
-            });
-
-        status
-    }
-
     fn validate_owned_state<Seal: ExposedSeal>(
         &self,
         id: OpId,
@@ -444,26 +371,6 @@ impl Schema {
                     .for_each(|data| status += assignment.validate(id, *state_id, data, types)),
             };
         }
-
-        status
-    }
-
-    fn validate_valencies(
-        &self,
-        id: OpId,
-        valencies: &Valencies,
-        valency_schema: &ValencySchema,
-    ) -> validation::Status {
-        let mut status = validation::Status::new();
-
-        valencies
-            .difference(valency_schema)
-            .for_each(|public_type_id| {
-                status.add_failure(validation::Failure::SchemaUnknownValencyType(
-                    id,
-                    *public_type_id,
-                ));
-            });
 
         status
     }

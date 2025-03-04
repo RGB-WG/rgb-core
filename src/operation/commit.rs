@@ -38,10 +38,9 @@ use strict_encoding::StrictDumb;
 
 use crate::{
     impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ChainNet, DataState,
-    ExposedSeal, ExposedState, Extension, ExtensionType, Ffv, Genesis, GlobalState,
-    GlobalStateType, Operation, Redeemed, RevealedAttach, RevealedData, RevealedState,
-    RevealedValue, SchemaId, SecretSeal, Transition, TransitionBundle, TransitionType,
-    TypedAssigns, LIB_NAME_RGB_COMMIT,
+    ExposedSeal, ExposedState, Ffv, Genesis, GlobalState, GlobalStateType, Operation,
+    RevealedAttach, RevealedData, RevealedState, RevealedValue, SchemaId, SecretSeal, Transition,
+    TransitionBundle, TransitionType, TypedAssigns, LIB_NAME_RGB_COMMIT,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -95,7 +94,7 @@ impl From<ContractId> for mpc::ProtocolId {
 
 impl_serde_baid64!(ContractId);
 
-/// Unique operation (genesis, extensions & state transition) identifier
+/// Unique operation (genesis & state transition) identifier
 /// equivalent to the commitment hash
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[wrapper(Deref, BorrowSlice, Hex, Index, RangeOps)]
@@ -248,9 +247,6 @@ pub enum TypeCommitment {
 
     #[strict_type(tag = 1)]
     Transition(ContractId, TransitionType),
-
-    #[strict_type(tag = 2)]
-    Extension(ContractId, ExtensionType),
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -266,8 +262,6 @@ pub struct OpCommitment {
     pub globals: MerkleHash,
     pub inputs: MerkleHash,
     pub assignments: MerkleHash,
-    pub redeemed: StrictHash,
-    pub valencies: StrictHash,
     pub witness: MerkleHash,
     pub validator: StrictHash,
 }
@@ -289,8 +283,6 @@ impl Genesis {
             globals: MerkleHash::merklize(&self.globals),
             inputs: MerkleHash::void(0, u256::ZERO),
             assignments: MerkleHash::merklize(&self.assignments),
-            redeemed: Redeemed::default().commit_id(),
-            valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
             validator: self.validator.commit_id(),
         }
@@ -309,26 +301,6 @@ impl Transition {
             globals: MerkleHash::merklize(&self.globals),
             inputs: MerkleHash::merklize(&self.inputs),
             assignments: MerkleHash::merklize(&self.assignments),
-            redeemed: Redeemed::default().commit_id(),
-            valencies: self.valencies.commit_id(),
-            witness: MerkleHash::void(0, u256::ZERO),
-            validator: self.validator.commit_id(),
-        }
-    }
-}
-
-impl Extension {
-    pub fn commit(&self) -> OpCommitment {
-        OpCommitment {
-            ffv: self.ffv,
-            nonce: self.nonce,
-            op_type: TypeCommitment::Extension(self.contract_id, self.extension_type),
-            metadata: self.metadata.commit_id(),
-            globals: MerkleHash::merklize(&self.globals),
-            inputs: MerkleHash::void(0, u256::ZERO),
-            assignments: MerkleHash::merklize(&self.assignments),
-            redeemed: self.redeemed.commit_id(),
-            valencies: self.valencies.commit_id(),
             witness: MerkleHash::void(0, u256::ZERO),
             validator: self.validator.commit_id(),
         }

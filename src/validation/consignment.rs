@@ -21,8 +21,7 @@
 // limitations under the License.
 
 //! Common API for accessing RGB contract operation graph, including individual
-//! state transitions, extensions, genesis, outputs, assignments &
-//! single-use-seal data.
+//! state transitions, genesis, outputs, assignments & single-use-seal data.
 
 use aluvm::library::{Lib, LibId};
 use amplify::confinement::ConfinedOrdMap;
@@ -31,9 +30,9 @@ use strict_types::TypeSystem;
 
 use super::EAnchor;
 use crate::{
-    AssignmentType, AssignmentsRef, BundleId, ContractId, Extension, ExtensionType, Genesis,
-    GlobalState, GraphSeal, Inputs, Metadata, OpFullType, OpId, OpType, Operation, Schema,
-    Transition, TransitionBundle, TransitionType, TypedAssigns, Valencies,
+    AssignmentType, AssignmentsRef, BundleId, ContractId, Genesis, GlobalState, GraphSeal, Inputs,
+    Metadata, OpFullType, OpId, OpType, Operation, Schema, Transition, TransitionBundle,
+    TransitionType, TypedAssigns,
 };
 
 pub const CONSIGNMENT_MAX_LIBS: usize = 1024;
@@ -46,8 +45,6 @@ pub enum OpRef<'op> {
     Genesis(&'op Genesis),
     #[from]
     Transition(&'op Transition),
-    #[from]
-    Extension(&'op Extension),
 }
 
 impl<'op> Operation for OpRef<'op> {
@@ -55,7 +52,6 @@ impl<'op> Operation for OpRef<'op> {
         match self {
             Self::Genesis(op) => op.op_type(),
             Self::Transition(op) => op.op_type(),
-            Self::Extension(op) => op.op_type(),
         }
     }
 
@@ -63,7 +59,6 @@ impl<'op> Operation for OpRef<'op> {
         match self {
             Self::Genesis(op) => op.full_type(),
             Self::Transition(op) => op.full_type(),
-            Self::Extension(op) => op.full_type(),
         }
     }
 
@@ -71,7 +66,6 @@ impl<'op> Operation for OpRef<'op> {
         match self {
             Self::Genesis(op) => op.id(),
             Self::Transition(op) => op.id(),
-            Self::Extension(op) => op.id(),
         }
     }
 
@@ -79,7 +73,6 @@ impl<'op> Operation for OpRef<'op> {
         match self {
             Self::Genesis(op) => op.contract_id(),
             Self::Transition(op) => op.contract_id(),
-            Self::Extension(op) => op.contract_id(),
         }
     }
 
@@ -87,7 +80,6 @@ impl<'op> Operation for OpRef<'op> {
         match self {
             Self::Genesis(op) => op.nonce(),
             Self::Transition(op) => op.nonce(),
-            Self::Extension(op) => op.nonce(),
         }
     }
 
@@ -95,15 +87,6 @@ impl<'op> Operation for OpRef<'op> {
         match self {
             Self::Genesis(op) => op.transition_type(),
             Self::Transition(op) => op.transition_type(),
-            Self::Extension(op) => op.transition_type(),
-        }
-    }
-
-    fn extension_type(&self) -> Option<ExtensionType> {
-        match self {
-            Self::Genesis(op) => op.extension_type(),
-            Self::Transition(op) => op.extension_type(),
-            Self::Extension(op) => op.extension_type(),
         }
     }
 
@@ -111,7 +94,6 @@ impl<'op> Operation for OpRef<'op> {
         match self {
             Self::Genesis(op) => op.metadata(),
             Self::Transition(op) => op.metadata(),
-            Self::Extension(op) => op.metadata(),
         }
     }
 
@@ -119,15 +101,6 @@ impl<'op> Operation for OpRef<'op> {
         match self {
             Self::Genesis(op) => op.globals(),
             Self::Transition(op) => op.globals(),
-            Self::Extension(op) => op.globals(),
-        }
-    }
-
-    fn valencies(&self) -> &Valencies {
-        match self {
-            Self::Genesis(op) => op.valencies(),
-            Self::Transition(op) => op.valencies(),
-            Self::Extension(op) => op.valencies(),
         }
     }
 
@@ -135,7 +108,6 @@ impl<'op> Operation for OpRef<'op> {
         match self {
             Self::Genesis(op) => (&op.assignments).into(),
             Self::Transition(op) => (&op.assignments).into(),
-            Self::Extension(op) => (&op.assignments).into(),
         }
     }
 
@@ -143,7 +115,6 @@ impl<'op> Operation for OpRef<'op> {
         match self {
             Self::Genesis(op) => op.assignments_by_type(t),
             Self::Transition(op) => op.assignments_by_type(t),
-            Self::Extension(op) => op.assignments_by_type(t),
         }
     }
 
@@ -151,7 +122,6 @@ impl<'op> Operation for OpRef<'op> {
         match self {
             Self::Genesis(op) => op.inputs(),
             Self::Transition(op) => op.inputs(),
-            Self::Extension(op) => op.inputs(),
         }
     }
 }
@@ -206,8 +176,8 @@ pub trait ConsignmentApi {
     /// validation.
     fn scripts(&self) -> &Scripts;
 
-    /// Retrieves reference to an operation (genesis, state transition or state
-    /// extension) matching the provided id, or `None` otherwise
+    /// Retrieves reference to an operation (genesis or state transition) matching the provided id,
+    /// or `None` otherwise
     fn operation(&self, opid: OpId) -> Option<OpRef>;
 
     /// Contract genesis.
