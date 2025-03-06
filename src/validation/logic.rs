@@ -90,7 +90,7 @@ impl Schema {
                             ),
                         );
                     }
-                    Some(transition_schema) => transition_schema,
+                    Some(transition_details) => &transition_details.transition_schema,
                 };
 
                 (
@@ -198,16 +198,20 @@ impl Schema {
                 continue;
             };
 
-            let sem_id = self.meta_types.get(type_id).expect(
-                "if this metadata type were absent, the schema would not be able to pass the \
-                 internal validation and we would not reach this point",
-            );
+            let sem_id = self
+                .meta_types
+                .get(type_id)
+                .expect(
+                    "if this metadata type were absent, the schema would not be able to pass the \
+                     internal validation and we would not reach this point",
+                )
+                .sem_id;
 
             if types
-                .strict_deserialize_type(*sem_id, value.as_ref())
+                .strict_deserialize_type(sem_id, value.as_ref())
                 .is_err()
             {
-                status.add_failure(validation::Failure::SchemaInvalidMetadata(opid, *sem_id));
+                status.add_failure(validation::Failure::SchemaInvalidMetadata(opid, sem_id));
             };
         }
 
@@ -245,10 +249,14 @@ impl Schema {
                 sem_id,
                 max_items,
                 reserved: _,
-            } = self.global_types.get(type_id).expect(
-                "if the field were absent, the schema would not be able to pass the internal \
-                 validation and we would not reach this point",
-            );
+            } = self
+                .global_types
+                .get(type_id)
+                .expect(
+                    "if the field were absent, the schema would not be able to pass the internal \
+                     validation and we would not reach this point",
+                )
+                .global_state_schema;
 
             // Checking number of field occurrences
             let count = set.len() as u16;
@@ -259,18 +267,18 @@ impl Schema {
             }
             if count as u32 > max_items.to_u32() {
                 status.add_failure(validation::Failure::SchemaGlobalStateLimit(
-                    opid, *type_id, count, *max_items,
+                    opid, *type_id, count, max_items,
                 ));
             }
 
             // Validating data types
             for data in set {
                 if types
-                    .strict_deserialize_type(*sem_id, data.as_ref())
+                    .strict_deserialize_type(sem_id, data.as_ref())
                     .is_err()
                 {
                     status.add_failure(validation::Failure::SchemaInvalidGlobalValue(
-                        opid, *type_id, *sem_id,
+                        opid, *type_id, sem_id,
                     ));
                 };
             }
@@ -350,10 +358,14 @@ impl Schema {
                 ));
             }
 
-            let assignment = &self.owned_types.get(state_id).expect(
-                "If the assignment were absent, the schema would not be able to pass the internal \
-                 validation and we would not reach this point",
-            );
+            let assignment = &self
+                .owned_types
+                .get(state_id)
+                .expect(
+                    "If the assignment were absent, the schema would not be able to pass the \
+                     internal validation and we would not reach this point",
+                )
+                .owned_state_schema;
 
             match owned_state.get(state_id) {
                 None => {}

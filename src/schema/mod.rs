@@ -31,5 +31,8 @@ pub use operations::{
     AssignmentType, AssignmentsSchema, GenesisSchema, GlobalSchema, MetaSchema, OpFullType,
     OpSchema, OpType, TransitionSchema,
 };
-pub use schema::{GlobalStateType, MetaType, Schema, SchemaId, TransitionType};
+pub use schema::{
+    AssignmentDetails, GlobalDetails, GlobalStateType, MetaDetails, MetaType, Schema, SchemaId,
+    TransitionDetails, TransitionType,
+};
 pub use state::{FungibleType, GlobalStateSchema, MediaType, OwnedStateSchema};

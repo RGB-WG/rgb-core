@@ -1,5 +1,5 @@
 {-
-  Id: stl:O97qYf!c-DQ5qDGf-DLQPobD-6u5bUjG-J8!Svk7-OIVz4fk#fossil-latin-random
+  Id: stl:BCPURiOu-GomuDWh-zQP$5BK-TMvP32R-WWBapOQ-r4CQwSI#cake-bingo-shadow
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -18,6 +18,7 @@ import BPCore#symbol-tropic-grand
   use TxPtr#italian-july-eddie
 
 import StrictTypes#century-comrade-chess
+  use FieldName#present-flute-herman
   use TypeName#edgar-carol-mystery
   use SemId#logic-absorb-hilton
 
@@ -36,6 +37,7 @@ import Std#ralph-blue-lucky
   use AsciiPrintable#ultra-sunset-format
   use AlphaNumLodash#percent-bingo-caesar
   use AlphaCapsLodash#duet-hammer-labor
+  use AlphaSmallLodash#pioneer-eagle-spell
 
 import Bitcoin#signal-color-cipher
   use Vout#brush-gloria-heroic
@@ -106,6 +108,11 @@ data AssignVoidStateBlindSealTxid : revealed (seal BPCore.BlindSealTxid
                        , state VoidState
                        , lock CommitVerify.ReservedBytes2)
 
+@mnemonic(sabine-magic-deal)
+data AssignmentDetails : ownedStateSchema OwnedStateSchema
+                       , name StrictTypes.FieldName
+                       , defaultTransition TransitionType
+
 @mnemonic(secret-penguin-limit)
 data AssignmentType    : U16
 
@@ -167,6 +174,9 @@ data GenesisSchema     : metadata {MetaType ^ ..0xff}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
                        , validator AluVM.LibSite?
 
+@mnemonic(eddie-super-cartoon)
+data GlobalDetails     : globalStateSchema GlobalStateSchema, name StrictTypes.FieldName
+
 @mnemonic(initial-malta-sierra)
 data GlobalState       : {GlobalStateType -> ^ ..0xff GlobalValues}
 
@@ -196,6 +206,9 @@ data Inputs            : {Input}
 @mnemonic(isabel-heaven-north)
 data MediaType         : any#255 | (|)
 
+
+@mnemonic(arena-janet-prepare)
+data MetaDetails       : semId StrictTypes.SemId, name StrictTypes.FieldName
 
 @mnemonic(quebec-mission-quota)
 data MetaType          : U16
@@ -243,17 +256,17 @@ data RevealedData      : value DataState, salt U128
 @mnemonic(escape-nylon-client)
 data RevealedFungible  : value FungibleState
 
-@mnemonic(ohio-carrot-grand)
+@mnemonic(mexico-resume-zipper)
 data Schema            : ffv Ffv
                        , flags CommitVerify.ReservedBytes1
                        , name StrictTypes.TypeName
                        , timestamp I64
                        , developer Identity
-                       , metaTypes {MetaType -> ^ ..0xff StrictTypes.SemId}
-                       , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
-                       , ownedTypes {AssignmentType -> ^ ..0xff OwnedStateSchema}
+                       , metaTypes {MetaType -> ^ ..0xff MetaDetails}
+                       , globalTypes {GlobalStateType -> ^ ..0xff GlobalDetails}
+                       , ownedTypes {AssignmentType -> ^ ..0xff AssignmentDetails}
                        , genesis GenesisSchema
-                       , transitions {TransitionType -> ^ ..0xff TransitionSchema}
+                       , transitions {TransitionType -> ^ ..0xff TransitionDetails}
                        , reserved CommitVerify.ReservedBytes8
 
 @mnemonic(ramirez-patron-simon)
@@ -273,6 +286,9 @@ data Transition        : ffv Ffv
 
 @mnemonic(rider-serpent-algebra)
 data TransitionBundle  : inputMap InputMap, knownTransitions {OpId -> ^ 1.. Transition}
+
+@mnemonic(orbit-pattern-goblin)
+data TransitionDetails : transitionSchema TransitionSchema, name StrictTypes.FieldName
 
 @mnemonic(scratch-magnum-polaris)
 data TransitionSchema  : metadata {MetaType ^ ..0xff}

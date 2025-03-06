@@ -29,27 +29,33 @@ impl Schema {
         let mut status = validation::Status::new();
 
         status += self.verify_operation(OpFullType::Genesis, &self.genesis);
-        for (type_id, schema) in &self.transitions {
-            status += self.verify_operation(OpFullType::StateTransition(*type_id), schema);
+        for (type_id, transition_details) in &self.transitions {
+            status += self.verify_operation(
+                OpFullType::StateTransition(*type_id),
+                &transition_details.transition_schema,
+            );
         }
 
-        for (type_id, sem_id) in &self.meta_types {
-            if !types.contains_key(sem_id) {
-                status.add_failure(validation::Failure::SchemaMetaSemIdUnknown(*type_id, *sem_id));
-            }
-        }
-
-        for (type_id, schema) in &self.global_types {
-            if !types.contains_key(&schema.sem_id) {
-                status.add_failure(validation::Failure::SchemaGlobalSemIdUnknown(
+        for (type_id, meta_details) in &self.meta_types {
+            if !types.contains_key(&meta_details.sem_id) {
+                status.add_failure(validation::Failure::SchemaMetaSemIdUnknown(
                     *type_id,
-                    schema.sem_id,
+                    meta_details.sem_id,
                 ));
             }
         }
 
-        for (type_id, schema) in &self.owned_types {
-            if let OwnedStateSchema::Structured(sem_id) = schema {
+        for (type_id, global_details) in &self.global_types {
+            if !types.contains_key(&global_details.global_state_schema.sem_id) {
+                status.add_failure(validation::Failure::SchemaGlobalSemIdUnknown(
+                    *type_id,
+                    global_details.global_state_schema.sem_id,
+                ));
+            }
+        }
+
+        for (type_id, assignment_details) in &self.owned_types {
+            if let OwnedStateSchema::Structured(sem_id) = &assignment_details.owned_state_schema {
                 if !types.contains_key(sem_id) {
                     status.add_failure(validation::Failure::SchemaOwnedSemIdUnknown(
                         *type_id, *sem_id,
