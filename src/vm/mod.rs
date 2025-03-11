@@ -27,7 +27,6 @@
 pub mod opcodes;
 mod isa;
 mod op_contract;
-mod op_timechain;
 #[macro_use]
 mod macroasm;
 mod contract;
@@ -40,4 +39,3 @@ pub use contract::{
 pub(crate) use contract::{OpInfo, VmContext};
 pub use isa::RgbIsa;
 pub use op_contract::ContractOp;
-pub use op_timechain::TimechainOp;

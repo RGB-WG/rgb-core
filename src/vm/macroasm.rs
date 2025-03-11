@@ -24,7 +24,7 @@
 macro_rules! rgbasm {
     ($( $tt:tt )+) => {{ #[allow(unused_imports)] {
         use amplify::num::{u4, u5};
-        use $crate::vm::{RgbIsa, ContractOp, TimechainOp};
+        use $crate::vm::{RgbIsa, ContractOp};
         use $crate::vm::aluasm_isa;
         use $crate::isa_instr;
         aluasm_isa! { RgbIsa<_> => $( $tt )+ }
