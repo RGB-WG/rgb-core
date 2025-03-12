@@ -21,7 +21,6 @@
 // limitations under the License.
 
 use amplify::num::u24;
-use commit_verify::ReservedBytes;
 use strict_encoding::Primitive;
 use strict_types::SemId;
 
@@ -66,7 +65,6 @@ pub enum OwnedStateSchema {
     Fungible(FungibleType),
     Structured(SemId),
     Attachment(MediaType),
-    // TODO: Computed state (RCP240327A) will be added here
 }
 
 impl OwnedStateSchema {
@@ -112,9 +110,6 @@ pub enum FungibleType {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct GlobalStateSchema {
-    // TODO: Reserved for computed state (RCP240327A): will be used as an enum tag with computed
-    //       state having value 1.
-    pub reserved: ReservedBytes<1>,
     pub sem_id: SemId,
     pub max_items: u24,
 }
@@ -122,7 +117,6 @@ pub struct GlobalStateSchema {
 impl GlobalStateSchema {
     pub fn once(sem_id: SemId) -> Self {
         GlobalStateSchema {
-            reserved: default!(),
             sem_id,
             max_items: u24::ONE,
         }
@@ -130,7 +124,6 @@ impl GlobalStateSchema {
 
     pub fn many(sem_id: SemId) -> Self {
         GlobalStateSchema {
-            reserved: default!(),
             sem_id,
             max_items: u24::MAX,
         }

@@ -43,7 +43,6 @@ Schema rec
     key is U16 aka=GlobalStateType
     value rec GlobalDetails
       globalStateSchema rec GlobalStateSchema
-        reserved bytes len=1 aka=ReservedBytes1
         semId bytes len=32 aka=SemId
         maxItems is U24
       name ascii aka=FieldName first=AlphaSmallLodash rest=AlphaNumLodash len=1..100

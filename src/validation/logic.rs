@@ -245,11 +245,7 @@ impl Schema {
                 .map(Confined::release)
                 .unwrap_or_default();
 
-            let GlobalStateSchema {
-                sem_id,
-                max_items,
-                reserved: _,
-            } = self
+            let GlobalStateSchema { sem_id, max_items } = self
                 .global_types
                 .get(type_id)
                 .expect(
