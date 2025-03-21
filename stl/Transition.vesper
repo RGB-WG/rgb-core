@@ -52,7 +52,7 @@ Transition rec
   assignments map len=0..MAX8 aka=AssignmentsBlindSealTxPtr
     key is U16 aka=AssignmentType
     value union TypedAssignsBlindSealTxPtr
-      declarative list len=0..MAX16 wrapped tag=0
+      declarative list len=1..MAX16 wrapped aka=AssignVecAssignVoidStateBlindSealTxPtr tag=0
         AssignVoidStateBlindSealTxPtr union
           revealed rec tag=0
             seal rec BlindSealTxPtr
@@ -67,7 +67,7 @@ Transition rec
             seal bytes len=32 aka=SecretSeal
             state is Unit aka=VoidState
             lock bytes len=2 aka=ReservedBytes2
-      fungible list len=0..MAX16 wrapped tag=1
+      fungible list len=1..MAX16 wrapped aka=AssignVecAssignRevealedValueBlindSealTxPtr tag=1
         AssignRevealedValueBlindSealTxPtr union
           revealed rec tag=0
             seal rec BlindSealTxPtr
@@ -86,7 +86,7 @@ Transition rec
               value union FungibleState
                 bits64 is U64 wrapped tag=0
             lock bytes len=2 aka=ReservedBytes2
-      structured list len=0..MAX16 wrapped tag=2
+      structured list len=1..MAX16 wrapped aka=AssignVecAssignRevealedDataBlindSealTxPtr tag=2
         AssignRevealedDataBlindSealTxPtr union
           revealed rec tag=0
             seal rec BlindSealTxPtr
@@ -105,7 +105,7 @@ Transition rec
               value bytes len=0..MAX16 aka=DataState
               salt is U128
             lock bytes len=2 aka=ReservedBytes2
-      attachment list len=0..MAX16 wrapped tag=3
+      attachment list len=1..MAX16 wrapped aka=AssignVecAssignRevealedAttachBlindSealTxPtr tag=3
         AssignRevealedAttachBlindSealTxPtr union
           revealed rec tag=0
             seal rec BlindSealTxPtr

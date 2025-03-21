@@ -1,5 +1,5 @@
 {-
-  Id: stl:eyIcK1Y8-vJmWKzi-CmYdpc4-bcfjuep-b0Bom0W-h6$8hJw#culture-pamela-ballad
+  Id: stl:!biPP1$Y-7BZyhSV-G4WQNlq-eDiicmt-K7hBJq9-4cyQk8o#tennis-nirvana-asia
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -91,6 +91,30 @@ data AssignRevealedValueBlindSealTxid : revealed (seal BPCore.BlindSealTxid
                        | confidentialSeal (seal BPCore.SecretSeal
                        , state RevealedFungible
                        , lock CommitVerify.ReservedBytes2)
+
+@mnemonic(pearl-epoxy-glass)
+data AssignVecAssignRevealedAttachBlindSealTxPtr : [AssignRevealedAttachBlindSealTxPtr ^ 1..]
+
+@mnemonic(person-finance-visible)
+data AssignVecAssignRevealedAttachBlindSealTxid : [AssignRevealedAttachBlindSealTxid ^ 1..]
+
+@mnemonic(critic-alcohol-actor)
+data AssignVecAssignRevealedDataBlindSealTxPtr : [AssignRevealedDataBlindSealTxPtr ^ 1..]
+
+@mnemonic(sonata-food-tina)
+data AssignVecAssignRevealedDataBlindSealTxid : [AssignRevealedDataBlindSealTxid ^ 1..]
+
+@mnemonic(magic-pupil-model)
+data AssignVecAssignRevealedValueBlindSealTxPtr : [AssignRevealedValueBlindSealTxPtr ^ 1..]
+
+@mnemonic(equator-sector-regard)
+data AssignVecAssignRevealedValueBlindSealTxid : [AssignRevealedValueBlindSealTxid ^ 1..]
+
+@mnemonic(begin-process-outside)
+data AssignVecAssignVoidStateBlindSealTxPtr : [AssignVoidStateBlindSealTxPtr ^ 1..]
+
+@mnemonic(arena-neuron-cantina)
+data AssignVecAssignVoidStateBlindSealTxid : [AssignVoidStateBlindSealTxid ^ 1..]
 
 @mnemonic(cannon-present-weekend)
 data AssignVoidStateBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr
@@ -302,17 +326,17 @@ data TransitionType    : U16
 data TypeCommitment    : genesis BaseCommitment
                        | transition (ContractId, TransitionType)
 
-@mnemonic(giant-trinity-lagoon)
-data TypedAssignsBlindSealTxPtr : declarative [AssignVoidStateBlindSealTxPtr]
-                       | fungible [AssignRevealedValueBlindSealTxPtr]
-                       | structured [AssignRevealedDataBlindSealTxPtr]
-                       | attachment#255 [AssignRevealedAttachBlindSealTxPtr]
+@mnemonic(alarm-genesis-mambo)
+data TypedAssignsBlindSealTxPtr : declarative AssignVecAssignVoidStateBlindSealTxPtr
+                       | fungible AssignVecAssignRevealedValueBlindSealTxPtr
+                       | structured AssignVecAssignRevealedDataBlindSealTxPtr
+                       | attachment#255 AssignVecAssignRevealedAttachBlindSealTxPtr
 
-@mnemonic(penguin-raja-machine)
-data TypedAssignsBlindSealTxid : declarative [AssignVoidStateBlindSealTxid]
-                       | fungible [AssignRevealedValueBlindSealTxid]
-                       | structured [AssignRevealedDataBlindSealTxid]
-                       | attachment#255 [AssignRevealedAttachBlindSealTxid]
+@mnemonic(initial-robot-archive)
+data TypedAssignsBlindSealTxid : declarative AssignVecAssignVoidStateBlindSealTxid
+                       | fungible AssignVecAssignRevealedValueBlindSealTxid
+                       | structured AssignVecAssignRevealedDataBlindSealTxid
+                       | attachment#255 AssignVecAssignRevealedAttachBlindSealTxid
 
 @mnemonic(email-snow-safari)
 data VoidState         : ()

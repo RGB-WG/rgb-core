@@ -21,17 +21,19 @@
 // limitations under the License.
 
 use std::cell::RefCell;
-use std::collections::BTreeSet;
+use std::collections::btree_map::Entry;
+use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
 use aluvm::data::Number;
 use aluvm::isa::Instr;
 use aluvm::reg::{Reg32, RegA};
 use aluvm::Vm;
-use amplify::confinement::Confined;
+use amplify::confinement::{Confined, NonEmptyVec};
 use amplify::Wrapper;
 use strict_types::TypeSystem;
 
+use crate::assignments::AssignVec;
 use crate::schema::{AssignmentsSchema, GlobalSchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OrdOpRef, RgbIsa, VmContext};
@@ -390,7 +392,7 @@ fn extract_prev_state<C: ConsignmentApi>(
     inputs: &Inputs,
     status: &mut validation::Status,
 ) -> Assignments<GraphSeal> {
-    let mut assignments = bmap! {};
+    let mut assignments: BTreeMap<AssignmentType, TypedAssigns<_>> = bmap! {};
     for input in inputs {
         let Opout { op, ty, no } = input.prev_out;
 
@@ -406,12 +408,17 @@ fn extract_prev_state<C: ConsignmentApi>(
         match prev_op.assignments_by_type(ty) {
             Some(TypedAssigns::Declarative(prev_assignments)) => {
                 if let Some(prev_assign) = prev_assignments.get(no) {
-                    if let Some(typed_assigns) = assignments
-                        .entry(ty)
-                        .or_insert_with(|| TypedAssigns::Declarative(Default::default()))
-                        .as_declarative_mut()
-                    {
-                        typed_assigns.push(prev_assign.clone()).expect("same size");
+                    match assignments.entry(ty) {
+                        Entry::Occupied(mut entry) => {
+                            if let Some(typed_assigns) = entry.get_mut().as_declarative_mut() {
+                                typed_assigns.push(prev_assign.clone()).expect("same size");
+                            }
+                        }
+                        Entry::Vacant(entry) => {
+                            entry.insert(TypedAssigns::Declarative(AssignVec::with(
+                                NonEmptyVec::with(prev_assign.clone()),
+                            )));
+                        }
                     }
                 } else {
                     status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
@@ -419,12 +426,17 @@ fn extract_prev_state<C: ConsignmentApi>(
             }
             Some(TypedAssigns::Fungible(prev_assignments)) => {
                 if let Some(prev_assign) = prev_assignments.get(no) {
-                    if let Some(typed_assigns) = assignments
-                        .entry(ty)
-                        .or_insert_with(|| TypedAssigns::Fungible(Default::default()))
-                        .as_fungible_mut()
-                    {
-                        typed_assigns.push(prev_assign.clone()).expect("same size");
+                    match assignments.entry(ty) {
+                        Entry::Occupied(mut entry) => {
+                            if let Some(typed_assigns) = entry.get_mut().as_fungible_mut() {
+                                typed_assigns.push(prev_assign.clone()).expect("same size");
+                            }
+                        }
+                        Entry::Vacant(entry) => {
+                            entry.insert(TypedAssigns::Fungible(AssignVec::with(
+                                NonEmptyVec::with(prev_assign.clone()),
+                            )));
+                        }
                     }
                 } else {
                     status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
@@ -432,12 +444,17 @@ fn extract_prev_state<C: ConsignmentApi>(
             }
             Some(TypedAssigns::Structured(prev_assignments)) => {
                 if let Some(prev_assign) = prev_assignments.get(no) {
-                    if let Some(typed_assigns) = assignments
-                        .entry(ty)
-                        .or_insert_with(|| TypedAssigns::Structured(Default::default()))
-                        .as_structured_mut()
-                    {
-                        typed_assigns.push(prev_assign.clone()).expect("same size");
+                    match assignments.entry(ty) {
+                        Entry::Occupied(mut entry) => {
+                            if let Some(typed_assigns) = entry.get_mut().as_structured_mut() {
+                                typed_assigns.push(prev_assign.clone()).expect("same size");
+                            }
+                        }
+                        Entry::Vacant(entry) => {
+                            entry.insert(TypedAssigns::Structured(AssignVec::with(
+                                NonEmptyVec::with(prev_assign.clone()),
+                            )));
+                        }
                     }
                 } else {
                     status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
@@ -445,12 +462,17 @@ fn extract_prev_state<C: ConsignmentApi>(
             }
             Some(TypedAssigns::Attachment(prev_assignments)) => {
                 if let Some(prev_assign) = prev_assignments.get(no) {
-                    if let Some(typed_assigns) = assignments
-                        .entry(ty)
-                        .or_insert_with(|| TypedAssigns::Attachment(Default::default()))
-                        .as_attachment_mut()
-                    {
-                        typed_assigns.push(prev_assign.clone()).expect("same size");
+                    match assignments.entry(ty) {
+                        Entry::Occupied(mut entry) => {
+                            if let Some(typed_assigns) = entry.get_mut().as_attachment_mut() {
+                                typed_assigns.push(prev_assign.clone()).expect("same size");
+                            }
+                        }
+                        Entry::Vacant(entry) => {
+                            entry.insert(TypedAssigns::Attachment(AssignVec::with(
+                                NonEmptyVec::with(prev_assign.clone()),
+                            )));
+                        }
                     }
                 } else {
                     status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
