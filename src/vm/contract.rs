@@ -29,7 +29,7 @@ use std::rc::Rc;
 
 use amplify::confinement;
 use amplify::num::u24;
-use bp::{Outpoint, Txid};
+use bp::{BlockHeight, Outpoint, Txid};
 use chrono::{MappedLocalTime, TimeZone, Utc};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
@@ -178,9 +178,8 @@ pub struct WitnessPos {
     #[getter(as_copy)]
     layer1: Layer1,
 
-    // TODO: Move BlockHeight from bp-wallet to bp-consensus and use it here
     #[getter(as_copy)]
-    height: NonZeroU32,
+    height: BlockHeight,
 
     #[getter(as_copy)]
     timestamp: i64,
