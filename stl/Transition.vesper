@@ -42,7 +42,7 @@ Transition rec
     key is U16 aka=GlobalStateType
     value list len=1..MAX16 aka=GlobalValues
       element bytes len=0..MAX16 aka=DataState
-  inputs set len=0..MAX16 aka=Inputs
+  inputs set len=1..MAX16 aka=Inputs
     Input rec
       prevOut rec Opout
         op bytes len=32 aka=OpId

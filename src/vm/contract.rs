@@ -34,9 +34,8 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
     AssignmentType, Assignments, AssignmentsRef, AttachState, BundleId, ContractId, DataState,
-    FungibleState, Genesis, GlobalState, GlobalStateType, GraphSeal, Inputs, Layer1, Metadata,
-    OpFullType, OpId, OpType, Operation, Transition, TransitionType, TypedAssigns,
-    LIB_NAME_RGB_LOGIC,
+    FungibleState, Genesis, GlobalState, GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType,
+    OpId, OpType, Operation, Transition, TransitionType, TypedAssigns, LIB_NAME_RGB_LOGIC,
 };
 
 /// The type is used during validation and computing a contract state. It
@@ -154,13 +153,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.assignments_by_type(t),
             OrdOpRef::Transition(op, ..) => op.assignments_by_type(t),
-        }
-    }
-
-    fn inputs(&self) -> Inputs {
-        match self {
-            OrdOpRef::Genesis(op) => op.inputs(),
-            OrdOpRef::Transition(op, ..) => op.inputs(),
         }
     }
 }

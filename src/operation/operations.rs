@@ -26,7 +26,7 @@ use std::iter;
 use std::num::ParseIntError;
 use std::str::FromStr;
 
-use amplify::confinement::{Confined, SmallOrdSet, TinyOrdSet};
+use amplify::confinement::{Confined, NonEmptyOrdSet, TinyOrdSet, U16};
 use amplify::{hex, Wrapper};
 use commit_verify::{
     CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, ReservedBytes,
@@ -95,18 +95,17 @@ impl FromStr for Opout {
     }
 }
 
-#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, dumb = Self(NonEmptyOrdSet::with(Input::strict_dumb())))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-// TODO: Consider requiring minimum number of inputs to be 1
-pub struct Inputs(SmallOrdSet<Input>);
+pub struct Inputs(NonEmptyOrdSet<Input, U16>);
 
 impl<'a> IntoIterator for &'a Inputs {
     type Item = Input;
@@ -187,9 +186,6 @@ pub trait Operation {
     fn assignments(&self) -> AssignmentsRef;
 
     fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>>;
-
-    /// For genesis always returns an empty list.
-    fn inputs(&self) -> Inputs;
 
     /// Provides summary about parts of the operation which are revealed.
     fn disclose(&self) -> OpDisclose {
@@ -374,6 +370,8 @@ impl Transition {
     /// [`Inputs`] wrapper structure which this operation updates with
     /// state transition ("parent owned rights").
     pub fn prev_state(&self) -> &Inputs { &self.inputs }
+
+    pub fn inputs(&self) -> Inputs { self.inputs.clone() }
 }
 
 impl Operation for Genesis {
@@ -410,9 +408,6 @@ impl Operation for Genesis {
             .get(&t)
             .map(TypedAssigns::transmutate_seals)
     }
-
-    #[inline]
-    fn inputs(&self) -> Inputs { empty!() }
 }
 
 impl Operation for Transition {
@@ -447,8 +442,6 @@ impl Operation for Transition {
     fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         self.assignments.get(&t).cloned()
     }
-
-    fn inputs(&self) -> Inputs { self.inputs.clone() }
 }
 
 #[cfg(test)]

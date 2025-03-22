@@ -30,7 +30,7 @@ use strict_types::TypeSystem;
 
 use super::EAnchor;
 use crate::{
-    AssignmentType, AssignmentsRef, BundleId, ContractId, Genesis, GlobalState, GraphSeal, Inputs,
+    AssignmentType, AssignmentsRef, BundleId, ContractId, Genesis, GlobalState, GraphSeal,
     Metadata, OpFullType, OpId, OpType, Operation, Schema, Transition, TransitionBundle,
     TransitionType, TypedAssigns,
 };
@@ -115,13 +115,6 @@ impl<'op> Operation for OpRef<'op> {
         match self {
             Self::Genesis(op) => op.assignments_by_type(t),
             Self::Transition(op) => op.assignments_by_type(t),
-        }
-    }
-
-    fn inputs(&self) -> Inputs {
-        match self {
-            Self::Genesis(op) => op.inputs(),
-            Self::Transition(op) => op.inputs(),
         }
     }
 }
