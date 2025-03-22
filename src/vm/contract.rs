@@ -27,7 +27,6 @@ use std::fmt::{self, Debug, Display, Formatter};
 use std::num::NonZeroU32;
 use std::rc::Rc;
 
-use amplify::confinement;
 use amplify::num::u24;
 use bp::{BlockHeight, Outpoint, Txid};
 use chrono::{MappedLocalTime, TimeZone, Utc};
@@ -540,10 +539,9 @@ pub trait ContractStateAccess: Debug {
 
 pub trait ContractStateEvolve {
     type Context<'ctx>;
+    type Error: std::error::Error;
     fn init(context: Self::Context<'_>) -> Self;
-    // TODO: distinguish contract validation failure errors from connectivity
-    //       errors. Allow custom error types here.
-    fn evolve_state(&mut self, op: OrdOpRef) -> Result<(), confinement::Error>;
+    fn evolve_state(&mut self, op: OrdOpRef) -> Result<(), Self::Error>;
 }
 
 pub struct VmContext<'op, S: ContractStateAccess> {
