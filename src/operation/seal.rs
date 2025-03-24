@@ -64,18 +64,6 @@ impl ExposedSeal for GraphSeal {}
 
 impl ExposedSeal for GenesisSeal {}
 
-/*
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct SealPreimage(Bytes32);
- */
-
 #[cfg(test)]
 mod test {
     use amplify::hex::FromHex;
