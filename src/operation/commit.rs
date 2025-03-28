@@ -38,9 +38,9 @@ use strict_encoding::StrictDumb;
 
 use crate::{
     impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ChainNet, DataState,
-    ExposedSeal, ExposedState, Ffv, Genesis, GlobalState, GlobalStateType, Operation,
-    RevealedAttach, RevealedData, RevealedState, RevealedValue, SchemaId, SecretSeal, Transition,
-    TransitionBundle, TransitionType, TypedAssigns, LIB_NAME_RGB_COMMIT,
+    ExposedSeal, ExposedState, Ffv, Genesis, GlobalState, GlobalStateType, Operation, RevealedData,
+    RevealedState, RevealedValue, SchemaId, SecretSeal, Transition, TransitionBundle,
+    TransitionType, TypedAssigns, LIB_NAME_RGB_COMMIT,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -190,7 +190,6 @@ pub struct OpDisclose {
     pub seals: MediumOrdMap<AssignmentIndex, SecretSeal>,
     pub fungible: MediumOrdMap<AssignmentIndex, RevealedValue>,
     pub data: MediumOrdMap<AssignmentIndex, RevealedData>,
-    pub attach: MediumOrdMap<AssignmentIndex, RevealedAttach>,
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -313,7 +312,6 @@ impl RevealedState {
             Self::Void => {}
             Self::Fungible(val) => e.commit_to_serialized(&val),
             Self::Structured(dat) => e.commit_to_serialized(dat),
-            Self::Attachment(att) => e.commit_to_serialized(att),
         }
     }
 }
@@ -369,9 +367,6 @@ impl<Seal: ExposedSeal> MerkleLeaves for Assignments<Seal> {
                         list.iter().map(|a| a.commitment(*ty)).collect()
                     }
                     TypedAssigns::Structured(list) => {
-                        list.iter().map(|a| a.commitment(*ty)).collect()
-                    }
-                    TypedAssigns::Attachment(list) => {
                         list.iter().map(|a| a.commitment(*ty)).collect()
                     }
                 }

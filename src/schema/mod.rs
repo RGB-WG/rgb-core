@@ -35,4 +35,4 @@ pub use schema::{
     AssignmentDetails, GlobalDetails, GlobalStateType, MetaDetails, MetaType, Schema, SchemaId,
     TransitionDetails, TransitionType,
 };
-pub use state::{FungibleType, GlobalStateSchema, MediaType, OwnedStateSchema};
+pub use state::{FungibleType, GlobalStateSchema, OwnedStateSchema};

@@ -1,5 +1,5 @@
 {-
-  Id: stl:zBxngQHW-1QPll66-1Mlwfe2-KaK0$jC-k6keyzn-6g8vMMs#media-norway-talent
+  Id: stl:pjinUG!S-9vK!Zks-lJfwoRW-XvQYSuF-90Dpgm0-gP$TQ7c#ibiza-monica-quiz
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -44,22 +44,6 @@ import Bitcoin#signal-color-cipher
   use Txid#shallow-light-reverse
 
 
-@mnemonic(virus-trick-chris)
-data AssignRevealedAttachBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr
-                       , state RevealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal BPCore.SecretSeal
-                       , state RevealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-
-@mnemonic(daniel-maze-tulip)
-data AssignRevealedAttachBlindSealTxid : revealed (seal BPCore.BlindSealTxid
-                       , state RevealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal BPCore.SecretSeal
-                       , state RevealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-
 @mnemonic(consul-touch-ambient)
 data AssignRevealedDataBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr
                        , state RevealedData
@@ -91,12 +75,6 @@ data AssignRevealedValueBlindSealTxid : revealed (seal BPCore.BlindSealTxid
                        | confidentialSeal (seal BPCore.SecretSeal
                        , state RevealedFungible
                        , lock CommitVerify.ReservedBytes2)
-
-@mnemonic(pearl-epoxy-glass)
-data AssignVecAssignRevealedAttachBlindSealTxPtr : [AssignRevealedAttachBlindSealTxPtr ^ 1..]
-
-@mnemonic(person-finance-visible)
-data AssignVecAssignRevealedAttachBlindSealTxid : [AssignRevealedAttachBlindSealTxid ^ 1..]
 
 @mnemonic(critic-alcohol-actor)
 data AssignVecAssignRevealedDataBlindSealTxPtr : [AssignRevealedDataBlindSealTxPtr ^ 1..]
@@ -145,12 +123,6 @@ data AssignmentsBlindSealTxPtr : {AssignmentType -> ^ ..0xff TypedAssignsBlindSe
 
 @mnemonic(baker-size-sonar)
 data AssignmentsBlindSealTxid : {AssignmentType -> ^ ..0xff TypedAssignsBlindSealTxid}
-
-@mnemonic(factor-hair-everest)
-data AttachId          : [Byte ^ 32]
-
-@mnemonic(harvard-burma-bicycle)
-data AttachState       : id AttachId, mediaType MediaType
 
 @mnemonic(stadium-stadium-vacuum)
 data BaseCommitment    : flags CommitVerify.ReservedBytes1
@@ -225,10 +197,6 @@ data InputMap          : {Bitcoin.Vout -> ^ 1.. {OpId}}
 @mnemonic(taboo-lazarus-sushi)
 data Inputs            : {Input ^ 1..}
 
-@mnemonic(isabel-heaven-north)
-data MediaType         : any#255 | (|)
-
-
 @mnemonic(arena-janet-prepare)
 data MetaDetails       : semId StrictTypes.SemId, name StrictTypes.FieldName
 
@@ -263,14 +231,10 @@ data Opout             : op OpId
                        , ty AssignmentType
                        , no U16
 
-@mnemonic(neutral-mixer-visual)
+@mnemonic(sincere-teacher-stella)
 data OwnedStateSchema  : declarative ()
                        | fungible FungibleType
                        | structured StrictTypes.SemId
-                       | attachment MediaType
-
-@mnemonic(simple-bombay-salute)
-data RevealedAttach    : file AttachState, salt U64
 
 @mnemonic(sleep-source-figure)
 data RevealedData      : value DataState, salt U128
@@ -330,17 +294,15 @@ data TransitionType    : U16
 data TypeCommitment    : genesis BaseCommitment
                        | transition (ContractId, TransitionType)
 
-@mnemonic(alarm-genesis-mambo)
+@mnemonic(ship-trilogy-clara)
 data TypedAssignsBlindSealTxPtr : declarative AssignVecAssignVoidStateBlindSealTxPtr
                        | fungible AssignVecAssignRevealedValueBlindSealTxPtr
                        | structured AssignVecAssignRevealedDataBlindSealTxPtr
-                       | attachment#255 AssignVecAssignRevealedAttachBlindSealTxPtr
 
-@mnemonic(initial-robot-archive)
+@mnemonic(felix-compare-history)
 data TypedAssignsBlindSealTxid : declarative AssignVecAssignVoidStateBlindSealTxid
                        | fungible AssignVecAssignRevealedValueBlindSealTxid
                        | structured AssignVecAssignRevealedDataBlindSealTxid
-                       | attachment#255 AssignVecAssignRevealedAttachBlindSealTxid
 
 @mnemonic(email-snow-safari)
 data VoidState         : ()

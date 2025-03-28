@@ -32,8 +32,8 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use super::ExposedState;
 use crate::operation::seal::GenesisSeal;
 use crate::{
-    AssignmentType, ExposedSeal, GraphSeal, RevealedAttach, RevealedData, RevealedValue,
-    SecretSeal, StateType, VoidState, LIB_NAME_RGB_COMMIT,
+    AssignmentType, ExposedSeal, GraphSeal, RevealedData, RevealedValue, SecretSeal, StateType,
+    VoidState, LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, From)]
@@ -72,7 +72,6 @@ pub struct UnknownDataError;
 pub type AssignRights<Seal> = Assign<VoidState, Seal>;
 pub type AssignFungible<Seal> = Assign<RevealedValue, Seal>;
 pub type AssignData<Seal> = Assign<RevealedData, Seal>;
-pub type AssignAttach<Seal> = Assign<RevealedAttach, Seal>;
 
 /// State data are assigned to a seal definition, which means that they are
 /// owned by a person controlling spending of the seal UTXO, unless the seal
@@ -265,8 +264,6 @@ pub enum TypedAssigns<Seal: ExposedSeal> {
     Fungible(AssignVec<AssignFungible<Seal>>),
     #[strict_type(tag = 0x02)]
     Structured(AssignVec<AssignData<Seal>>),
-    #[strict_type(tag = 0xFF)]
-    Attachment(AssignVec<AssignAttach<Seal>>),
 }
 
 impl<Seal: ExposedSeal> Conceal for TypedAssigns<Seal> {
@@ -288,11 +285,6 @@ impl<Seal: ExposedSeal> Conceal for TypedAssigns<Seal> {
                 let inner = NonEmptyVec::try_from_iter(concealed_iter).expect("same size");
                 TypedAssigns::Structured(AssignVec::with(inner))
             }
-            TypedAssigns::Attachment(s) => {
-                let concealed_iter = s.iter().map(AssignAttach::<Seal>::conceal);
-                let inner = NonEmptyVec::try_from_iter(concealed_iter).expect("same size");
-                TypedAssigns::Attachment(AssignVec::with(inner))
-            }
         }
     }
 }
@@ -303,7 +295,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
             TypedAssigns::Declarative(set) => set.is_empty(),
             TypedAssigns::Fungible(set) => set.is_empty(),
             TypedAssigns::Structured(set) => set.is_empty(),
-            TypedAssigns::Attachment(set) => set.is_empty(),
         }
     }
 
@@ -312,7 +303,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
             TypedAssigns::Declarative(set) => set.len_u16(),
             TypedAssigns::Fungible(set) => set.len_u16(),
             TypedAssigns::Structured(set) => set.len_u16(),
-            TypedAssigns::Attachment(set) => set.len_u16(),
         }
     }
 
@@ -322,7 +312,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
             TypedAssigns::Declarative(_) => StateType::Void,
             TypedAssigns::Fungible(_) => StateType::Fungible,
             TypedAssigns::Structured(_) => StateType::Structured,
-            TypedAssigns::Attachment(_) => StateType::Attachment,
         }
     }
 
@@ -334,9 +323,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
 
     #[inline]
     pub fn is_structured(&self) -> bool { matches!(self, TypedAssigns::Structured(_)) }
-
-    #[inline]
-    pub fn is_attachment(&self) -> bool { matches!(self, TypedAssigns::Attachment(_)) }
 
     #[inline]
     pub fn as_declarative(&self) -> &[AssignRights<Seal>] {
@@ -358,14 +344,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     pub fn as_structured(&self) -> &[AssignData<Seal>] {
         match self {
             TypedAssigns::Structured(set) => set,
-            _ => Default::default(),
-        }
-    }
-
-    #[inline]
-    pub fn as_attachment(&self) -> &[AssignAttach<Seal>] {
-        match self {
-            TypedAssigns::Attachment(set) => set,
             _ => Default::default(),
         }
     }
@@ -394,14 +372,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         }
     }
 
-    #[inline]
-    pub fn as_attachment_mut(&mut self) -> Option<&mut NonEmptyVec<AssignAttach<Seal>, U16>> {
-        match self {
-            TypedAssigns::Attachment(set) => Some(set),
-            _ => None,
-        }
-    }
-
     /// If seal definition does not exist, returns [`UnknownDataError`]. If the
     /// seal is confidential, returns `Ok(None)`; otherwise returns revealed
     /// seal data packed as `Ok(Some(`[`Seal`]`))`
@@ -416,10 +386,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
                 .ok_or(UnknownDataError)?
                 .revealed_seal(),
             TypedAssigns::Structured(vec) => vec
-                .get(index as usize)
-                .ok_or(UnknownDataError)?
-                .revealed_seal(),
-            TypedAssigns::Attachment(vec) => vec
                 .get(index as usize)
                 .ok_or(UnknownDataError)?
                 .revealed_seal(),
@@ -439,10 +405,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
             TypedAssigns::Structured(s) => s
                 .iter()
                 .map(AssignData::<Seal>::to_confidential_seal)
-                .collect(),
-            TypedAssigns::Attachment(s) => s
-                .iter()
-                .map(AssignAttach::<Seal>::to_confidential_seal)
                 .collect(),
         }
     }
@@ -504,10 +466,6 @@ impl TypedAssigns<GenesisSeal> {
                     .expect("same size"),
             )),
             TypedAssigns::Structured(a) => TypedAssigns::Structured(AssignVec::with(
-                Confined::try_from_iter(a.iter().map(|a| a.transmutate_seals()))
-                    .expect("same size"),
-            )),
-            TypedAssigns::Attachment(a) => TypedAssigns::Attachment(AssignVec::with(
                 Confined::try_from_iter(a.iter().map(|a| a.transmutate_seals()))
                     .expect("same size"),
             )),

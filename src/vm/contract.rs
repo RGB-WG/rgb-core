@@ -33,9 +33,9 @@ use chrono::{MappedLocalTime, TimeZone, Utc};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    AssignmentType, Assignments, AssignmentsRef, AttachState, BundleId, ContractId, DataState,
-    FungibleState, Genesis, GlobalState, GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType,
-    OpId, OpType, Operation, Transition, TransitionType, TypedAssigns, LIB_NAME_RGB_LOGIC,
+    AssignmentType, Assignments, AssignmentsRef, BundleId, ContractId, DataState, FungibleState,
+    Genesis, GlobalState, GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType, OpId, OpType,
+    Operation, Transition, TransitionType, TypedAssigns, LIB_NAME_RGB_LOGIC,
 };
 
 /// The type is used during validation and computing a contract state. It
@@ -521,12 +521,6 @@ pub trait ContractStateAccess: Debug {
         outpoint: Outpoint,
         ty: AssignmentType,
     ) -> impl DoubleEndedIterator<Item = impl Borrow<DataState>>;
-
-    fn attach(
-        &self,
-        outpoint: Outpoint,
-        ty: AssignmentType,
-    ) -> impl DoubleEndedIterator<Item = impl Borrow<AttachState>>;
 }
 
 pub trait ContractStateEvolve {

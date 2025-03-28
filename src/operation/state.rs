@@ -25,7 +25,7 @@ use core::hash::Hash;
 
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
-use crate::{RevealedAttach, RevealedData, RevealedValue};
+use crate::{RevealedData, RevealedValue};
 
 /// Marker trait for types of state holding explicit state data.
 pub trait ExposedState:
@@ -52,9 +52,6 @@ pub enum StateType {
 
     /// State defined with custom data
     Structured,
-
-    /// Attached data container
-    Attachment,
 }
 
 /// Categories of the state
@@ -68,7 +65,6 @@ pub enum RevealedState {
     Void,
     Fungible(RevealedValue),
     Structured(RevealedData),
-    Attachment(RevealedAttach),
 }
 
 impl RevealedState {
@@ -77,7 +73,6 @@ impl RevealedState {
             RevealedState::Void => StateType::Void,
             RevealedState::Fungible(_) => StateType::Fungible,
             RevealedState::Structured(_) => StateType::Structured,
-            RevealedState::Attachment(_) => StateType::Attachment,
         }
     }
 }

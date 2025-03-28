@@ -376,9 +376,6 @@ impl Schema {
                 Some(TypedAssigns::Structured(set)) => set
                     .iter()
                     .for_each(|data| status += assignment.validate(id, *state_id, data, types)),
-                Some(TypedAssigns::Attachment(set)) => set
-                    .iter()
-                    .for_each(|data| status += assignment.validate(id, *state_id, data, types)),
             };
         }
 
@@ -460,24 +457,6 @@ fn extract_prev_state<C: ConsignmentApi>(
                     status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
                 }
             }
-            Some(TypedAssigns::Attachment(prev_assignments)) => {
-                if let Some(prev_assign) = prev_assignments.get(no) {
-                    match assignments.entry(ty) {
-                        Entry::Occupied(mut entry) => {
-                            if let Some(typed_assigns) = entry.get_mut().as_attachment_mut() {
-                                typed_assigns.push(prev_assign.clone()).expect("same size");
-                            }
-                        }
-                        Entry::Vacant(entry) => {
-                            entry.insert(TypedAssigns::Attachment(AssignVec::with(
-                                NonEmptyVec::with(prev_assign.clone()),
-                            )));
-                        }
-                    }
-                } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
-                }
-            }
             None => {
                 // Presence of the required owned rights type in the
                 // parent operation was already validated; we have nothing
@@ -503,17 +482,6 @@ impl OwnedStateSchema {
             Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
                 match (self, state.state_data()) {
                     (OwnedStateSchema::Declarative, RevealedState::Void) => {}
-                    (
-                        OwnedStateSchema::Attachment(media_type),
-                        RevealedState::Attachment(attach),
-                    ) if !attach.file.media_type.conforms(media_type) => {
-                        status.add_failure(validation::Failure::MediaTypeMismatch {
-                            opid,
-                            state_type,
-                            expected: *media_type,
-                            found: attach.file.media_type,
-                        });
-                    }
                     (OwnedStateSchema::Fungible(schema), RevealedState::Fungible(v))
                         if v.value.fungible_type() != *schema =>
                     {

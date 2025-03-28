@@ -53,7 +53,6 @@ Schema rec
         declarative is Unit tag=0
         fungible enum FungibleType wrapped unsigned64Bit=8 tag=1
         structured bytes len=32 wrapped aka=SemId tag=2
-        attachment enum MediaType wrapped any=255 tag=3
       name ascii aka=FieldName first=AlphaSmallLodash rest=AlphaNumLodash len=1..100
       defaultTransition is U16 aka=TransitionType
   genesis rec GenesisSchema

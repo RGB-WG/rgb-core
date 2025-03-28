@@ -26,31 +26,6 @@ use strict_types::SemId;
 
 use crate::{StateType, LIB_NAME_RGB_COMMIT};
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase", tag = "type")
-)]
-#[non_exhaustive]
-#[repr(u8)]
-pub enum MediaType {
-    #[display("*/*")]
-    #[strict_type(dumb)]
-    Any = 0xFF,
-    // TODO: Complete MIME type implementation
-}
-
-impl MediaType {
-    pub fn conforms(&self, other: &MediaType) -> bool {
-        match (self, other) {
-            (MediaType::Any, MediaType::Any) => true,
-        }
-    }
-}
-
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = order)]
@@ -64,7 +39,6 @@ pub enum OwnedStateSchema {
     Declarative,
     Fungible(FungibleType),
     Structured(SemId),
-    Attachment(MediaType),
 }
 
 impl OwnedStateSchema {
@@ -73,7 +47,6 @@ impl OwnedStateSchema {
             OwnedStateSchema::Declarative => StateType::Void,
             OwnedStateSchema::Fungible(_) => StateType::Fungible,
             OwnedStateSchema::Structured(_) => StateType::Structured,
-            OwnedStateSchema::Attachment(_) => StateType::Attachment,
         }
     }
 

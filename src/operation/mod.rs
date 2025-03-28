@@ -24,7 +24,6 @@ mod meta;
 mod global;
 mod data;
 mod fungible;
-mod attachment;
 mod state;
 pub mod seal;
 pub mod assignments;
@@ -34,10 +33,8 @@ mod layer1;
 mod commit;
 
 pub use assignments::{
-    Assign, AssignAttach, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef,
-    TypedAssigns,
+    Assign, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef, TypedAssigns,
 };
-pub use attachment::{AttachId, AttachState, RevealedAttach};
 pub use bundle::{BundleId, InputMap, TransitionBundle, Vin};
 pub use commit::{
     AssignmentCommitment, AssignmentIndex, BaseCommitment, BundleDisclosure, ContractId,

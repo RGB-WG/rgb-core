@@ -39,8 +39,7 @@ use crate::schema::{OpFullType, OpType, SchemaId, TransitionType};
 use crate::{
     Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ChainNet, ContractId,
     DiscloseHash, ExposedState, Ffv, GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose,
-    OpId, RevealedAttach, RevealedData, RevealedValue, SecretSeal, TypedAssigns, VoidState,
-    LIB_NAME_RGB_COMMIT,
+    OpId, RevealedData, RevealedValue, SecretSeal, TypedAssigns, VoidState, LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -210,7 +209,6 @@ pub trait Operation {
         let mut void: BTreeMap<AssignmentIndex, VoidState> = bmap!();
         let mut fungible: BTreeMap<AssignmentIndex, RevealedValue> = bmap!();
         let mut data: BTreeMap<AssignmentIndex, RevealedData> = bmap!();
-        let mut attach: BTreeMap<AssignmentIndex, RevealedAttach> = bmap!();
         for (ty, assigns) in self.assignments().flat() {
             match assigns {
                 TypedAssigns::Declarative(a) => {
@@ -222,9 +220,6 @@ pub trait Operation {
                 TypedAssigns::Structured(a) => {
                     proc_seals(ty, &a, &mut seals, &mut data);
                 }
-                TypedAssigns::Attachment(a) => {
-                    proc_seals(ty, &a, &mut seals, &mut attach);
-                }
             }
         }
 
@@ -233,7 +228,6 @@ pub trait Operation {
             seals: Confined::from_checked(seals),
             fungible: Confined::from_iter_checked(fungible),
             data: Confined::from_checked(data),
-            attach: Confined::from_checked(attach),
         }
     }
 
