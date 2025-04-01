@@ -20,22 +20,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cmp::Ordering;
 use std::collections::{btree_set, BTreeMap};
 use std::iter;
 use std::num::ParseIntError;
-use std::str::FromStr;
 
 use amplify::confinement::{Confined, NonEmptyOrdSet, TinyOrdSet, U16};
 use amplify::{hex, Bytes64, Wrapper};
 use commit_verify::{
-    CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, ReservedBytes,
-    StrictHash,
+    CommitEncode, CommitEngine, CommitId, MerkleHash, MerkleLeaves, ReservedBytes, StrictHash,
 };
 use strict_encoding::stl::AsciiPrintable;
 use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize};
 
-use crate::schema::{OpFullType, OpType, SchemaId, TransitionType};
+use crate::schema::{OpFullType, SchemaId, TransitionType};
 use crate::{
     Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ChainNet, ContractId,
     DiscloseHash, ExposedState, Ffv, GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose,
@@ -76,22 +73,6 @@ pub enum OpoutParseError {
     /// invalid operation outpoint format ('{0}')
     #[display(doc_comments)]
     WrongFormat(String),
-}
-
-impl FromStr for Opout {
-    type Err = OpoutParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split('/');
-        match (split.next(), split.next(), split.next(), split.next()) {
-            (Some(op), Some(ty), Some(no), None) => Ok(Opout {
-                op: op.parse()?,
-                ty: ty.parse().map_err(OpoutParseError::InvalidType)?,
-                no: no.parse().map_err(OpoutParseError::InvalidOutputNo)?,
-            }),
-            _ => Err(OpoutParseError::WrongFormat(s.to_owned())),
-        }
-    }
 }
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
@@ -152,12 +133,6 @@ impl Input {
 /// - Genesis ([`Genesis`])
 /// - State transitions ([`Transitions`])
 pub trait Operation {
-    /// Returns type of the operation (see [`OpType`]). Unfortunately, this
-    /// can't be just a const, since it will break our ability to convert
-    /// concrete `Node` types into `&dyn Node` (entities implementing traits
-    /// with const definitions can't be made into objects)
-    fn op_type(&self) -> OpType;
-
     /// Returns full contract operation type information
     fn full_type(&self) -> OpFullType;
 
@@ -170,10 +145,6 @@ pub trait Operation {
 
     /// Returns nonce used in consensus ordering of state transitions
     fn nonce(&self) -> u64;
-
-    /// Returns [`Option::Some`]`(`[`TransitionType`]`)` for transitions or
-    /// [`Option::None`] for genesis operation type
-    fn transition_type(&self) -> Option<TransitionType>;
 
     /// Returns metadata associated with the operation, if any.
     fn metadata(&self) -> &Metadata;
@@ -264,11 +235,6 @@ impl From<&'static str> for Identity {
     fn from(s: &'static str) -> Self { Self(RString::from(s)) }
 }
 
-impl Identity {
-    pub fn is_empty(&self) -> bool { self.is_anonymous() }
-    pub fn is_anonymous(&self) -> bool { self == &default!() }
-}
-
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
@@ -330,38 +296,6 @@ pub struct Transition {
 impl StrictSerialize for Transition {}
 impl StrictDeserialize for Transition {}
 
-impl Ord for Transition {
-    fn cmp(&self, other: &Self) -> Ordering { self.id().cmp(&other.id()) }
-}
-
-impl PartialOrd for Transition {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-impl Conceal for Genesis {
-    type Concealed = Self;
-    fn conceal(&self) -> Self::Concealed {
-        let mut concealed = self.clone();
-        concealed
-            .assignments
-            .keyed_values_mut()
-            .for_each(|(_, a)| *a = a.conceal());
-        concealed
-    }
-}
-
-impl Conceal for Transition {
-    type Concealed = Self;
-    fn conceal(&self) -> Self::Concealed {
-        let mut concealed = self.clone();
-        concealed
-            .assignments
-            .keyed_values_mut()
-            .for_each(|(_, a)| *a = a.conceal());
-        concealed
-    }
-}
-
 impl CommitEncode for Genesis {
     type CommitmentId = OpId;
     fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_serialized(&self.commit()) }
@@ -376,15 +310,10 @@ impl Transition {
     /// Returns reference to information about the owned rights in form of
     /// [`Inputs`] wrapper structure which this operation updates with
     /// state transition ("parent owned rights").
-    pub fn prev_state(&self) -> &Inputs { &self.inputs }
-
-    pub fn inputs(&self) -> Inputs { self.inputs.clone() }
+    pub fn inputs(&self) -> &Inputs { &self.inputs }
 }
 
 impl Operation for Genesis {
-    #[inline]
-    fn op_type(&self) -> OpType { OpType::Genesis }
-
     #[inline]
     fn full_type(&self) -> OpFullType { OpFullType::Genesis }
 
@@ -396,9 +325,6 @@ impl Operation for Genesis {
 
     #[inline]
     fn nonce(&self) -> u64 { u64::MAX }
-
-    #[inline]
-    fn transition_type(&self) -> Option<TransitionType> { None }
 
     #[inline]
     fn metadata(&self) -> &Metadata { &self.metadata }
@@ -419,9 +345,6 @@ impl Operation for Genesis {
 
 impl Operation for Transition {
     #[inline]
-    fn op_type(&self) -> OpType { OpType::StateTransition }
-
-    #[inline]
     fn full_type(&self) -> OpFullType { OpFullType::StateTransition(self.transition_type) }
 
     #[inline]
@@ -432,9 +355,6 @@ impl Operation for Transition {
 
     #[inline]
     fn nonce(&self) -> u64 { self.nonce }
-
-    #[inline]
-    fn transition_type(&self) -> Option<TransitionType> { Some(self.transition_type) }
 
     #[inline]
     fn metadata(&self) -> &Metadata { &self.metadata }
@@ -453,6 +373,8 @@ impl Operation for Transition {
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
     use amplify::ByteArray;
     use baid64::DisplayBaid64;
 

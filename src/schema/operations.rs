@@ -50,27 +50,6 @@ pub type GlobalSchema = TinyOrdMap<GlobalStateType, Occurrences>;
 pub type InputsSchema = TinyOrdMap<AssignmentType, Occurrences>;
 pub type AssignmentsSchema = TinyOrdMap<AssignmentType, Occurrences>;
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[repr(u8)]
-/// Node type: genesis and state transitions
-pub enum OpType {
-    /// Genesis: single operation per contract, defining contract and
-    /// committing to a specific schema and underlying chain hash
-    #[display("genesis")]
-    Genesis = 0,
-
-    /// State transition performing owned change to the state data and committing to (potentially
-    /// multiple) ancestors (i.e. genesis and/or  other state transitions) via spending
-    /// corresponding transaction outputs assigned some state by ancestors
-    #[display("transition")]
-    StateTransition = 1,
-}
-
 /// Aggregated type used to supply full contract operation type and transition type information
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[cfg_attr(
@@ -80,11 +59,18 @@ pub enum OpType {
 )]
 pub enum OpFullType {
     /// Genesis operation (no subtypes)
+    ///
+    /// Genesis: single operation per contract, defining contract and
+    /// committing to a specific schema and underlying chain hash
     #[display("genesis")]
     Genesis,
 
     /// State transition contract operation, subtyped by transition type
-    #[display("state transition #{0}")]
+    ///
+    /// State transition performing owned change to the state data and committing to (potentially
+    /// multiple) ancestors (i.e. genesis and/or  other state transitions) via spending
+    /// corresponding transaction outputs assigned some state by ancestors
+    #[display("transition #{0}")]
     StateTransition(TransitionType),
 }
 
@@ -101,7 +87,6 @@ impl OpFullType {
 
 /// Trait defining common API for all operation type schemata
 pub trait OpSchema {
-    fn op_type(&self) -> OpType;
     fn metadata(&self) -> &MetaSchema;
     fn globals(&self) -> &GlobalSchema;
     fn inputs(&self) -> Option<&InputsSchema>;
@@ -142,8 +127,6 @@ pub struct TransitionSchema {
 
 impl OpSchema for GenesisSchema {
     #[inline]
-    fn op_type(&self) -> OpType { OpType::Genesis }
-    #[inline]
     fn metadata(&self) -> &MetaSchema { &self.metadata }
     #[inline]
     fn globals(&self) -> &GlobalSchema { &self.globals }
@@ -154,8 +137,6 @@ impl OpSchema for GenesisSchema {
 }
 
 impl OpSchema for TransitionSchema {
-    #[inline]
-    fn op_type(&self) -> OpType { OpType::StateTransition }
     #[inline]
     fn metadata(&self) -> &MetaSchema { &self.metadata }
     #[inline]

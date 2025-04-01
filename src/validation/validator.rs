@@ -36,8 +36,8 @@ use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Valid
 use crate::operation::seal::ExposedSeal;
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd};
 use crate::{
-    validation, BundleId, ChainNet, ContractId, OpId, OpType, Operation, Opout, OutputSeal, Schema,
-    SchemaId, TransitionBundle,
+    validation, BundleId, ChainNet, ContractId, OpFullType, OpId, Operation, Opout, OutputSeal,
+    Schema, SchemaId, TransitionBundle,
 };
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
@@ -338,7 +338,7 @@ impl<
         }
 
         if !self.validated_op_seals.borrow().contains(&opid)
-            && operation.op_type() == OpType::StateTransition
+            && matches!(operation.full_type(), OpFullType::StateTransition(_))
         {
             self.status
                 .borrow_mut()
@@ -548,7 +548,7 @@ impl<
                     continue;
                 };
 
-                let seal = if prev_op.op_type() == OpType::StateTransition {
+                let seal = if matches!(prev_op.full_type(), OpFullType::StateTransition(_)) {
                     let Some(witness_id) = self.consignment.op_witness_id(op) else {
                         self.status
                             .borrow_mut()

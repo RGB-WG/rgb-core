@@ -34,7 +34,7 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
     AssignmentType, Assignments, AssignmentsRef, BundleId, ContractId, DataState, FungibleState,
-    Genesis, GlobalState, GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType, OpId, OpType,
+    Genesis, GlobalState, GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType, OpId,
     Operation, Transition, TransitionType, TypedAssigns, LIB_NAME_RGB_LOGIC,
 };
 
@@ -86,13 +86,6 @@ impl OrdOpRef<'_> {
 }
 
 impl<'op> Operation for OrdOpRef<'op> {
-    fn op_type(&self) -> OpType {
-        match self {
-            OrdOpRef::Genesis(op) => op.op_type(),
-            OrdOpRef::Transition(op, ..) => op.op_type(),
-        }
-    }
-
     fn full_type(&self) -> OpFullType {
         match self {
             OrdOpRef::Genesis(op) => op.full_type(),
@@ -121,13 +114,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         }
     }
 
-    fn transition_type(&self) -> Option<TransitionType> {
-        match self {
-            OrdOpRef::Genesis(op) => op.transition_type(),
-            OrdOpRef::Transition(op, ..) => op.transition_type(),
-        }
-    }
-
     fn metadata(&self) -> &Metadata {
         match self {
             OrdOpRef::Genesis(op) => op.metadata(),
@@ -144,8 +130,8 @@ impl<'op> Operation for OrdOpRef<'op> {
 
     fn assignments(&self) -> AssignmentsRef<'op> {
         match self {
-            OrdOpRef::Genesis(op) => (&op.assignments).into(),
-            OrdOpRef::Transition(op, ..) => (&op.assignments).into(),
+            OrdOpRef::Genesis(op) => op.assignments(),
+            OrdOpRef::Transition(op, ..) => op.assignments(),
         }
     }
 

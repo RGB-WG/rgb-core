@@ -31,8 +31,7 @@ use strict_types::TypeSystem;
 use super::EAnchor;
 use crate::{
     AssignmentType, AssignmentsRef, BundleId, ContractId, Genesis, GlobalState, GraphSeal,
-    Metadata, OpFullType, OpId, OpType, Operation, Schema, Transition, TransitionBundle,
-    TransitionType, TypedAssigns,
+    Metadata, OpFullType, OpId, Operation, Schema, Transition, TransitionBundle, TypedAssigns,
 };
 
 pub const CONSIGNMENT_MAX_LIBS: usize = 1024;
@@ -48,13 +47,6 @@ pub enum OpRef<'op> {
 }
 
 impl<'op> Operation for OpRef<'op> {
-    fn op_type(&self) -> OpType {
-        match self {
-            Self::Genesis(op) => op.op_type(),
-            Self::Transition(op) => op.op_type(),
-        }
-    }
-
     fn full_type(&self) -> OpFullType {
         match self {
             Self::Genesis(op) => op.full_type(),
@@ -80,13 +72,6 @@ impl<'op> Operation for OpRef<'op> {
         match self {
             Self::Genesis(op) => op.nonce(),
             Self::Transition(op) => op.nonce(),
-        }
-    }
-
-    fn transition_type(&self) -> Option<TransitionType> {
-        match self {
-            Self::Genesis(op) => op.transition_type(),
-            Self::Transition(op) => op.transition_type(),
         }
     }
 
