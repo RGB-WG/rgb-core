@@ -468,7 +468,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     /// recent global state value. Ensures that the global state ordering is
     /// consensus-based.
     pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<DataState> + '_> {
-        if depth >= self.iter.size() {
+        if depth > self.iter.size() {
             return None;
         }
         if depth >= self.checked_depth {
@@ -476,7 +476,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
         } else {
             self.iter.reset(self.checked_depth);
             let size = self.iter.size();
-            let to = (depth - self.checked_depth).to_u32();
+            let to = (self.checked_depth - depth).to_u32();
             for inc in 0..to {
                 if self.prev_checked().is_none() {
                     panic!(
