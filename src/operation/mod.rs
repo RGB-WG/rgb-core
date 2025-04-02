@@ -49,7 +49,7 @@ pub use global::{GlobalState, GlobalValues};
 pub use layer1::{ChainNet, Layer1};
 pub use meta::{MetaValue, Metadata, MetadataError};
 pub use operations::{
-    Genesis, Identity, Input, Inputs, Operation, Opout, OpoutParseError, Transition,
+    Genesis, Identity, Input, Inputs, Operation, Opout, OpoutParseError, Signature, Transition,
 };
 pub use seal::{ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal};
 pub use state::{ExposedState, RevealedState, StateType};

@@ -125,4 +125,5 @@ TransitionBundle rec
                 lock bytes len=2 aka=ReservedBytes2
       validator bytes len=1 aka=ReservedBytes1
       witness bytes len=2 aka=ReservedBytes2
+        some bytes len=64 option wrapped aka=Signature tag=1
 

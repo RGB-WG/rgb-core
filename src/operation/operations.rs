@@ -27,7 +27,7 @@ use std::num::ParseIntError;
 use std::str::FromStr;
 
 use amplify::confinement::{Confined, NonEmptyOrdSet, TinyOrdSet, U16};
-use amplify::{hex, Wrapper};
+use amplify::{hex, Bytes64, Wrapper};
 use commit_verify::{
     CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, ReservedBytes,
     StrictHash,
@@ -299,6 +299,18 @@ pub struct Genesis {
 impl StrictSerialize for Genesis {}
 impl StrictDeserialize for Genesis {}
 
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+#[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct Signature(Bytes64);
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
@@ -318,6 +330,7 @@ pub struct Transition {
     pub assignments: Assignments<GraphSeal>,
     pub validator: ReservedBytes<1, 0>,
     pub witness: ReservedBytes<2, 0>,
+    pub signature: Option<Signature>,
 }
 
 impl StrictSerialize for Transition {}

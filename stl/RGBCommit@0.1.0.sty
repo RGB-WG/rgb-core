@@ -1,5 +1,5 @@
 {-
-  Id: stl:WKkN3tFN-zijlQzg-i7tPNQI-dIkgj2j-urx56ZP-k2fGksY#visible-salt-vodka
+  Id: stl:zBxngQHW-1QPll66-1Mlwfe2-KaK0$jC-k6keyzn-6g8vMMs#media-norway-talent
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -294,7 +294,10 @@ data Schema            : ffv Ffv
 @mnemonic(ramirez-patron-simon)
 data SchemaId          : [Byte ^ 32]
 
-@mnemonic(gizmo-plastic-hazard)
+@mnemonic(ferrari-zebra-tempo)
+data Signature         : [Byte ^ 64]
+
+@mnemonic(extra-member-guide)
 data Transition        : ffv Ffv
                        , contractId ContractId
                        , nonce U64
@@ -305,6 +308,7 @@ data Transition        : ffv Ffv
                        , assignments AssignmentsBlindSealTxPtr
                        , validator CommitVerify.ReservedBytes1
                        , witness CommitVerify.ReservedBytes2
+                       , signature Signature?
 
 @mnemonic(rider-serpent-algebra)
 data TransitionBundle  : inputMap InputMap, knownTransitions {OpId -> ^ 1.. Transition}
