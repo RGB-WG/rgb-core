@@ -33,9 +33,11 @@ use aluvm::library::{CodeEofError, IsaSeg, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg, Reg16, Reg32, RegA, RegS};
 use amplify::num::{u24, u3, u4};
 use amplify::Wrapper;
+use secp256k1::{ecdsa, Message, PublicKey};
 
 use super::opcodes::*;
 use super::{ContractStateAccess, VmContext};
+use crate::vm::OrdOpRef;
 use crate::{Assign, AssignmentType, GlobalStateType, MetaType, TypedAssigns};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -170,6 +172,14 @@ pub enum ContractOp<S: ContractStateAccess> {
     #[display("sps     {0}")]
     Sps(/** owned state type */ AssignmentType),
 
+    /// Verifies the signature of a transition against the pubkey in the first argument.
+    ///
+    /// If the register doesn't contain a valid public key or the operation
+    /// signature is missing or invalid, sets `st0` to fail state and terminates
+    /// the program.
+    #[display("vts     {0}")]
+    Vts(RegS),
+
     /// All other future unsupported operations, which must set `st0` to
     /// `false` and stop the execution.
     #[display("fail    {0}")]
@@ -196,6 +206,9 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             | ContractOp::LdM(_, _) => bset![],
             ContractOp::Svs(_) => bset![],
             ContractOp::Sas(_) | ContractOp::Sps(_) => bset![Reg::A(RegA::A64, Reg32::Reg0)],
+
+            ContractOp::Vts(_) => bset![],
+
             ContractOp::Fail(_, _) => bset![],
         }
     }
@@ -221,6 +234,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             ContractOp::Svs(_) | ContractOp::Sas(_) | ContractOp::Sps(_) => {
                 bset![]
             }
+            ContractOp::Vts(reg) => bset![Reg::S(*reg)],
             ContractOp::Fail(_, _) => bset![],
         }
     }
@@ -238,6 +252,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
             | ContractOp::LdC(_, _, _) => 8,
             ContractOp::LdM(_, _) => 6,
             ContractOp::Svs(_) | ContractOp::Sas(_) | ContractOp::Sps(_) => 20,
+            ContractOp::Vts(_) => 512,
             ContractOp::Fail(_, _) => u64::MAX,
         }
     }
@@ -268,7 +283,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
         }
         macro_rules! load_revealed_outputs {
             ($state_type:ident) => {{
-                let Some(new_state) = context.op_info.owned_state.get(*$state_type) else {
+                let Some(new_state) = context.op_info.owned_state().get(*$state_type) else {
                     fail!()
                 };
                 match new_state {
@@ -302,7 +317,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                     *reg,
                     context
                         .op_info
-                        .owned_state
+                        .owned_state()
                         .get(*state_type)
                         .map(|a| a.len_u16()),
                 );
@@ -311,7 +326,11 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 regs.set_n(
                     RegA::A8,
                     *reg,
-                    context.op_info.global.get(state_type).map(|a| a.len_u16()),
+                    context
+                        .op_info
+                        .global()
+                        .get(state_type)
+                        .map(|a| a.len_u16()),
                 );
             }
             ContractOp::CnC(state_type, reg) => {
@@ -347,7 +366,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
 
                 let Some(Ok(state)) = context
                     .op_info
-                    .owned_state
+                    .owned_state()
                     .get(*state_type)
                     .map(|a| a.into_structured_state_at(index))
                 else {
@@ -364,7 +383,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
 
                 let Some(Ok(state)) = context
                     .op_info
-                    .owned_state
+                    .owned_state()
                     .get(*state_type)
                     .map(|a| a.into_fungible_state_at(index))
                 else {
@@ -380,7 +399,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
 
                 let Some(state) = context
                     .op_info
-                    .global
+                    .global()
                     .get(state_type)
                     .and_then(|a| a.get(index as usize))
                 else {
@@ -407,7 +426,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 regs.set_s16(*reg_s, state.borrow().as_inner());
             }
             ContractOp::LdM(type_id, reg) => {
-                let Some(meta) = context.op_info.metadata.get(type_id) else {
+                let Some(meta) = context.op_info.metadata().get(type_id) else {
                     fail!()
                 };
                 regs.set_s16(*reg, meta.to_inner());
@@ -463,6 +482,31 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                     fail!()
                 }
             }
+            ContractOp::Vts(reg_s) => match context.op_info.op {
+                OrdOpRef::Genesis(_) => fail!(),
+                OrdOpRef::Transition(transition, _, _, _) => {
+                    let Some(pubkey) = regs.s16(*reg_s) else {
+                        fail!()
+                    };
+                    let Ok(pubkey) = PublicKey::from_slice(&pubkey.to_vec()) else {
+                        fail!()
+                    };
+                    let Some(ref witness) = transition.signature else {
+                        fail!()
+                    };
+                    let sig_bytes = witness.clone().into_inner().into_inner();
+                    let Ok(sig) = ecdsa::Signature::from_compact(&sig_bytes) else {
+                        fail!()
+                    };
+
+                    let transition_id = context.op_info.id.into_inner().into_inner();
+                    let msg = Message::from_digest(transition_id);
+
+                    if sig.verify(&msg, &pubkey).is_err() {
+                        fail!()
+                    }
+                }
+            },
             // All other future unsupported operations, which must set `st0` to `false`.
             _ => fail!(),
         }
@@ -490,6 +534,8 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
             ContractOp::Svs(_) => INSTR_SVS,
             ContractOp::Sas(_) => INSTR_SAS,
             ContractOp::Sps(_) => INSTR_SPS,
+
+            ContractOp::Vts(_) => INSTR_VTS,
 
             ContractOp::Fail(other, _) => *other,
         }
@@ -552,6 +598,8 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
             ContractOp::Svs(state_type) => writer.write_u16(*state_type)?,
             ContractOp::Sas(owned_type) => writer.write_u16(*owned_type)?,
             ContractOp::Sps(owned_type) => writer.write_u16(*owned_type)?,
+
+            ContractOp::Vts(reg_s) => writer.write_u4(*reg_s)?,
 
             ContractOp::Fail(_, _) => {}
         }
@@ -619,6 +667,8 @@ impl<S: ContractStateAccess> Bytecode for ContractOp<S> {
             INSTR_SVS => Self::Svs(reader.read_u16()?.into()),
             INSTR_SAS => Self::Sas(reader.read_u16()?.into()),
             INSTR_SPS => Self::Sps(reader.read_u16()?.into()),
+
+            INSTR_VTS => Self::Vts(reader.read_u4()?.into()),
 
             x => Self::Fail(x, PhantomData),
         })

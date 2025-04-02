@@ -544,24 +544,20 @@ pub struct VmContext<'op, S: ContractStateAccess> {
 
 pub struct OpInfo<'op> {
     pub id: OpId,
-    pub ty: OpFullType,
-    pub metadata: &'op Metadata,
     pub prev_state: &'op Assignments<GraphSeal>,
-    pub owned_state: AssignmentsRef<'op>,
-    pub global: &'op GlobalState,
+    pub op: &'op OrdOpRef<'op>,
 }
 
 impl<'op> OpInfo<'op> {
     pub fn with(id: OpId, op: &'op OrdOpRef<'op>, prev_state: &'op Assignments<GraphSeal>) -> Self {
-        OpInfo {
-            id,
-            ty: op.full_type(),
-            metadata: op.metadata(),
-            prev_state,
-            owned_state: op.assignments(),
-            global: op.globals(),
-        }
+        OpInfo { id, prev_state, op }
     }
+
+    pub fn global(&self) -> &'op GlobalState { self.op.globals() }
+
+    pub fn metadata(&self) -> &'op Metadata { self.op.metadata() }
+
+    pub fn owned_state(&self) -> AssignmentsRef<'op> { self.op.assignments() }
 }
 
 #[cfg(test)]
