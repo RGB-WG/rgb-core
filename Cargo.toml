@@ -10,7 +10,7 @@ categories = ["cryptography::cryptocurrencies"]
 readme = "README.md"
 license = "Apache-2.0"
 edition = "2021"
-rust-version = "1.77.0" # Due to `rustfix`
+rust-version = "1.81.0"
 exclude = [".github"]
 
 [lib]
@@ -26,7 +26,7 @@ amplify = { version = "~4.7.0", features = ["rand"] }
 baid64 = "~0.2.2"
 strict_encoding = "~2.7.0"
 strict_types = { version = "~2.7.2", features = ["armor"] }
-aluvm = { version = "~0.11.0-beta.9", features = ["std", "ascii-armor"] }
+aluvm = { version = "~0.11.0", features = ["std", "ascii-armor"] }
 commit_verify = { version = "~0.11.0-beta.9", features = ["rand", "derive"] }
 single_use_seals = "~0.11.0-beta.9"
 bp-core = { version = "~0.11.1-alpha.1" }
@@ -62,5 +62,7 @@ wasm-bindgen-test = "0.3"
 features = ["all"]
 
 [patch.crates-io]
+aluvm = { git = "https://github.com/zoedberg/rust-aluvm", branch = "0.11.1-2" }
+commit_verify = { git = "https://github.com/zoedberg/client_side_validation", branch = "0.11.1-2" }
 bp-consensus = { git = "https://github.com/zoedberg/bp-core", branch = "0.11.1-2" }
 bp-core = { git = "https://github.com/zoedberg/bp-core", branch = "0.11.1-2" }
