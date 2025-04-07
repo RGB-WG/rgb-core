@@ -28,6 +28,8 @@ use bp::Vout;
 use commit_verify::{mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
 use strict_encoding::{StrictDumb, StrictEncode};
 
+use super::GraphSeal;
+use crate::operation::operations::Operation;
 use crate::{OpId, Transition, LIB_NAME_RGB_COMMIT};
 
 pub type Vin = Vout;
@@ -101,6 +103,10 @@ impl<'a> IntoIterator for &'a InputMap {
     fn into_iter(self) -> Self::IntoIter { self.0.iter() }
 }
 
+#[derive(Clone, Eq, PartialEq, Debug, Display, Error)]
+#[display("state transition {0} is not a part of the bundle.")]
+pub struct UnrelatedTransition(OpId, Transition);
+
 #[derive(Clone, PartialEq, Eq, Debug, From)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
@@ -131,4 +137,33 @@ impl StrictDumb for TransitionBundle {
 
 impl TransitionBundle {
     pub fn bundle_id(&self) -> BundleId { self.commit_id() }
+
+    pub fn reveal_seal(&mut self, bundle_id: BundleId, seal: GraphSeal) -> bool {
+        if self.bundle_id() != bundle_id {
+            return false;
+        }
+        self.known_transitions
+            .values_mut()
+            .flat_map(|t| t.assignments.values_mut())
+            .for_each(|a| a.reveal_seal(seal));
+
+        true
+    }
+
+    pub fn reveal_transition(
+        &mut self,
+        transition: Transition,
+    ) -> Result<bool, UnrelatedTransition> {
+        let opid = transition.id();
+        if self.input_map.values().all(|ids| !ids.contains(&opid)) {
+            return Err(UnrelatedTransition(opid, transition));
+        }
+        if self.known_transitions.contains_key(&opid) {
+            return Ok(false);
+        }
+        self.known_transitions
+            .insert(opid, transition)
+            .expect("same size as input map");
+        Ok(true)
+    }
 }

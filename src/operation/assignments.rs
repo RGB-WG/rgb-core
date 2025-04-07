@@ -392,6 +392,34 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         })
     }
 
+    pub fn reveal_seal(&mut self, seal: Seal) {
+        fn reveal<State: ExposedState, Seal: ExposedSeal>(
+            vec: &mut NonEmptyVec<Assign<State, Seal>, U16>,
+            revealed: Seal,
+        ) {
+            for assign in vec.iter_mut() {
+                match assign {
+                    Assign::ConfidentialSeal { seal, state, lock }
+                        if *seal == revealed.conceal() =>
+                    {
+                        *assign = Assign::Revealed {
+                            seal: revealed,
+                            state: state.clone(),
+                            lock: *lock,
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        match self {
+            TypedAssigns::Declarative(v) => reveal(v, seal),
+            TypedAssigns::Fungible(v) => reveal(v, seal),
+            TypedAssigns::Structured(v) => reveal(v, seal),
+        }
+    }
+
     pub fn to_confidential_seals(&self) -> Vec<SecretSeal> {
         match self {
             TypedAssigns::Declarative(s) => s

@@ -35,7 +35,7 @@ mod commit;
 pub use assignments::{
     Assign, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef, TypedAssigns,
 };
-pub use bundle::{BundleId, InputMap, TransitionBundle, Vin};
+pub use bundle::{BundleId, InputMap, TransitionBundle, UnrelatedTransition, Vin};
 pub use commit::{
     AssignmentCommitment, AssignmentIndex, BaseCommitment, BundleDisclosure, ContractId,
     DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,

@@ -32,7 +32,7 @@ use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
 use super::status::{Failure, Warning};
-use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, Status, Validity};
+use super::{CheckedConsignment, ConsignmentApi, EAnchor, Status, Validity};
 use crate::operation::seal::ExposedSeal;
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd};
 use crate::{
@@ -463,25 +463,8 @@ impl<
             }
             Ok(pub_witness) => {
                 let seals = seals.as_ref();
-                match anchor.clone() {
-                    EAnchor {
-                        mpc_proof,
-                        dbc_proof: DbcProof::Tapret(tapret),
-                        ..
-                    } => {
-                        let witness = Witness::with(pub_witness.clone(), tapret);
-                        self.validate_seal_closing(seals, bundle_id, witness, mpc_proof)
-                    }
-                    EAnchor {
-                        mpc_proof,
-                        dbc_proof: DbcProof::Opret(opret),
-                        ..
-                    } => {
-                        let witness = Witness::with(pub_witness.clone(), opret);
-                        self.validate_seal_closing(seals, bundle_id, witness, mpc_proof)
-                    }
-                }
-
+                let witness = Witness::with(pub_witness.clone(), anchor.dbc_proof.clone());
+                self.validate_seal_closing(seals, bundle_id, witness, anchor.mpc_proof.clone());
                 Some(pub_witness)
             }
         }

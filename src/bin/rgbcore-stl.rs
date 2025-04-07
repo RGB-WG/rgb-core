@@ -138,11 +138,11 @@ Transition vesper lexicon=types+commitments
     let tt = sys.type_tree("RGBCommit.Transition").unwrap();
     writeln!(file, "{tt}").unwrap();
 
-    let mut file = fs::File::create(format!("{dir}/AnchoredBundle.vesper")).unwrap();
+    let mut file = fs::File::create(format!("{dir}/TransitionBundle.vesper")).unwrap();
     writeln!(
         file,
         "{{-
-  Description: RGB Anchored Bundles
+  Description: RGB Transition Bundles
   Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
   Copyright (C) 2024 LNP/BP Standards Association. All rights reserved.
   License: Apache-2.0
