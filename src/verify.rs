@@ -28,7 +28,9 @@ use alloc::vec::Vec;
 use amplify::confinement::SmallOrdMap;
 use amplify::ByteArray;
 use single_use_seals::{PublishedWitness, SealError, SealWitness};
-use ultrasonic::{AuthToken, CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid};
+use ultrasonic::{
+    AuthToken, CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid, VerifiedOperation,
+};
 
 use crate::{RgbSealDef, RgbSealSrc, LIB_NAME_RGB_CORE};
 
@@ -76,7 +78,7 @@ pub trait ContractApi<Seal: RgbSealDef> {
     fn repo(&self) -> &impl LibRepo;
     fn memory(&self) -> &impl Memory;
     fn is_known(&self, opid: Opid) -> bool;
-    fn apply_operation(&mut self, header: OperationSeals<Seal>);
+    fn apply_operation(&mut self, op: VerifiedOperation, seals: SmallOrdMap<u16, Seal>);
     fn apply_witness(&mut self, opid: Opid, witness: SealWitness<Seal::Src>);
 }
 
@@ -128,16 +130,7 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
                 return Err(VerificationError::SealsDefinitionMismatch { opid, reported, defined, sources });
             }
 
-            // If the operation was validated before, we need to skip its validation, since its inputs are not a
-            // part of the state anymore.
-            let op_known = self.is_known(opid);
-            if !op_known {
-                // Verify the operation
-                self.codex()
-                    .verify(contract_id, &header.operation, self.memory(), self.repo())?;
-            }
-
-            // Next we verify single-use seal closings by the operation
+            // Collect single-use seal closings by the operation
             let mut closed_seals = Vec::<SealDef::Src>::new();
             for input in &header.operation.destroying {
                 let seal = seals
@@ -145,6 +138,18 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
                     .ok_or(VerificationError::SealUnknown(input.addr))?;
                 closed_seals.push(seal);
             }
+
+            // If the operation was validated before, we need to skip its validation, since its inputs are not a
+            // part of the state anymore.
+            let operation = if !self.is_known(opid) {
+                // Verify the operation
+                let verified = self
+                    .codex()
+                    .verify(contract_id, header.operation, self.memory(), self.repo())?;
+                Some(verified)
+            } else {
+                None
+            };
 
             // This convoluted logic happens since we use a state machine which ensures the client can't lie to
             // the verifier
@@ -193,8 +198,8 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
             seals.extend(seal_sources);
             if first {
                 first = false
-            } else if !op_known {
-                self.apply_operation(header);
+            } else if let Some(operation) = operation {
+                self.apply_operation(operation, header.defined_seals);
             }
         }
 
