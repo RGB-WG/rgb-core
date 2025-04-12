@@ -32,7 +32,7 @@ use ultrasonic::{
     AuthToken, CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid, VerifiedOperation,
 };
 
-use crate::{RgbSealDef, RgbSealSrc, LIB_NAME_RGB_CORE};
+use crate::{RgbSeal, RgbSealDef, LIB_NAME_RGB_CORE};
 
 // TODO: Move to amplify crate
 pub enum Step<A, B> {
@@ -46,13 +46,13 @@ pub enum Step<A, B> {
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(rename_all = "camelCase", bound = "Seal: serde::Serialize + for<'d> serde::Deserialize<'d>")
+    serde(rename_all = "camelCase", bound = "SealDef: serde::Serialize + for<'d> serde::Deserialize<'d>")
 )]
-pub struct OperationSeals<Seal: RgbSealDef> {
+pub struct OperationSeals<SealDef: RgbSealDef> {
     pub operation: Operation,
     /// Operation itself contains only AuthToken's, which are a commitments to the seals. Hence, we
     /// have to separately include a full seal definitions next to the operation data.
-    pub defined_seals: SmallOrdMap<u16, Seal>,
+    pub defined_seals: SmallOrdMap<u16, SealDef>,
 }
 
 pub trait ReadOperation: Sized {
@@ -72,29 +72,29 @@ pub trait ReadWitness: Sized {
 /// [`ContractVerify`]).
 ///
 /// NB: `apply_operation` is called only after `apply_witness`.
-pub trait ContractApi<Seal: RgbSealDef> {
+pub trait ContractApi<Seal: RgbSeal> {
     fn contract_id(&self) -> ContractId;
     fn codex(&self) -> &Codex;
     fn repo(&self) -> &impl LibRepo;
     fn memory(&self) -> &impl Memory;
     fn is_known(&self, opid: Opid) -> bool;
-    fn apply_operation(&mut self, op: VerifiedOperation, seals: SmallOrdMap<u16, Seal>);
-    fn apply_witness(&mut self, opid: Opid, witness: SealWitness<Seal::Src>);
+    fn apply_operation(&mut self, op: VerifiedOperation, seals: SmallOrdMap<u16, Seal::Definiton>);
+    fn apply_witness(&mut self, opid: Opid, witness: SealWitness<Seal>);
 }
 
 // We use dedicated trait here in order to prevent overriding of the implementation in client
 // libraries
-pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
+pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
-    fn evaluate<R: ReadOperation<SealDef = SealDef>>(
+    fn evaluate<R: ReadOperation<SealDef = Seal::Definiton>>(
         &mut self,
         mut reader: R,
-    ) -> Result<(), VerificationError<SealDef::Src>> {
+    ) -> Result<(), VerificationError<Seal>> {
         let contract_id = self.contract_id();
         let codex_id = self.codex().codex_id();
 
         let mut first = true;
-        let mut seals = BTreeMap::<CellAddr, SealDef::Src>::new();
+        let mut seals = BTreeMap::<CellAddr, Seal>::new();
 
         while let Some((mut header, mut witness_reader)) = reader.read_operation() {
             // Genesis can't commit to the contract id since the contract doesn't exist yet; thus, we have to
@@ -131,7 +131,7 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
             }
 
             // Collect single-use seal closings by the operation
-            let mut closed_seals = Vec::<SealDef::Src>::new();
+            let mut closed_seals = Vec::<Seal>::new();
             for input in &header.operation.destroying {
                 let seal = seals
                     .remove(&input.addr)
@@ -207,12 +207,12 @@ pub trait ContractVerify<SealDef: RgbSealDef>: ContractApi<SealDef> {
     }
 }
 
-impl<SealDef: RgbSealDef, C: ContractApi<SealDef>> ContractVerify<SealDef> for C {}
+impl<Seal: RgbSeal, C: ContractApi<Seal>> ContractVerify<Seal> for C {}
 
 // TODO: Find a way to do Debug and Clone implementation
 #[derive(Debug, Display, From)]
 #[display(doc_comments)]
-pub enum VerificationError<SealSrc: RgbSealSrc> {
+pub enum VerificationError<Seal: RgbSeal> {
     /// genesis does not commit to the codex id; a wrong contract genesis is used.
     NoCodexCommitment,
 
@@ -222,7 +222,7 @@ pub enum VerificationError<SealSrc: RgbSealSrc> {
     /// single-use seals are not closed properly with witness {0} for operation {1}.
     ///
     /// Details: {2}
-    SealsNotClosed(<SealSrc::PubWitness as PublishedWitness<SealSrc>>::PubId, Opid, SealError<SealSrc>),
+    SealsNotClosed(<Seal::PubWitness as PublishedWitness<Seal>>::PubId, Opid, SealError<Seal>),
 
     /// unknown seal definition for cell address {0}.
     SealUnknown(CellAddr),

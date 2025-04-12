@@ -29,7 +29,7 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use ultrasonic::AuthToken;
 
 pub trait RgbSealDef: Clone + Eq + Debug + Display + StrictDumb + StrictEncode + StrictDecode {
-    type Src: RgbSealSrc;
+    type Src: RgbSeal;
     fn auth_token(&self) -> AuthToken;
     fn resolve(
         &self,
@@ -38,7 +38,7 @@ pub trait RgbSealDef: Clone + Eq + Debug + Display + StrictDumb + StrictEncode +
     fn to_src(&self) -> Option<Self::Src>;
 }
 
-pub trait RgbSealSrc:
+pub trait RgbSeal:
     SingleUseSeal<Message: From<[u8; 32]>, PubWitness = Self::Published, CliWitness = Self::Client> + Ord
 {
     type Definiton: RgbSealDef<Src = Self>;
@@ -57,7 +57,7 @@ pub mod bitcoin {
 
     use super::*;
 
-    impl RgbSealSrc for TxoSeal {
+    impl RgbSeal for TxoSeal {
         type Definiton = WTxoSeal;
         type Published = Tx;
         type Client = Anchor;
