@@ -24,7 +24,7 @@
 
 use core::fmt::{Debug, Display};
 
-use single_use_seals::{PublishedWitness, SingleUseSeal};
+use single_use_seals::{ClientSideWitness, PublishedWitness, SingleUseSeal};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use ultrasonic::AuthToken;
 
@@ -38,19 +38,31 @@ pub trait RgbSealDef: Clone + Eq + Debug + Display + StrictDumb + StrictEncode +
     fn to_src(&self) -> Option<Self::Src>;
 }
 
-pub trait RgbSealSrc: SingleUseSeal<Message: From<[u8; 32]>> + Ord {}
+pub trait RgbSealSrc:
+    SingleUseSeal<Message: From<[u8; 32]>, PubWitness = Self::Published, CliWitness = Self::Client> + Ord
+{
+    type Definiton: RgbSealDef<Src = Self>;
+    type Published: PublishedWitness<Self, PubId = Self::WitnessId>;
+    type Client: ClientSideWitness;
+    type WitnessId: Copy + Ord + Debug + Display;
+}
 
 // Below are capabilities constants used in the standard library:
 
 #[cfg(any(feature = "bitcoin", feature = "liquid"))]
 pub mod bitcoin {
-    use bp::seals::{TxoSeal, WOutpoint, WTxoSeal};
-    use bp::Outpoint;
+    use bp::seals::{Anchor, TxoSeal, WOutpoint, WTxoSeal};
+    use bp::{Outpoint, Tx, Txid};
     use commit_verify::CommitId;
 
     use super::*;
 
-    impl RgbSealSrc for TxoSeal {}
+    impl RgbSealSrc for TxoSeal {
+        type Definiton = WTxoSeal;
+        type Published = Tx;
+        type Client = Anchor;
+        type WitnessId = Txid;
+    }
 
     impl RgbSealDef for WTxoSeal {
         type Src = TxoSeal;
