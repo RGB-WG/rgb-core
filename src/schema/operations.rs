@@ -43,6 +43,9 @@ impl AssignmentType {
     pub const fn with(ty: u16) -> Self { Self(ty) }
     #[inline]
     pub fn to_le_bytes(&self) -> [u8; 2] { self.0.to_le_bytes() }
+
+    pub const ASSET: Self = AssignmentType(4000);
+    pub fn is_asset(self) -> bool { self == Self::ASSET }
 }
 
 pub type MetaSchema = TinyOrdSet<MetaType>;

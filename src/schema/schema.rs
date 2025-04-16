@@ -135,6 +135,11 @@ pub struct TransitionDetails {
     pub name: FieldName,
 }
 
+impl TransitionType {
+    pub const REPLACE: Self = TransitionType(8011);
+    pub fn is_replace(self) -> bool { self == Self::REPLACE }
+}
+
 /// Schema identifier.
 ///
 /// Schema identifier commits to all the schema data.
