@@ -21,7 +21,7 @@
 // limitations under the License.
 
 use core::ops::AddAssign;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::{self, Display, Formatter};
 
 use amplify::num::u24;
@@ -62,6 +62,7 @@ pub struct Status {
     pub failures: Vec<Failure>,
     pub warnings: Vec<Warning>,
     pub info: Vec<Info>,
+    pub validated_opids: BTreeSet<OpId>,
 }
 
 impl Display for Status {
@@ -109,6 +110,7 @@ impl Status {
             failures: vec![v],
             warnings: vec![],
             info: vec![],
+            validated_opids: bset![],
         }
     }
 }

@@ -134,9 +134,10 @@ pub struct Validator<
     chain_net: ChainNet,
 
     contract_state: Rc<RefCell<S>>,
-    validated_op_seals: RefCell<BTreeSet<OpId>>,
     input_assignments: RefCell<BTreeSet<Opout>>,
 
+    // Operations in this set will not be validated
+    trusted_op_seals: BTreeSet<OpId>,
     resolver: CheckedWitnessResolver<&'resolver R>,
     safe_height: Option<NonZeroU32>,
 }
@@ -154,6 +155,7 @@ impl<
         resolver: &'resolver R,
         context: S::Context<'_>,
         safe_height: Option<NonZeroU32>,
+        trusted_op_seals: BTreeSet<OpId>,
     ) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
@@ -166,8 +168,6 @@ impl<
         let schema_id = genesis.schema_id;
         let chain_net = genesis.chain_net;
 
-        // Prevent repeated validation of single-use seals
-        let validated_op_seals = RefCell::new(BTreeSet::<OpId>::new());
         let input_transitions = RefCell::new(BTreeSet::<Opout>::new());
 
         Self {
@@ -176,7 +176,7 @@ impl<
             schema_id,
             contract_id,
             chain_net,
-            validated_op_seals,
+            trusted_op_seals,
             input_assignments: input_transitions,
             resolver: CheckedWitnessResolver::from(resolver),
             contract_state: Rc::new(RefCell::new(S::init(context))),
@@ -199,8 +199,10 @@ impl<
         chain_net: ChainNet,
         context: S::Context<'_>,
         safe_height: Option<NonZeroU32>,
+        trusted_op_seals: BTreeSet<OpId>,
     ) -> Status {
-        let mut validator = Self::init(consignment, resolver, context, safe_height);
+        let mut validator =
+            Self::init(consignment, resolver, context, safe_height, trusted_op_seals);
         // If the chain-network pair doesn't match there is no point in validating the contract
         // since all witness transactions will be missed.
         if validator.chain_net != chain_net {
@@ -329,6 +331,9 @@ impl<
     fn validate_operation(&self, operation: OrdOpRef<'consignment>) {
         let schema = self.consignment.schema();
         let opid = operation.id();
+        if self.trusted_op_seals.contains(&opid) {
+            return;
+        }
 
         if operation.contract_id() != self.contract_id {
             self.status
@@ -336,7 +341,7 @@ impl<
                 .add_failure(Failure::ContractMismatch(opid, operation.contract_id()));
         }
 
-        if !self.validated_op_seals.borrow().contains(&opid)
+        if !self.status.borrow_mut().validated_opids.contains(&opid)
             && matches!(operation.full_type(), OpFullType::StateTransition(_))
         {
             self.status
@@ -408,6 +413,9 @@ impl<
         let witness_id = pub_witness.txid();
         for (vin, opids) in &bundle.input_map {
             for opid in opids {
+                if self.trusted_op_seals.contains(&opid) {
+                    continue;
+                }
                 let Some(outpoints) = input_map.get(&opid) else {
                     self.status
                         .borrow_mut()
@@ -479,9 +487,12 @@ impl<
         let mut input_map: BTreeMap<OpId, BTreeSet<Outpoint>> = bmap!();
         let mut seals = vec![];
         for (opid, transition) in &bundle.known_transitions {
+            if self.trusted_op_seals.contains(opid) {
+                continue;
+            }
             let opid = *opid;
 
-            if !self.validated_op_seals.borrow_mut().insert(opid) {
+            if !self.status.borrow_mut().validated_opids.insert(opid) {
                 self.status
                     .borrow_mut()
                     .add_failure(Failure::CyclicGraph(opid));
