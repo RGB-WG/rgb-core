@@ -266,34 +266,30 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
         }
         macro_rules! load_revealed_inputs {
             ($state_type:ident) => {{
-                let Some(prev_state) = context.op_info.prev_state.get($state_type) else {
-                    fail!()
-                };
-                match prev_state {
-                    TypedAssigns::Fungible(state) => {
+                match context.op_info.prev_state.get($state_type) {
+                    Some(TypedAssigns::Fungible(state)) => {
                         let mut values = vec![];
                         for assign in state.iter().map(Assign::as_revealed_state) {
                             values.push(assign.as_inner().as_u64())
                         }
                         values
                     }
+                    None => vec![0],
                     _ => fail!(),
                 }
             }};
         }
         macro_rules! load_revealed_outputs {
             ($state_type:ident) => {{
-                let Some(new_state) = context.op_info.owned_state().get(*$state_type) else {
-                    fail!()
-                };
-                match new_state {
-                    TypedAssigns::Fungible(state) => {
+                match context.op_info.owned_state().get(*$state_type) {
+                    Some(TypedAssigns::Fungible(state)) => {
                         let mut values = vec![];
                         for assign in state.iter().map(Assign::as_revealed_state) {
                             values.push(assign.as_inner().as_u64())
                         }
                         values
                     }
+                    None => vec![0],
                     _ => fail!(),
                 }
             }};
