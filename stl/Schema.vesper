@@ -11,8 +11,6 @@ SchemaId commitment hasher=SHA256 tagged=urn:lnp-bp:rgb:schema#2024-02-03
   Ffv serialized
   ReservedBytes1 serialized
   TypeName serialized
-  I64 serialized
-  Identity serialized
   MetaDetails map len=0..MAX8
     MetaType mapKey
     MetaDetails mapValue
@@ -32,8 +30,6 @@ Schema rec
   ffv is U16 aka=Ffv
   flags bytes len=1 aka=ReservedBytes1
   name ascii aka=TypeName first=AlphaCapsLodash rest=AlphaNumLodash len=1..100
-  timestamp is I64
-  developer ascii aka=Identity first=AsciiPrintable rest=AsciiPrintable len=1..4096
   metaTypes map len=0..MAX8
     key is U16 aka=MetaType
     value rec MetaDetails

@@ -37,7 +37,7 @@ use strict_encoding::{
 use strict_types::{FieldName, SemId};
 
 use super::{AssignmentType, GenesisSchema, OwnedStateSchema, TransitionSchema};
-use crate::{impl_serde_baid64, Ffv, GlobalStateSchema, Identity, StateType, LIB_NAME_RGB_COMMIT};
+use crate::{impl_serde_baid64, Ffv, GlobalStateSchema, StateType, LIB_NAME_RGB_COMMIT};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -194,8 +194,6 @@ pub struct Schema {
     pub flags: ReservedBytes<1, 0>,
 
     pub name: TypeName,
-    pub timestamp: i64,
-    pub developer: Identity,
 
     pub meta_types: TinyOrdMap<MetaType, MetaDetails>,
     pub global_types: TinyOrdMap<GlobalStateType, GlobalDetails>,
@@ -214,8 +212,6 @@ impl CommitEncode for Schema {
         e.commit_to_serialized(&self.flags);
 
         e.commit_to_serialized(&self.name);
-        e.commit_to_serialized(&self.timestamp);
-        e.commit_to_serialized(&self.developer);
 
         e.commit_to_map(&self.meta_types);
         e.commit_to_map(&self.global_types);
