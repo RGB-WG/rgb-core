@@ -15,7 +15,6 @@ OpCommitment rec
   nonce is U64
   opType union TypeCommitment
     genesis rec BaseCommitment wrapped tag=0
-      flags bytes len=1 aka=ReservedBytes1
       schemaId bytes len=32 aka=SchemaId
       timestamp is I64
       issuer bytes len=32 aka=StrictHash
@@ -27,8 +26,6 @@ OpCommitment rec
   globals bytes len=32 aka=MerkleHash
   inputs bytes len=32 aka=MerkleHash
   assignments bytes len=32 aka=MerkleHash
-  witness bytes len=32 aka=MerkleHash
-  validator bytes len=32 aka=StrictHash
 
 Transition rec
   ffv is U16 aka=Ffv
@@ -43,12 +40,10 @@ Transition rec
     value list len=1..MAX16 aka=GlobalValues
       element bytes len=0..MAX16 aka=DataState
   inputs set len=1..MAX16 aka=Inputs
-    Input rec
-      prevOut rec Opout
-        op bytes len=32 aka=OpId
-        ty is U16 aka=AssignmentType
-        no is U16
-      reserved bytes len=2 aka=ReservedBytes2
+    Opout rec
+      op bytes len=32 aka=OpId
+      ty is U16 aka=AssignmentType
+      no is U16
   assignments map len=0..MAX8 aka=AssignmentsBlindSealTxPtr
     key is U16 aka=AssignmentType
     value union TypedAssignsBlindSealTxPtr
@@ -62,11 +57,9 @@ Transition rec
               vout is U32 aka=Vout
               blinding is U64
             state is Unit aka=VoidState
-            lock bytes len=2 aka=ReservedBytes2
           confidentialSeal rec tag=1
             seal bytes len=32 aka=SecretSeal
             state is Unit aka=VoidState
-            lock bytes len=2 aka=ReservedBytes2
       fungible list len=1..MAX16 wrapped aka=AssignVecAssignRevealedValueBlindSealTxPtr tag=1
         AssignRevealedValueBlindSealTxPtr union
           revealed rec tag=0
@@ -79,13 +72,11 @@ Transition rec
             state rec RevealedFungible
               value union FungibleState
                 bits64 is U64 wrapped tag=0
-            lock bytes len=2 aka=ReservedBytes2
           confidentialSeal rec tag=1
             seal bytes len=32 aka=SecretSeal
             state rec RevealedFungible
               value union FungibleState
                 bits64 is U64 wrapped tag=0
-            lock bytes len=2 aka=ReservedBytes2
       structured list len=1..MAX16 wrapped aka=AssignVecAssignRevealedDataBlindSealTxPtr tag=2
         AssignRevealedDataBlindSealTxPtr union
           revealed rec tag=0
@@ -98,14 +89,10 @@ Transition rec
             state rec RevealedData
               value bytes len=0..MAX16 aka=DataState
               salt is U128
-            lock bytes len=2 aka=ReservedBytes2
           confidentialSeal rec tag=1
             seal bytes len=32 aka=SecretSeal
             state rec RevealedData
               value bytes len=0..MAX16 aka=DataState
               salt is U128
-            lock bytes len=2 aka=ReservedBytes2
-  validator bytes len=1 aka=ReservedBytes1
-  witness bytes len=2 aka=ReservedBytes2
     some bytes len=64 option wrapped aka=Signature tag=1
 

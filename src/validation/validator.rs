@@ -354,10 +354,10 @@ impl<
             }
             OrdOpRef::Transition(transition, ..) => {
                 for input in &transition.inputs {
-                    if self.consignment.operation(input.prev_out.op).is_none() {
+                    if self.consignment.operation(input.op).is_none() {
                         self.status
                             .borrow_mut()
-                            .add_failure(Failure::OperationAbsent(input.prev_out.op));
+                            .add_failure(Failure::OperationAbsent(input.op));
                     }
                 }
             }
@@ -491,11 +491,11 @@ impl<
             // Checking that witness transaction closes seals defined by transition previous
             // outputs.
             for input in &transition.inputs {
-                let Opout { op, ty, no } = input.prev_out;
-                if !self.input_assignments.borrow_mut().insert(input.prev_out) {
+                let Opout { op, ty, no } = input;
+                if !self.input_assignments.borrow_mut().insert(input) {
                     self.status
                         .borrow_mut()
-                        .add_failure(Failure::DoubleSpend(input.prev_out));
+                        .add_failure(Failure::DoubleSpend(input));
                 }
 
                 let Some(prev_op) = self.consignment.operation(op) else {
@@ -519,7 +519,7 @@ impl<
                 let Ok(seal) = variant.revealed_seal_at(no) else {
                     self.status
                         .borrow_mut()
-                        .add_failure(Failure::NoPrevOut(opid, input.prev_out));
+                        .add_failure(Failure::NoPrevOut(opid, input));
                     continue;
                 };
                 let Some(seal) = seal else {
@@ -527,7 +527,7 @@ impl<
                     // full verification and have to report the failure
                     self.status
                         .borrow_mut()
-                        .add_failure(Failure::ConfidentialSeal(input.prev_out));
+                        .add_failure(Failure::ConfidentialSeal(input));
                     continue;
                 };
 

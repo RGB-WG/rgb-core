@@ -28,9 +28,7 @@ use aluvm::library::LibId;
 use amplify::confinement::TinyOrdMap;
 use amplify::{ByteArray, Bytes32};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
-use commit_verify::{
-    CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, ReservedBytes, Sha256,
-};
+use commit_verify::{CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
 use strict_encoding::{
     StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType, TypeName,
 };
@@ -191,7 +189,6 @@ impl_serde_baid64!(SchemaId);
 )]
 pub struct Schema {
     pub ffv: Ffv,
-    pub flags: ReservedBytes<1, 0>,
 
     pub name: TypeName,
 
@@ -200,8 +197,6 @@ pub struct Schema {
     pub owned_types: TinyOrdMap<AssignmentType, AssignmentDetails>,
     pub genesis: GenesisSchema,
     pub transitions: TinyOrdMap<TransitionType, TransitionDetails>,
-
-    pub reserved: ReservedBytes<8, 0>,
 }
 
 impl CommitEncode for Schema {
@@ -209,7 +204,6 @@ impl CommitEncode for Schema {
 
     fn commit_encode(&self, e: &mut CommitEngine) {
         e.commit_to_serialized(&self.ffv);
-        e.commit_to_serialized(&self.flags);
 
         e.commit_to_serialized(&self.name);
 
@@ -218,8 +212,6 @@ impl CommitEncode for Schema {
         e.commit_to_map(&self.owned_types);
         e.commit_to_serialized(&self.genesis);
         e.commit_to_map(&self.transitions);
-
-        e.commit_to_serialized(&self.reserved);
     }
 }
 

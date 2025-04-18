@@ -26,7 +26,7 @@ use std::collections::{btree_map, BTreeSet};
 use std::hash::Hash;
 
 use amplify::confinement::{Confined, NonEmptyVec, TinyOrdMap, U16};
-use commit_verify::{Conceal, ReservedBytes};
+use commit_verify::Conceal;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use super::ExposedState;
@@ -81,7 +81,7 @@ pub type AssignData<Seal> = Assign<RevealedData, Seal>;
 #[strict_type(
     lib = LIB_NAME_RGB_COMMIT,
     tags = custom,
-    dumb = { Self::Revealed { seal: strict_dumb!(), state: strict_dumb!(), lock: default!() } }
+    dumb = { Self::Revealed { seal: strict_dumb!(), state: strict_dumb!() } }
 )]
 #[cfg_attr(
     feature = "serde",
@@ -90,17 +90,9 @@ pub type AssignData<Seal> = Assign<RevealedData, Seal>;
 )]
 pub enum Assign<State: ExposedState, Seal: ExposedSeal> {
     #[strict_type(tag = 0x00)]
-    Revealed {
-        seal: Seal,
-        state: State,
-        lock: ReservedBytes<2, 0>,
-    },
+    Revealed { seal: Seal, state: State },
     #[strict_type(tag = 0x01)]
-    ConfidentialSeal {
-        seal: SecretSeal,
-        state: State,
-        lock: ReservedBytes<2, 0>,
-    },
+    ConfidentialSeal { seal: SecretSeal, state: State },
 }
 
 // Consensus-critical!
@@ -128,30 +120,16 @@ impl<State: ExposedState, Seal: ExposedSeal> PartialEq for Assign<State, Seal> {
 impl<State: ExposedState, Seal: ExposedSeal> Eq for Assign<State, Seal> {}
 
 impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
-    pub fn revealed(seal: Seal, state: State) -> Self {
-        Assign::Revealed {
-            seal,
-            state,
-            lock: default!(),
-        }
-    }
+    pub fn revealed(seal: Seal, state: State) -> Self { Assign::Revealed { seal, state } }
 
     pub fn with_seal_replaced(assignment: &Self, seal: Seal) -> Self {
         match assignment {
-            Assign::ConfidentialSeal {
-                seal: _,
-                state,
-                lock,
+            Assign::ConfidentialSeal { seal: _, state } | Assign::Revealed { seal: _, state } => {
+                Assign::Revealed {
+                    seal,
+                    state: state.clone(),
+                }
             }
-            | Assign::Revealed {
-                seal: _,
-                state,
-                lock,
-            } => Assign::Revealed {
-                seal,
-                state: state.clone(),
-                lock: *lock,
-            },
         }
     }
 
@@ -216,10 +194,9 @@ where Self: Clone
 
     fn conceal(&self) -> Self::Concealed {
         match self {
-            Assign::Revealed { seal, state, lock } => Self::ConfidentialSeal {
+            Assign::Revealed { seal, state } => Self::ConfidentialSeal {
                 seal: seal.conceal(),
                 state: state.clone(),
-                lock: *lock,
             },
             Assign::ConfidentialSeal { .. } => self.clone(),
         }
@@ -229,15 +206,13 @@ where Self: Clone
 impl<State: ExposedState> Assign<State, GenesisSeal> {
     pub fn transmutate_seals(&self) -> Assign<State, GraphSeal> {
         match self {
-            Assign::ConfidentialSeal { seal, state, lock } => Assign::ConfidentialSeal {
+            Assign::ConfidentialSeal { seal, state } => Assign::ConfidentialSeal {
                 seal: *seal,
                 state: state.clone(),
-                lock: *lock,
             },
-            Assign::Revealed { seal, state, lock } => Assign::Revealed {
+            Assign::Revealed { seal, state } => Assign::Revealed {
                 seal: seal.transmutate(),
                 state: state.clone(),
-                lock: *lock,
             },
         }
     }
@@ -399,13 +374,10 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         ) {
             for assign in vec.iter_mut() {
                 match assign {
-                    Assign::ConfidentialSeal { seal, state, lock }
-                        if *seal == revealed.conceal() =>
-                    {
+                    Assign::ConfidentialSeal { seal, state } if *seal == revealed.conceal() => {
                         *assign = Assign::Revealed {
                             seal: revealed,
                             state: state.clone(),
-                            lock: *lock,
                         }
                     }
                     _ => {}

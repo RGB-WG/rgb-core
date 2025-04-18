@@ -32,7 +32,7 @@ use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
 use commit_verify::{
     mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, Conceal, DigestExt, MerkleHash,
-    MerkleLeaves, ReservedBytes, Sha256, StrictHash,
+    MerkleLeaves, Sha256, StrictHash,
 };
 use strict_encoding::StrictDumb;
 
@@ -230,7 +230,6 @@ impl TransitionBundle {
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 pub struct BaseCommitment {
-    pub flags: ReservedBytes<1, 0>,
     pub schema_id: SchemaId,
     pub timestamp: i64,
     pub issuer: StrictHash,
@@ -261,14 +260,11 @@ pub struct OpCommitment {
     pub globals: MerkleHash,
     pub inputs: MerkleHash,
     pub assignments: MerkleHash,
-    pub witness: MerkleHash,
-    pub validator: StrictHash,
 }
 
 impl Genesis {
     pub fn commit(&self) -> OpCommitment {
         let base = BaseCommitment {
-            flags: self.flags,
             schema_id: self.schema_id,
             timestamp: self.timestamp,
             chain_net: self.chain_net,
@@ -282,8 +278,6 @@ impl Genesis {
             globals: MerkleHash::merklize(&self.globals),
             inputs: MerkleHash::void(0, u256::ZERO),
             assignments: MerkleHash::merklize(&self.assignments),
-            witness: MerkleHash::void(0, u256::ZERO),
-            validator: self.validator.commit_id(),
         }
     }
 
@@ -300,8 +294,6 @@ impl Transition {
             globals: MerkleHash::merklize(&self.globals),
             inputs: MerkleHash::merklize(&self.inputs),
             assignments: MerkleHash::merklize(&self.assignments),
-            witness: MerkleHash::void(0, u256::ZERO),
-            validator: self.validator.commit_id(),
         }
     }
 }
@@ -321,7 +313,6 @@ pub struct AssignmentCommitment {
     pub ty: AssignmentType,
     pub state: RevealedState,
     pub seal: SecretSeal,
-    pub lock: ReservedBytes<2, 0>,
 }
 
 impl CommitEncode for AssignmentCommitment {
@@ -331,21 +322,19 @@ impl CommitEncode for AssignmentCommitment {
         e.commit_to_serialized(&self.ty);
         self.state.commit_encode(e);
         e.commit_to_serialized(&self.seal);
-        e.commit_to_serialized(&self.lock);
         e.set_finished();
     }
 }
 
 impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
     pub fn commitment(&self, ty: AssignmentType) -> AssignmentCommitment {
-        let Self::ConfidentialSeal { seal, state, lock } = self.conceal() else {
+        let Self::ConfidentialSeal { seal, state } = self.conceal() else {
             unreachable!();
         };
         AssignmentCommitment {
             ty,
             state: state.state_data(),
             seal,
-            lock,
         }
     }
 }

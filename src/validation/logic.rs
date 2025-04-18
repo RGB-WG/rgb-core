@@ -391,7 +391,7 @@ fn extract_prev_state<C: ConsignmentApi>(
 ) -> Assignments<GraphSeal> {
     let mut assignments: BTreeMap<AssignmentType, TypedAssigns<_>> = bmap! {};
     for input in inputs {
-        let Opout { op, ty, no } = input.prev_out;
+        let Opout { op, ty, no } = input;
 
         let prev_op = match consignment.operation(op) {
             None => {
@@ -418,7 +418,7 @@ fn extract_prev_state<C: ConsignmentApi>(
                         }
                     }
                 } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
+                    status.add_failure(validation::Failure::NoPrevOut(opid, input));
                 }
             }
             Some(TypedAssigns::Fungible(prev_assignments)) => {
@@ -436,7 +436,7 @@ fn extract_prev_state<C: ConsignmentApi>(
                         }
                     }
                 } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
+                    status.add_failure(validation::Failure::NoPrevOut(opid, input));
                 }
             }
             Some(TypedAssigns::Structured(prev_assignments)) => {
@@ -454,7 +454,7 @@ fn extract_prev_state<C: ConsignmentApi>(
                         }
                     }
                 } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
+                    status.add_failure(validation::Failure::NoPrevOut(opid, input));
                 }
             }
             None => {

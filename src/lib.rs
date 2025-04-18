@@ -45,7 +45,6 @@ pub mod stl;
 
 pub mod prelude {
     pub use bp::Txid;
-    pub use commit_verify::ReservedBytes;
     pub use operation::*;
     pub use schema::*;
 

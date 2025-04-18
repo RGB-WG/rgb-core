@@ -26,9 +26,7 @@ use std::num::ParseIntError;
 
 use amplify::confinement::{Confined, NonEmptyOrdSet, TinyOrdSet, U16};
 use amplify::{hex, Bytes64, Wrapper};
-use commit_verify::{
-    CommitEncode, CommitEngine, CommitId, MerkleHash, MerkleLeaves, ReservedBytes, StrictHash,
-};
+use commit_verify::{CommitEncode, CommitEngine, CommitId, MerkleHash, MerkleLeaves, StrictHash};
 use strict_encoding::stl::AsciiPrintable;
 use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize};
 
@@ -42,6 +40,8 @@ use crate::{
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = MerkleHash)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -79,52 +79,26 @@ pub enum OpoutParseError {
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, dumb = Self(NonEmptyOrdSet::with(Input::strict_dumb())))]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, dumb = Self(NonEmptyOrdSet::with(Opout::strict_dumb())))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct Inputs(NonEmptyOrdSet<Input, U16>);
+pub struct Inputs(NonEmptyOrdSet<Opout, U16>);
 
 impl<'a> IntoIterator for &'a Inputs {
-    type Item = Input;
-    type IntoIter = iter::Copied<btree_set::Iter<'a, Input>>;
+    type Item = Opout;
+    type IntoIter = iter::Copied<btree_set::Iter<'a, Opout>>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.iter().copied() }
 }
 
 impl MerkleLeaves for Inputs {
-    type Leaf = Input;
-    type LeafIter<'tmp> = <TinyOrdSet<Input> as MerkleLeaves>::LeafIter<'tmp>;
+    type Leaf = Opout;
+    type LeafIter<'tmp> = <TinyOrdSet<Opout> as MerkleLeaves>::LeafIter<'tmp>;
 
     fn merkle_leaves(&self) -> Self::LeafIter<'_> { self.0.merkle_leaves() }
-}
-
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict, id = MerkleHash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[display("{prev_out}")]
-pub struct Input {
-    pub prev_out: Opout,
-    #[cfg_attr(feature = "serde", serde(skip))]
-    reserved: ReservedBytes<2>,
-}
-
-impl Input {
-    pub fn with(prev_out: Opout) -> Input {
-        Input {
-            prev_out,
-            reserved: default!(),
-        }
-    }
 }
 
 /// RGB contract operation API, defined as trait
@@ -246,14 +220,12 @@ impl From<&'static str> for Identity {
 pub struct Genesis {
     pub ffv: Ffv,
     pub schema_id: SchemaId,
-    pub flags: ReservedBytes<1, 0>,
     pub timestamp: i64,
     pub issuer: Identity,
     pub chain_net: ChainNet,
     pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
-    pub validator: ReservedBytes<1, 0>,
 }
 
 impl StrictSerialize for Genesis {}
@@ -288,8 +260,6 @@ pub struct Transition {
     pub globals: GlobalState,
     pub inputs: Inputs,
     pub assignments: Assignments<GraphSeal>,
-    pub validator: ReservedBytes<1, 0>,
-    pub witness: ReservedBytes<2, 0>,
     pub signature: Option<Signature>,
 }
 
