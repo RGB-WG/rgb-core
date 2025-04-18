@@ -1,5 +1,5 @@
 {-
-  Id: stl:taGMXEjW-1FDlac4-c6kFcnK-6iv9IXB-G0Gjhdz-Stoexsk#film-extreme-koala
+  Id: stl:6fV506IQ-vMhzEMh-POJEglP-j8QFZYw-coxDSxG-nETVnig#teacher-puma-sound
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -11,30 +11,30 @@
 @context
 typelib RGBCommit
 
-import StrictTypes#century-comrade-chess
-  use FieldName#present-flute-herman
-  use TypeName#edgar-carol-mystery
-  use SemId#logic-absorb-hilton
-
-import AluVM#congo-archive-folio
-  use LibSite#ultra-grace-message
-  use LibId#germany-culture-olivia
-
-import BPCore#alfonso-andrea-nitro
+import BPCore#juliet-super-dominic
   use BlindSealTxid#halt-crash-valid
   use SecretSeal#dollar-iris-wizard
   use BlindSealTxPtr#content-paradox-dominic
   use TxPtr#italian-july-eddie
 
-import CommitVerify#miller-pancake-elastic
+import CommitVerify#violet-panther-herbert
   use MerkleHash#horse-popcorn-bundle
   use StrictHash#pizza-sherman-sound
 
-import Std#ralph-blue-lucky
+import Std#delete-roman-hair
   use AsciiPrintable#ultra-sunset-format
   use AlphaNumLodash#percent-bingo-caesar
   use AlphaCapsLodash#duet-hammer-labor
   use AlphaSmallLodash#pioneer-eagle-spell
+
+import AluVM#jargon-gorilla-poetic
+  use LibSite#ultra-grace-message
+  use LibId#germany-culture-olivia
+
+import StrictTypes#henry-heart-survive
+  use FieldName#present-flute-herman
+  use TypeName#edgar-carol-mystery
+  use SemId#logic-absorb-hilton
 
 import Bitcoin#signal-color-cipher
   use Vout#brush-gloria-heroic
@@ -102,6 +102,9 @@ data BaseCommitment    : schemaId SchemaId
                        , timestamp I64
                        , issuer CommitVerify.StrictHash
                        , chainNet ChainNet
+
+@mnemonic(carmen-farmer-diesel)
+data BundleId          : [Byte ^ 32]
 
 @mnemonic(ringo-fashion-enrico)
 data ChainNet          : bitcoinMainnet | bitcoinTestnet3 | bitcoinTestnet4 | bitcoinSignet

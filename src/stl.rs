@@ -21,7 +21,7 @@
 // limitations under the License.
 
 pub use aluvm::stl::aluvm_stl;
-pub use bp::bc::stl::bp_tx_stl;
+pub use bp::bc::stl::{bp_consensus_stl, bp_tx_stl};
 pub use bp::stl::bp_core_stl;
 use bp::Txid;
 use commit_verify::stl::commit_verify_stl;
@@ -32,43 +32,46 @@ use strict_types::{CompileError, TypeLib};
 use crate::validation::DbcProof;
 use crate::vm::GlobalOrd;
 use crate::{
-    Genesis, OpCommitment, Schema, TransitionBundle, LIB_NAME_RGB_COMMIT, LIB_NAME_RGB_LOGIC,
+    BundleId, Genesis, OpCommitment, Schema, TransitionBundle, LIB_NAME_RGB_COMMIT,
+    LIB_NAME_RGB_LOGIC,
 };
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_COMMIT: &str =
-    "stl:taGMXEjW-1FDlac4-c6kFcnK-6iv9IXB-G0Gjhdz-Stoexsk#film-extreme-koala";
+    "stl:6fV506IQ-vMhzEMh-POJEglP-j8QFZYw-coxDSxG-nETVnig#teacher-puma-sound";
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_LOGIC: &str =
-    "stl:hrx4os5M-G1AhR3Z-8FlOSFa-VxScvGS-!jvqFk3-XBnsCa8#cable-pagoda-mayor";
+    "stl:JXHYYte5-zpKGnbK-BPX9gDq-fyR0RbB-F6U3Nxj-gDdt_3A#special-jungle-patient";
 
 fn _rgb_commit_stl() -> Result<TypeLib, CompileError> {
-    LibBuilder::new(libname!(LIB_NAME_RGB_COMMIT), tiny_bset! {
-        std_stl().to_dependency(),
-        strict_types_stl().to_dependency(),
-        commit_verify_stl().to_dependency(),
-        bp_tx_stl().to_dependency(),
-        bp_core_stl().to_dependency(),
-        aluvm_stl().to_dependency()
-    })
+    LibBuilder::with(libname!(LIB_NAME_RGB_COMMIT), [
+        std_stl().to_dependency_types(),
+        strict_types_stl().to_dependency_types(),
+        commit_verify_stl().to_dependency_types(),
+        bp_tx_stl().to_dependency_types(),
+        bp_core_stl().to_dependency_types(),
+        aluvm_stl().to_dependency_types(),
+    ])
+    .transpile::<Schema>()
     .transpile::<Schema>()
     .transpile::<Genesis>()
     .transpile::<Txid>()
     .transpile::<TransitionBundle>()
+    .transpile::<BundleId>()
     .transpile::<OpCommitment>()
     .compile()
 }
 
 fn _rgb_logic_stl() -> Result<TypeLib, CompileError> {
-    LibBuilder::new(libname!(LIB_NAME_RGB_LOGIC), tiny_bset! {
-        std_stl().to_dependency(),
-        strict_types_stl().to_dependency(),
-        commit_verify_stl().to_dependency(),
-        bp_tx_stl().to_dependency(),
-        bp_core_stl().to_dependency(),
-        aluvm_stl().to_dependency(),
-        rgb_commit_stl().to_dependency()
-    })
+    LibBuilder::with(libname!(LIB_NAME_RGB_LOGIC), [
+        std_stl().to_dependency_types(),
+        strict_types_stl().to_dependency_types(),
+        commit_verify_stl().to_dependency_types(),
+        bp_consensus_stl().to_dependency_types(),
+        bp_core_stl().to_dependency_types(),
+        aluvm_stl().to_dependency_types(),
+        rgb_commit_stl().to_dependency_types(),
+    ])
     .transpile::<GlobalOrd>()
     .transpile::<DbcProof>()
     .compile()

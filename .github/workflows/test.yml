@@ -36,4 +36,4 @@ jobs:
       - name: Add wasm32 target
         run: rustup target add wasm32-unknown-unknown
       - name: Test in headless Chrome
-        run: wasm-pack test --headless --chrome
+        run: RUSTFLAGS='--cfg getrandom_backend="wasm_js"' wasm-pack test --headless --chrome
