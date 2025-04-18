@@ -436,15 +436,6 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
 
     fn prev_checked(&mut self) -> Option<(GlobalOrd, I::Data)> {
         let (ord, item) = self.iter.prev()?;
-        if self.last_ord.map(|last| ord <= last).unwrap_or_default() {
-            panic!(
-                "global contract state iterator has invalid implementation: it fails to order \
-                 global state according to the consensus ordering"
-            );
-        }
-        if ord.op_ord.is_archived() {
-            panic!("invalid GlobalStateIter implementation returning WitnessOrd::Archived")
-        }
         self.checked_depth += u24::ONE;
         self.last_ord = Some(ord);
         Some((ord, item))
