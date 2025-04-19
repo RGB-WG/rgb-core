@@ -1,5 +1,5 @@
 {-
-  Id: stl:KcBYRebN-pYf7mdW-bcI7bKj-GCGO3Lc-sBgzDJi-DWTBahs#lady-stadium-invent
+  Id: stl:hrx4os5M-G1AhR3Z-8FlOSFa-VxScvGS-!jvqFk3-XBnsCa8#cable-pagoda-mayor
   Name: RGBLogic
   Version: 0.1.0
   Description: Consensus logic layer for RGB smart contracts
@@ -20,7 +20,6 @@ import BPCore#alfonso-andrea-nitro
 
 import RGBCommit#film-extreme-koala
   use TransitionType#picture-reflex-brigade
-  use Layer1#camilla-basket-justin
   use OpId#picnic-single-gloria
 
 import Bitcoin#signal-color-cipher
@@ -39,6 +38,10 @@ data DbcProof          : tapret#1 BPCore.TapretProof
 @mnemonic(east-sunset-extra)
 data GlobalOrd         : opOrd OpOrd, idx U16
 
+@mnemonic(camilla-basket-justin)
+data Layer1            : bitcoin | liquid
+
+
 @mnemonic(disney-mama-rover)
 data OpOrd             : genesis ()
                        | transition#255 (witness WitnessOrd
@@ -52,8 +55,8 @@ data WitnessOrd        : mined WitnessPos
                        | ignored ()
                        | archived ()
 
-@mnemonic(cliff-enrico-nominal)
-data WitnessPos        : layer1 RGBCommit.Layer1
+@mnemonic(giraffe-melody-aspirin)
+data WitnessPos        : layer1 Layer1
                        , height U32
                        , timestamp I64
 

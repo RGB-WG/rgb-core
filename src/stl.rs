@@ -40,7 +40,7 @@ pub const LIB_ID_RGB_COMMIT: &str =
     "stl:taGMXEjW-1FDlac4-c6kFcnK-6iv9IXB-G0Gjhdz-Stoexsk#film-extreme-koala";
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_LOGIC: &str =
-    "stl:KcBYRebN-pYf7mdW-bcI7bKj-GCGO3Lc-sBgzDJi-DWTBahs#lady-stadium-invent";
+    "stl:hrx4os5M-G1AhR3Z-8FlOSFa-VxScvGS-!jvqFk3-XBnsCa8#cable-pagoda-mayor";
 
 fn _rgb_commit_stl() -> Result<TypeLib, CompileError> {
     LibBuilder::new(libname!(LIB_NAME_RGB_COMMIT), tiny_bset! {

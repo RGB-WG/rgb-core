@@ -25,12 +25,12 @@ use std::str::FromStr;
 use bp::BlockHash;
 use strict_encoding::{StrictDecode, StrictEncode, StrictType};
 
-use crate::LIB_NAME_RGB_COMMIT;
+use crate::{LIB_NAME_RGB_COMMIT, LIB_NAME_RGB_LOGIC};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
 #[display(lowercase)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
+#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = repr, into_u8, try_from_u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
