@@ -41,7 +41,7 @@ pub trait RgbSealDef: Clone + Eq + Debug + Display + StrictDumb + StrictEncode +
 pub trait RgbSeal:
     SingleUseSeal<Message: From<[u8; 32]>, PubWitness = Self::Published, CliWitness = Self::Client> + Ord
 {
-    type Definiton: RgbSealDef<Src = Self>;
+    type Definition: RgbSealDef<Src = Self>;
     type Published: PublishedWitness<Self, PubId = Self::WitnessId>;
     type Client: ClientSideWitness;
     type WitnessId: Copy + Ord + Debug + Display;
@@ -58,7 +58,7 @@ pub mod bitcoin {
     use super::*;
 
     impl RgbSeal for TxoSeal {
-        type Definiton = WTxoSeal;
+        type Definition = WTxoSeal;
         type Published = Tx;
         type Client = Anchor;
         type WitnessId = Txid;

@@ -78,7 +78,7 @@ pub trait ContractApi<Seal: RgbSeal> {
     fn repo(&self) -> &impl LibRepo;
     fn memory(&self) -> &impl Memory;
     fn is_known(&self, opid: Opid) -> bool;
-    fn apply_operation(&mut self, op: VerifiedOperation, seals: SmallOrdMap<u16, Seal::Definiton>);
+    fn apply_operation(&mut self, op: VerifiedOperation, seals: SmallOrdMap<u16, Seal::Definition>);
     fn apply_witness(&mut self, opid: Opid, witness: SealWitness<Seal>);
 }
 
@@ -86,7 +86,7 @@ pub trait ContractApi<Seal: RgbSeal> {
 // libraries
 pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
     // TODO: Support multi-thread mode for parallel processing of unrelated operations
-    fn evaluate<R: ReadOperation<SealDef = Seal::Definiton>>(
+    fn evaluate<R: ReadOperation<SealDef = Seal::Definition>>(
         &mut self,
         mut reader: R,
     ) -> Result<(), VerificationError<Seal>> {
