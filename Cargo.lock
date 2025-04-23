@@ -309,7 +309,7 @@ dependencies = [
 [[package]]
 name = "commit_encoding_derive"
 version = "0.11.0"
-source = "git+https://github.com/zoedberg/client_side_validation?branch=0.11.1-2#c6bdd35814dc2d316bc5d1f0f1d13293ca2ec64e"
+source = "git+https://github.com/zoedberg/client_side_validation?branch=0.11.1-2#52a1d7fef821dbc833a483cc508b4cd12955e468"
 dependencies = [
  "amplify",
  "amplify_syn",
@@ -321,7 +321,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.11.0"
-source = "git+https://github.com/zoedberg/client_side_validation?branch=0.11.1-2#c6bdd35814dc2d316bc5d1f0f1d13293ca2ec64e"
+source = "git+https://github.com/zoedberg/client_side_validation?branch=0.11.1-2#52a1d7fef821dbc833a483cc508b4cd12955e468"
 dependencies = [
  "amplify",
  "commit_encoding_derive",

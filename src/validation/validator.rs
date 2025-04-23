@@ -59,7 +59,6 @@ pub enum WitnessResolverError {
 }
 
 pub trait ResolveWitness {
-    // TODO: Return with SPV proof data
     fn resolve_pub_witness(&self, witness_id: Txid) -> Result<Tx, WitnessResolverError>;
 
     fn resolve_pub_witness_ord(&self, witness_id: Txid)

@@ -129,6 +129,3 @@ macro_rules! impl_serde_baid64 {
         }
     };
 }
-
-// TODO: Validate strict type data
-// TODO: Add parsed global and structured state to the ContractState

@@ -69,11 +69,9 @@ fn _rgb_logic_stl() -> Result<TypeLib, CompileError> {
         aluvm_stl().to_dependency(),
         rgb_commit_stl().to_dependency()
     })
-        .transpile::<GlobalOrd>()
-        .transpile::<DbcProof>()
-        // TODO: Commit to the RGB ISA once AluVM will support strict types
-        // .transpile::<RgbIsa>()
-        .compile()
+    .transpile::<GlobalOrd>()
+    .transpile::<DbcProof>()
+    .compile()
 }
 
 /// Generates strict type library providing data types for RGB consensus.
