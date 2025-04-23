@@ -42,4 +42,4 @@ pub use seals::{RgbSeal, RgbSealDef};
 pub use single_use_seals::*;
 pub use verify::{ContractApi, ContractVerify, OperationSeals, ReadOperation, ReadWitness, Step, VerificationError};
 
-pub const LIB_NAME_RGB_CORE: &str = "RGBCore";
+pub const LIB_NAME_RGB: &str = "RGB";

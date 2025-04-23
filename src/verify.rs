@@ -32,7 +32,7 @@ use ultrasonic::{
     AuthToken, CallError, CellAddr, Codex, ContractId, LibRepo, Memory, Operation, Opid, VerifiedOperation,
 };
 
-use crate::{RgbSeal, RgbSealDef, LIB_NAME_RGB_CORE};
+use crate::{RgbSeal, RgbSealDef, LIB_NAME_RGB};
 
 // TODO: Move to amplify crate
 pub enum Step<A, B> {
@@ -42,7 +42,8 @@ pub enum Step<A, B> {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_CORE)]
+// This type is used in the RGB Standard library
+#[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
