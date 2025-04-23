@@ -18,9 +18,9 @@ name = "rgbcore"
 crate-type = ["cdylib", "rlib", "staticlib"] # We need this for WASM
 
 [dependencies]
-amplify = { version = "~4.8.0", default-features = false, features = ["alloc"] }
+amplify = { version = "~4.8.1", default-features = false, features = ["alloc"] }
 ultrasonic = "0.12.0-beta.5"
-strict_encoding = "2.8.1"
+strict_encoding = "2.8.2"
 commit_verify = "~0.12.0-beta.5"
 single_use_seals = { version = "~0.12.0-beta.5", features = ["strict_encoding"] }
 bp-core = { version = "0.12.0-beta.5", optional = true }
@@ -54,6 +54,8 @@ wasm-bindgen-test = "0.3"
 features = ["all"]
 
 [patch.crates-io]
+commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
+single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
 zk-aluvm = { git = "https://github.com/AluVM/zk-aluvm", branch = "master" }
 aluvm = { git = "https://github.com/AluVM/aluvm", branch = "master" }
 ultrasonic = { git = "https://github.com/AluVM/ultrasonic", branch = "master" }

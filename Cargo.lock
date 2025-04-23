@@ -19,9 +19,9 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "4.8.0"
+version = "4.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "448cf0c3afc71439b5f837aac5399a1ef2b223f5f38324dbfb4343deec3b80cc"
+checksum = "3a9d7cb29f1d4c6ec8650abbee35948b8bdefb7f0750a26445ff593eb9bf7fcf"
 dependencies = [
  "amplify_derive",
  "amplify_num",
@@ -256,9 +256,8 @@ dependencies = [
 
 [[package]]
 name = "commit_encoding_derive"
-version = "0.12.0-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9613582af45e1564c09d813dae82e7c7bca95678b9c42dae955a8499ecc6ae95"
+version = "0.12.0-beta.5"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.12#b5024094fb3183b1cf4376efed7e2d3e38a0e7e2"
 dependencies = [
  "amplify",
  "amplify_syn",
@@ -270,8 +269,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.12.0-beta.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4de6c513328b7228446f116caf74d658a2d39b305683f5ed24b73edccc3f9cf3"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.12#b5024094fb3183b1cf4376efed7e2d3e38a0e7e2"
 dependencies = [
  "amplify",
  "commit_encoding_derive",
@@ -629,8 +627,7 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 [[package]]
 name = "single_use_seals"
 version = "0.12.0-beta.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6aca5a44fa5e544b62816ecb7309355e53a3bb36d55219606be0028227c13b64"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.12#b5024094fb3183b1cf4376efed7e2d3e38a0e7e2"
 dependencies = [
  "serde",
  "strict_encoding",
@@ -638,9 +635,9 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding"
-version = "2.8.1"
+version = "2.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fd36b71bb44ca146be0b2185ed6c6deb3684cc0d5c3a94284e97fe7fa6a642f"
+checksum = "8553c0321466c11aa1e33f082c9190194f380efd8824bf5ce4fa56b64b875be9"
 dependencies = [
  "amplify",
  "serde",
