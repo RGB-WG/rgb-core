@@ -1,5 +1,5 @@
 {-
-  Id: stl:0f49mOgU-jvc2JeV-iX2M~IO-jYPrjwt-A8aSIrO-o0r81Es#patron-melody-jazz
+  Id: stl:RNm~87HP-0IyhQ0U-r9rKAGs-BkcPlgj-EXn99u1-mOj57KM#music-cool-tahiti
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -97,11 +97,12 @@ data AssignmentsBlindSealTxPtr : {AssignmentType -> ^ ..0xff TypedAssignsBlindSe
 @mnemonic(baker-size-sonar)
 data AssignmentsBlindSealTxid : {AssignmentType -> ^ ..0xff TypedAssignsBlindSealTxid}
 
-@mnemonic(manila-number-locate)
+@mnemonic(fiesta-gilbert-fiber)
 data BaseCommitment    : schemaId SchemaId
                        , timestamp I64
                        , issuer CommitVerify.StrictHash
                        , chainNet ChainNet
+                       , sealClosingStrategy SealClosingStrategy
 
 @mnemonic(carmen-farmer-diesel)
 data BundleId          : [Byte ^ 32]
@@ -127,12 +128,13 @@ data FungibleState     : bits64#8 U64 | (|)
 data FungibleType      : unsigned64Bit#8 | (|)
 
 
-@mnemonic(july-angel-bombay)
+@mnemonic(salami-water-climax)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
                        , timestamp I64
                        , issuer Identity
                        , chainNet ChainNet
+                       , sealClosingStrategy SealClosingStrategy
                        , metadata Metadata
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
@@ -222,6 +224,10 @@ data Schema            : ffv Ffv
 
 @mnemonic(ramirez-patron-simon)
 data SchemaId          : [Byte ^ 32]
+
+@mnemonic(exile-target-catalog)
+data SealClosingStrategy : firstOpretOrTapret | (|)
+
 
 @mnemonic(ferrari-zebra-tempo)
 data Signature         : [Byte ^ 64]

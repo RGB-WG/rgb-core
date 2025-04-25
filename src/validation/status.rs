@@ -33,7 +33,8 @@ use strict_types::SemId;
 use crate::schema::{self, SchemaId};
 use crate::validation::WitnessResolverError;
 use crate::{
-    BundleId, ChainNet, ContractId, OccurrencesMismatch, OpFullType, OpId, Opout, StateType, Vin,
+    BundleId, ChainNet, ContractId, OccurrencesMismatch, OpFullType, OpId, Opout,
+    SealClosingStrategy, StateType, Vin,
 };
 
 pub type UnsafeHistoryMap = HashMap<u32, HashSet<Txid>>;
@@ -210,6 +211,8 @@ pub enum Failure {
     SchemaUnknownGlobalStateType(OpId, schema::GlobalStateType),
     /// operation {0} uses invalid assignment type {1}.
     SchemaUnknownAssignmentType(OpId, schema::AssignmentType),
+    /// operation {0} uses invalid seal closing strategy {1}.
+    SchemaUnknownSealClosingStrategy(OpId, SealClosingStrategy),
 
     /// invalid number of global state entries of type {1} in operation {0} -
     /// {2}

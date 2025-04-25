@@ -39,8 +39,8 @@ use strict_encoding::StrictDumb;
 use crate::{
     impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ChainNet, DataState,
     ExposedSeal, ExposedState, Ffv, Genesis, GlobalState, GlobalStateType, Operation, RevealedData,
-    RevealedState, RevealedValue, SchemaId, SecretSeal, Transition, TransitionBundle,
-    TransitionType, TypedAssigns, LIB_NAME_RGB_COMMIT,
+    RevealedState, RevealedValue, SchemaId, SealClosingStrategy, SecretSeal, Transition,
+    TransitionBundle, TransitionType, TypedAssigns, LIB_NAME_RGB_COMMIT,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -234,6 +234,7 @@ pub struct BaseCommitment {
     pub timestamp: i64,
     pub issuer: StrictHash,
     pub chain_net: ChainNet,
+    pub seal_closing_strategy: SealClosingStrategy,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -268,6 +269,7 @@ impl Genesis {
             schema_id: self.schema_id,
             timestamp: self.timestamp,
             chain_net: self.chain_net,
+            seal_closing_strategy: self.seal_closing_strategy,
             issuer: self.issuer.commit_id(),
         };
         OpCommitment {

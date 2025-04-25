@@ -40,7 +40,8 @@ use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OrdOpRef, RgbI
 use crate::{
     validation, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal, ExposedState,
     GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId,
-    Operation, Opout, OwnedStateSchema, RevealedState, Schema, Transition, TypedAssigns,
+    Operation, Opout, OwnedStateSchema, RevealedState, Schema, SealClosingStrategy, Transition,
+    TypedAssigns,
 };
 
 impl Schema {
@@ -60,14 +61,24 @@ impl Schema {
         let empty_assign_schema = AssignmentsSchema::default();
         let (metadata_schema, global_schema, owned_schema, assign_schema, validator, ty) = match op
         {
-            OrdOpRef::Genesis(_) => (
-                &self.genesis.metadata,
-                &self.genesis.globals,
-                &empty_assign_schema,
-                &self.genesis.assignments,
-                self.genesis.validator,
-                None::<u16>,
-            ),
+            OrdOpRef::Genesis(genesis) => {
+                if genesis.seal_closing_strategy != SealClosingStrategy::FirstOpretOrTapret {
+                    return validation::Status::with_failure(
+                        validation::Failure::SchemaUnknownSealClosingStrategy(
+                            opid,
+                            genesis.seal_closing_strategy,
+                        ),
+                    );
+                }
+                (
+                    &self.genesis.metadata,
+                    &self.genesis.globals,
+                    &empty_assign_schema,
+                    &self.genesis.assignments,
+                    self.genesis.validator,
+                    None::<u16>,
+                )
+            }
             OrdOpRef::Transition(
                 Transition {
                     transition_type, ..

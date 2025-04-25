@@ -23,6 +23,7 @@ commitment SchemaId, hasher SHA256, tagged urn:lnp-bp:rgb:schema#2024-02-03
   map TransitionDetails, len 0..MAX8
     mapKey TransitionType
     mapValue TransitionDetails
+  serialized AssignmentType
 
 rec Schema
   is ffv, U16, aka Ffv

@@ -19,6 +19,7 @@ rec OpCommitment
       is timestamp, I64
       bytes issuer, len 32, aka StrictHash
       enum chainNet, ChainNet, bitcoinMainnet 0, bitcoinTestnet3 1, bitcoinTestnet4 2, bitcoinSignet 3, bitcoinRegtest 4, liquidMainnet 5, liquidTestnet 6
+      enum sealClosingStrategy, SealClosingStrategy, firstOpretOrTapret 0
     tuple transition, tag 1
       bytes _, len 32, aka ContractId
       is _, U16, aka TransitionType

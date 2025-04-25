@@ -209,6 +209,23 @@ impl From<&'static str> for Identity {
     fn from(s: &'static str) -> Self { Self(RString::from(s)) }
 }
 
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[display(inner)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[repr(u8)]
+#[derive(Default)]
+#[non_exhaustive]
+pub enum SealClosingStrategy {
+    #[default]
+    FirstOpretOrTapret = 0,
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
@@ -223,6 +240,7 @@ pub struct Genesis {
     pub timestamp: i64,
     pub issuer: Identity,
     pub chain_net: ChainNet,
+    pub seal_closing_strategy: SealClosingStrategy,
     pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
