@@ -197,6 +197,8 @@ pub struct Schema {
     pub owned_types: TinyOrdMap<AssignmentType, AssignmentDetails>,
     pub genesis: GenesisSchema,
     pub transitions: TinyOrdMap<TransitionType, TransitionDetails>,
+
+    pub default_assignment: Option<AssignmentType>,
 }
 
 impl CommitEncode for Schema {
@@ -212,6 +214,8 @@ impl CommitEncode for Schema {
         e.commit_to_map(&self.owned_types);
         e.commit_to_serialized(&self.genesis);
         e.commit_to_map(&self.transitions);
+
+        e.commit_to_option(&self.default_assignment);
     }
 }
 
