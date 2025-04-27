@@ -45,7 +45,7 @@ rec Transition
       bytes op, len 32, aka OpId
       is ty, U16, aka AssignmentType
       is no, U16
-  map assignments, len 0..MAX8, aka AssignmentsBlindSealTxPtr
+  map assignments, len 0..MAX16, aka AssignmentsBlindSealTxPtr
     is key, U16, aka AssignmentType
     union value, TypedAssignsBlindSealTxPtr
       list declarative, len 1..MAX16, wrapped, aka AssignVecAssignVoidStateBlindSealTxPtr, tag 0

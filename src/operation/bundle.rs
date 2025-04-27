@@ -20,9 +20,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{btree_map, BTreeMap};
+use std::collections::btree_set;
+use std::iter;
 
-use amplify::confinement::{Confined, SmallOrdSet, U16 as U16MAX};
+use amplify::confinement::{NonEmptyOrdMap, NonEmptyOrdSet, U16 as U16MAX};
 use amplify::{Bytes32, Wrapper};
 use bp::Vout;
 use commit_verify::{mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
@@ -70,37 +71,20 @@ impl From<mpc::Message> for BundleId {
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, dumb = Self(NonEmptyOrdSet::with(OpId::strict_dumb())))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct InputMap(Confined<BTreeMap<Vin, SmallOrdSet<OpId>>, 1, U16MAX>);
+pub struct InputOpids(NonEmptyOrdSet<OpId, U16MAX>);
 
-impl StrictDumb for InputMap {
-    fn strict_dumb() -> Self { Self(Confined::with_key_value(strict_dumb!(), strict_dumb!())) }
-}
+impl<'a> IntoIterator for &'a InputOpids {
+    type Item = OpId;
+    type IntoIter = iter::Copied<btree_set::Iter<'a, OpId>>;
 
-impl InputMap {
-    pub fn with(input: Vin, ids: SmallOrdSet<OpId>) -> Self {
-        InputMap(Confined::with((input, ids)))
-    }
-}
-
-impl IntoIterator for InputMap {
-    type Item = (Vin, SmallOrdSet<OpId>);
-    type IntoIter = btree_map::IntoIter<Vin, SmallOrdSet<OpId>>;
-
-    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
-}
-
-impl<'a> IntoIterator for &'a InputMap {
-    type Item = (&'a Vin, &'a SmallOrdSet<OpId>);
-    type IntoIter = btree_map::Iter<'a, Vin, SmallOrdSet<OpId>>;
-
-    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+    fn into_iter(self) -> Self::IntoIter { self.0.iter().copied() }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Display, Error)]
@@ -116,21 +100,21 @@ pub struct UnrelatedTransition(OpId, Transition);
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct TransitionBundle {
-    pub input_map: InputMap,
-    pub known_transitions: Confined<BTreeMap<OpId, Transition>, 1, U16MAX>,
+    pub input_map: NonEmptyOrdMap<Vin, InputOpids, U16MAX>,
+    pub known_transitions: NonEmptyOrdMap<OpId, Transition, U16MAX>,
 }
 
 impl CommitEncode for TransitionBundle {
     type CommitmentId = BundleId;
 
-    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_serialized(&self.input_map); }
+    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_map(&self.input_map); }
 }
 
 impl StrictDumb for TransitionBundle {
     fn strict_dumb() -> Self {
         Self {
-            input_map: strict_dumb!(),
-            known_transitions: Confined::with_key_value(strict_dumb!(), strict_dumb!()),
+            input_map: NonEmptyOrdMap::with_key_value(strict_dumb!(), strict_dumb!()),
+            known_transitions: NonEmptyOrdMap::with_key_value(strict_dumb!(), strict_dumb!()),
         }
     }
 }

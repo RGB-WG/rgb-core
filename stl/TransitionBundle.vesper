@@ -8,7 +8,9 @@
 Bundles vesper lexicon=types+commitments
 
 commitment BundleId, hasher SHA256, tagged urn:lnp-bp:rgb:bundle#2024-02-03
-  serialized InputMap
+  map InputOpids, len 1..MAX16
+    mapKey Vout
+    mapValue InputOpids
 
 union DbcProof
   rec tapret, TapretProof, wrapped, tag 0
@@ -26,9 +28,9 @@ union DbcProof
   is opret, Unit, wrapped, aka OpretProof, tag 1
 
 rec TransitionBundle
-  map inputMap, len 1..MAX16, aka InputMap
+  map inputMap, len 1..MAX16
     is key, U32, aka Vout
-    set value, len 0..MAX16
+    set value, len 1..MAX16, aka InputOpids
       bytes element, len 32, aka OpId
   map knownTransitions, len 1..MAX16
     bytes key, len 32, aka OpId
@@ -49,7 +51,7 @@ rec TransitionBundle
           bytes op, len 32, aka OpId
           is ty, U16, aka AssignmentType
           is no, U16
-      map assignments, len 0..MAX8, aka AssignmentsBlindSealTxPtr
+      map assignments, len 0..MAX16, aka AssignmentsBlindSealTxPtr
         is key, U16, aka AssignmentType
         union value, TypedAssignsBlindSealTxPtr
           list declarative, len 1..MAX16, wrapped, aka AssignVecAssignVoidStateBlindSealTxPtr, tag 0

@@ -25,7 +25,7 @@ use core::fmt::Debug;
 use std::collections::{btree_map, BTreeSet};
 use std::hash::Hash;
 
-use amplify::confinement::{Confined, NonEmptyVec, TinyOrdMap, U16};
+use amplify::confinement::{Confined, NonEmptyVec, SmallOrdMap, U16};
 use commit_verify::Conceal;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
@@ -487,7 +487,7 @@ impl TypedAssigns<GenesisSeal> {
         bound = "Seal: serde::Serialize + serde::de::DeserializeOwned"
     )
 )]
-pub struct Assignments<Seal>(TinyOrdMap<AssignmentType, TypedAssigns<Seal>>)
+pub struct Assignments<Seal>(SmallOrdMap<AssignmentType, TypedAssigns<Seal>>)
 where Seal: ExposedSeal;
 
 impl<Seal: ExposedSeal> Default for Assignments<Seal> {
