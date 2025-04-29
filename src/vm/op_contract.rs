@@ -274,7 +274,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                         }
                         values
                     }
-                    None => vec![0],
+                    None => vec![],
                     _ => fail!(),
                 }
             }};
@@ -289,7 +289,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                         }
                         values
                     }
-                    None => vec![0],
+                    None => vec![],
                     _ => fail!(),
                 }
             }};
@@ -450,9 +450,11 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 };
                 let sum = u64::from(sum);
 
-                let Some(output_amt) = load_revealed_outputs!(owned_state)
-                    .iter()
-                    .try_fold(0u64, |acc, &x| acc.checked_add(x))
+                let outputs = load_revealed_outputs!(owned_state);
+                if outputs.contains(&0) {
+                    fail!()
+                }
+                let Some(output_amt) = outputs.iter().try_fold(0u64, |acc, &x| acc.checked_add(x))
                 else {
                     fail!()
                 };
