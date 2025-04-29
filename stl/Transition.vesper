@@ -39,7 +39,7 @@ rec Transition
   map globals, len 0..MAX8, aka GlobalState
     is key, U16, aka GlobalStateType
     list value, len 1..MAX16, aka GlobalValues
-      bytes element, len 0..MAX16, aka DataState
+      bytes element, len 0..MAX16, aka RevealedData
   set inputs, len 1..MAX16, aka Inputs
     rec Opout
       bytes op, len 32, aka OpId
@@ -70,14 +70,12 @@ rec Transition
                 bytes txid, len 32, wrapped, aka Txid, tag 1
               is vout, U32, aka Vout
               is blinding, U64
-            rec state, RevealedFungible
-              union value, FungibleState
-                is bits64, U64, wrapped, tag 0
+            union state, FungibleState, aka RevealedValue
+              is bits64, U64, wrapped, tag 0
           rec confidentialSeal, tag 1
             bytes seal, len 32, aka SecretSeal
-            rec state, RevealedFungible
-              union value, FungibleState
-                is bits64, U64, wrapped, tag 0
+            union state, FungibleState, aka RevealedValue
+              is bits64, U64, wrapped, tag 0
       list structured, len 1..MAX16, wrapped, aka AssignVecAssignRevealedDataBlindSealTxPtr, tag 2
         union AssignRevealedDataBlindSealTxPtr
           rec revealed, tag 0
@@ -87,13 +85,9 @@ rec Transition
                 bytes txid, len 32, wrapped, aka Txid, tag 1
               is vout, U32, aka Vout
               is blinding, U64
-            rec state, RevealedData
-              bytes value, len 0..MAX16, aka DataState
-              is salt, U128
+            bytes state, len 0..MAX16, aka RevealedData
           rec confidentialSeal, tag 1
             bytes seal, len 32, aka SecretSeal
-            rec state, RevealedData
-              bytes value, len 0..MAX16, aka DataState
-              is salt, U128
+            bytes state, len 0..MAX16, aka RevealedData
     bytes some, len 64, option, wrapped, aka Signature, tag 1
 

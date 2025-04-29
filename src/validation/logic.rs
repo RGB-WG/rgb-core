@@ -480,19 +480,19 @@ impl OwnedStateSchema {
                 match (self, state.state_data()) {
                     (OwnedStateSchema::Declarative, RevealedState::Void) => {}
                     (OwnedStateSchema::Fungible(schema), RevealedState::Fungible(v))
-                        if v.value.fungible_type() != *schema =>
+                        if v.as_inner().fungible_type() != *schema =>
                     {
                         status.add_failure(validation::Failure::FungibleTypeMismatch {
                             opid,
                             state_type,
                             expected: *schema,
-                            found: v.value.fungible_type(),
+                            found: v.as_inner().fungible_type(),
                         });
                     }
                     (OwnedStateSchema::Fungible(_), RevealedState::Fungible(_)) => {}
                     (OwnedStateSchema::Structured(sem_id), RevealedState::Structured(data)) => {
                         if type_system
-                            .strict_deserialize_type(*sem_id, data.value.as_ref())
+                            .strict_deserialize_type(*sem_id, data.as_ref())
                             .is_err()
                         {
                             status.add_failure(validation::Failure::SchemaInvalidOwnedValue(

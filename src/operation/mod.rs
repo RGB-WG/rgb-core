@@ -40,7 +40,7 @@ pub use commit::{
     AssignmentCommitment, AssignmentIndex, BaseCommitment, BundleDisclosure, ContractId,
     DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
 };
-pub use data::{DataState, RevealedData, VoidState};
+pub use data::{RevealedData, VoidState};
 pub use fungible::{FungibleState, RevealedValue};
 pub use global::{GlobalState, GlobalValues};
 pub use layer1::{ChainNet, Layer1};

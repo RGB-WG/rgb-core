@@ -20,13 +20,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::fmt::{self, Debug, Formatter};
-use std::cmp::Ordering;
-
 use amplify::confinement::SmallBlob;
-use amplify::hex::ToHex;
 use amplify::Wrapper;
-use bp::secp256k1::rand::{random, Rng, RngCore};
 use strict_encoding::{StrictSerialize, StrictType};
 
 use super::ExposedState;
@@ -50,11 +45,18 @@ impl ExposedState for VoidState {
 #[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-pub struct DataState(SmallBlob);
-impl StrictSerialize for DataState {}
+pub struct RevealedData(SmallBlob);
 
-impl From<RevealedData> for DataState {
-    fn from(data: RevealedData) -> Self { data.value }
+impl StrictSerialize for RevealedData {}
+
+impl RevealedData {
+    /// Convenience constructor.
+    pub fn new(value: impl Into<SmallBlob>) -> Self { Self(value.into()) }
+}
+
+impl ExposedState for RevealedData {
+    fn state_type(&self) -> StateType { StateType::Structured }
+    fn state_data(&self) -> RevealedState { RevealedState::Structured(self.clone()) }
 }
 
 #[cfg(feature = "serde")]
@@ -65,76 +67,18 @@ mod _serde {
 
     use super::*;
 
-    impl Serialize for DataState {
+    impl Serialize for RevealedData {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer {
             serializer.serialize_str(&self.to_string())
         }
     }
 
-    impl<'de> Deserialize<'de> for DataState {
+    impl<'de> Deserialize<'de> for RevealedData {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de> {
             let s = String::deserialize(deserializer)?;
             Self::from_hex(&s).map_err(D::Error::custom)
         }
-    }
-}
-
-#[derive(Clone, Eq, PartialEq, Hash)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct RevealedData {
-    pub value: DataState,
-    pub salt: u128,
-}
-
-impl RevealedData {
-    /// Constructs new state using the provided value using random blinding
-    /// factor.
-    pub fn new_random_salt(value: impl Into<DataState>) -> Self { Self::with_salt(value, random()) }
-
-    /// Constructs new state using the provided value and random generator for
-    /// creating blinding factor.
-    pub fn with_rng<R: Rng + RngCore>(value: impl Into<DataState>, rng: &mut R) -> Self {
-        Self::with_salt(value, rng.gen())
-    }
-
-    /// Convenience constructor.
-    pub fn with_salt(value: impl Into<DataState>, salt: u128) -> Self {
-        Self {
-            value: value.into(),
-            salt,
-        }
-    }
-}
-
-impl ExposedState for RevealedData {
-    fn state_type(&self) -> StateType { StateType::Structured }
-    fn state_data(&self) -> RevealedState { RevealedState::Structured(self.clone()) }
-}
-
-impl PartialOrd for RevealedData {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-impl Ord for RevealedData {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match self.value.cmp(&other.value) {
-            Ordering::Equal => self.salt.cmp(&other.salt),
-            other => other,
-        }
-    }
-}
-
-impl Debug for RevealedData {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let val = String::from_utf8(self.value.to_vec()).unwrap_or_else(|_| self.value.to_hex());
-
-        f.debug_struct("RevealedData")
-            .field("value", &val)
-            .field("salt", &self.salt)
-            .finish()
     }
 }

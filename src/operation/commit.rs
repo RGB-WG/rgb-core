@@ -37,8 +37,8 @@ use commit_verify::{
 use strict_encoding::StrictDumb;
 
 use crate::{
-    impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ChainNet, DataState,
-    ExposedSeal, ExposedState, Ffv, Genesis, GlobalState, GlobalStateType, Operation, RevealedData,
+    impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ChainNet, ExposedSeal,
+    ExposedState, Ffv, Genesis, GlobalState, GlobalStateType, Operation, RevealedData,
     RevealedState, RevealedValue, SchemaId, SealClosingStrategy, SecretSeal, Transition,
     TransitionBundle, TransitionType, TypedAssigns, LIB_NAME_RGB_COMMIT,
 };
@@ -371,7 +371,7 @@ impl<Seal: ExposedSeal> MerkleLeaves for Assignments<Seal> {
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GlobalCommitment {
     pub ty: GlobalStateType,
-    pub state: DataState,
+    pub state: RevealedData,
 }
 
 impl CommitEncode for GlobalCommitment {

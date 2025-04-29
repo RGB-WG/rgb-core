@@ -1,5 +1,5 @@
 {-
-  Id: stl:IW263JVo-49naRhx-LV5qkTm-Jgko_2S-qtsQe2k-dB7CM24#neutral-doctor-fractal
+  Id: stl:XbiECcs9-xlyofco-wkXoupT-gJ61JJf-XWL0DWf-INKzIp0#support-iris-depend
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -49,13 +49,13 @@ data AssignRevealedDataBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, st
 data AssignRevealedDataBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state RevealedData)
                        | confidentialSeal (seal BPCore.SecretSeal, state RevealedData)
 
-@mnemonic(program-miguel-sultan)
-data AssignRevealedValueBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, state RevealedFungible)
-                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedFungible)
+@mnemonic(beatles-service-husband)
+data AssignRevealedValueBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, state RevealedValue)
+                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedValue)
 
-@mnemonic(basic-natural-friday)
-data AssignRevealedValueBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state RevealedFungible)
-                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedFungible)
+@mnemonic(address-natural-neptune)
+data AssignRevealedValueBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state RevealedValue)
+                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedValue)
 
 @mnemonic(critic-alcohol-actor)
 data AssignVecAssignRevealedDataBlindSealTxPtr : [AssignRevealedDataBlindSealTxPtr ^ 1..]
@@ -115,9 +115,6 @@ data ChainNet          : bitcoinMainnet | bitcoinTestnet3 | bitcoinTestnet4 | bi
 @mnemonic(uniform-welcome-papa)
 data ContractId        : [Byte ^ 32]
 
-@mnemonic(short-noise-postal)
-data DataState         : [Byte]
-
 @mnemonic(pigment-career-hippie)
 data Ffv               : U16
 
@@ -157,8 +154,8 @@ data GlobalStateSchema : semId StrictTypes.SemId, maxItems U24
 @mnemonic(yoga-quick-jasmine)
 data GlobalStateType   : U16
 
-@mnemonic(charter-fractal-maze)
-data GlobalValues      : [DataState ^ 1..]
+@mnemonic(henry-kevin-carrot)
+data GlobalValues      : [RevealedData ^ 1..]
 
 @mnemonic(smart-pioneer-nominal)
 data Identity          : Std.AsciiPrintable, [Std.AsciiPrintable ^ ..0xfff]
@@ -206,11 +203,11 @@ data OwnedStateSchema  : declarative ()
                        | fungible FungibleType
                        | structured StrictTypes.SemId
 
-@mnemonic(sleep-source-figure)
-data RevealedData      : value DataState, salt U128
+@mnemonic(salon-clarion-factor)
+data RevealedData      : [Byte]
 
-@mnemonic(escape-nylon-client)
-data RevealedFungible  : value FungibleState
+@mnemonic(chance-stage-kermit)
+data RevealedValue     : FungibleState
 
 @mnemonic(burma-bambino-nobody)
 data Schema            : ffv Ffv

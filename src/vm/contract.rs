@@ -33,9 +33,9 @@ use chrono::{MappedLocalTime, TimeZone, Utc};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    AssignmentType, Assignments, AssignmentsRef, BundleId, ContractId, DataState, FungibleState,
-    Genesis, GlobalState, GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType, OpId,
-    Operation, Transition, TransitionType, TypedAssigns, LIB_NAME_RGB_LOGIC,
+    AssignmentType, Assignments, AssignmentsRef, BundleId, ContractId, FungibleState, Genesis,
+    GlobalState, GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType, OpId, Operation,
+    RevealedData, Transition, TransitionType, TypedAssigns, LIB_NAME_RGB_LOGIC,
 };
 
 /// The type is used during validation and computing a contract state. It
@@ -392,7 +392,7 @@ impl GlobalOrd {
 }
 
 pub trait GlobalStateIter {
-    type Data: Borrow<DataState>;
+    type Data: Borrow<RevealedData>;
     fn size(&mut self) -> u24;
     fn prev(&mut self) -> Option<(GlobalOrd, Self::Data)>;
     fn last(&mut self) -> Option<(GlobalOrd, Self::Data)>;
@@ -453,7 +453,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     /// Retrieves global state data located `depth` items back from the most
     /// recent global state value. Ensures that the global state ordering is
     /// consensus-based.
-    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<DataState> + '_> {
+    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<RevealedData> + '_> {
         if depth > self.iter.size() {
             return None;
         }
@@ -506,7 +506,7 @@ pub trait ContractStateAccess: Debug {
         &self,
         outpoint: Outpoint,
         ty: AssignmentType,
-    ) -> impl DoubleEndedIterator<Item = impl Borrow<DataState>>;
+    ) -> impl DoubleEndedIterator<Item = impl Borrow<RevealedData>>;
 }
 
 pub trait ContractStateEvolve {
