@@ -40,6 +40,6 @@ mod seals;
 
 pub use seals::{RgbSeal, RgbSealDef};
 pub use single_use_seals::*;
-pub use verify::{ContractApi, ContractVerify, OperationSeals, ReadOperation, ReadWitness, Step, VerificationError};
+pub use verify::{ContractApi, ContractVerify, OperationSeals, ReadOperation, ReadWitness, VerificationError};
 
 pub const LIB_NAME_RGB: &str = "RGB";

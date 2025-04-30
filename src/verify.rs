@@ -34,12 +34,6 @@ use ultrasonic::{
 
 use crate::{RgbSeal, RgbSealDef, LIB_NAME_RGB};
 
-// TODO: Move to amplify crate
-pub enum Step<A, B> {
-    Next(A),
-    Complete(B),
-}
-
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 // This type is used in the RGB Standard library
@@ -51,8 +45,8 @@ pub enum Step<A, B> {
 )]
 pub struct OperationSeals<SealDef: RgbSealDef> {
     pub operation: Operation,
-    /// Operation itself contains only AuthToken's, which are a commitments to the seals. Hence, we
-    /// have to separately include a full seal definitions next to the operation data.
+    /// Operation itself contains only AuthToken's, which are a commitment to the seals.
+    /// Hence, we have to separately include a full seal definition next to the operation data.
     pub defined_seals: SmallOrdMap<u16, SealDef>,
 }
 
@@ -66,7 +60,7 @@ pub trait ReadWitness: Sized {
     type SealDef: RgbSealDef;
     type OperationReader: ReadOperation<SealDef = Self::SealDef, WitnessReader = Self>;
     #[allow(clippy::type_complexity)]
-    fn read_witness(self) -> Step<(SealWitness<<Self::SealDef as RgbSealDef>::Src>, Self), Self::OperationReader>;
+    fn read_witness(self) -> (Option<SealWitness<<Self::SealDef as RgbSealDef>::Src>>, Self::OperationReader);
 }
 
 /// API exposed by the contract required for evaluating and verifying the contract state (see
@@ -97,7 +91,7 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
         let mut first = true;
         let mut seals = BTreeMap::<CellAddr, Seal>::new();
 
-        while let Some((mut header, mut witness_reader)) = reader.read_operation() {
+        while let Some((mut header, witness_reader)) = reader.read_operation() {
             // Genesis can't commit to the contract id since the contract doesn't exist yet; thus, we have to
             // apply this little trick
             if first {
@@ -154,7 +148,6 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
 
             // This convoluted logic happens since we use a state machine which ensures the client can't lie to
             // the verifier
-            let mut witness_count = 0usize;
             // Now we can add operation-defined seals to the set of known seals
             let mut seal_sources: BTreeSet<_> = header
                 .defined_seals
@@ -162,37 +155,25 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
                 .filter_map(|(pos, seal)| seal.to_src().map(|seal| (CellAddr::new(opid, *pos), seal)))
                 .collect();
 
-            loop {
-                // An operation may have multiple witnesses (like multiple commitment transactions in lightning
-                // channel).
-                match witness_reader.read_witness() {
-                    Step::Next((witness, w)) => {
-                        let msg = opid.to_byte_array();
-                        witness
-                            .verify_seals_closing(&closed_seals, msg.into())
-                            .map_err(|e| VerificationError::SealsNotClosed(witness.published.pub_id(), opid, e))?;
+            let (witness, r) = witness_reader.read_witness();
+            reader = r;
+            if let Some(witness) = witness {
+                let msg = opid.to_byte_array();
+                witness
+                    .verify_seals_closing(&closed_seals, msg.into())
+                    .map_err(|e| VerificationError::SealsNotClosed(witness.published.pub_id(), opid, e))?;
 
-                        //  Each witness actually produces its own set of witness-output based seal sources.
-                        let pub_id = witness.published.pub_id();
-                        let iter = header
-                            .defined_seals
-                            .iter()
-                            .filter(|(_, seal)| seal.to_src().is_none())
-                            .map(|(pos, seal)| (CellAddr::new(opid, *pos), seal.resolve(pub_id)));
-                        seal_sources.extend(iter);
+                //  Each witness actually produces its own set of witness-output-based seal sources.
+                let pub_id = witness.published.pub_id();
+                let iter = header
+                    .defined_seals
+                    .iter()
+                    .filter(|(_, seal)| seal.to_src().is_none())
+                    .map(|(pos, seal)| (CellAddr::new(opid, *pos), seal.resolve(pub_id)));
+                seal_sources.extend(iter);
 
-                        self.apply_witness(opid, witness);
-                        witness_reader = w;
-                    }
-                    Step::Complete(r) => {
-                        reader = r;
-                        break;
-                    }
-                }
-                witness_count += 1;
-            }
-
-            if !closed_seals.is_empty() && witness_count == 0 {
+                self.apply_witness(opid, witness);
+            } else if !closed_seals.is_empty() {
                 return Err(VerificationError::NoWitness(opid));
             }
 
