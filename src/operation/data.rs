@@ -22,7 +22,7 @@
 
 use amplify::confinement::SmallBlob;
 use amplify::Wrapper;
-use strict_encoding::{StrictSerialize, StrictType};
+use strict_encoding::StrictType;
 
 use super::ExposedState;
 use crate::{RevealedState, StateType, LIB_NAME_RGB_COMMIT};
@@ -46,8 +46,6 @@ impl ExposedState for VoidState {
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 pub struct RevealedData(SmallBlob);
-
-impl StrictSerialize for RevealedData {}
 
 impl RevealedData {
     /// Convenience constructor.
