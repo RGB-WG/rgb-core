@@ -72,8 +72,32 @@ pub trait ContractApi<Seal: RgbSeal> {
     fn codex(&self) -> &Codex;
     fn repo(&self) -> &impl LibRepo;
     fn memory(&self) -> &impl Memory;
+
+    /// Detects whether an operation with a given id is already known as a _valid_ operation for the
+    /// ledger.
+    ///
+    /// The method MUST return `true` for genesis operation.
     fn is_known(&self, opid: Opid) -> bool;
-    fn apply_operation(&mut self, op: VerifiedOperation, seals: SmallOrdMap<u16, Seal::Definition>);
+
+    /// # Nota bene:
+    ///
+    /// The method is called only for those operations which are not known (i.e. [`Self::is_known`]
+    /// returns `false` for the operation id).
+    ///
+    /// The method is NOT called for the genesis operation.
+    fn apply_operation(&mut self, op: VerifiedOperation);
+
+    /// # Nota bene:
+    ///
+    /// The method is called for all operations, including known ones, for which the consignment
+    /// provides at least single seal definition information (thus, it may be called for the genesis
+    /// operation as well).
+    fn apply_seals(&mut self, opid: Opid, seals: SmallOrdMap<u16, Seal::Definition>);
+
+    /// # Nota bene:
+    ///
+    /// The method is called for all operations, including known ones, which have a witness (i.e.,
+    /// except genesis or operations with no destroyed state).
     fn apply_witness(&mut self, opid: Opid, witness: SealWitness<Seal>);
 }
 
