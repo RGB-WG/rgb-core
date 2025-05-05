@@ -88,13 +88,13 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
         let contract_id = self.contract_id();
         let codex_id = self.codex().codex_id();
 
-        let mut first = true;
+        let mut is_genesis = true;
         let mut seals = BTreeMap::<CellAddr, Seal>::new();
 
         while let Some((mut header, witness_reader)) = reader.read_operation() {
             // Genesis can't commit to the contract id since the contract doesn't exist yet; thus, we have to
             // apply this little trick
-            if first {
+            if is_genesis {
                 if header.operation.contract_id.to_byte_array() != codex_id.to_byte_array() {
                     return Err(VerificationError::NoCodexCommitment);
                 }
@@ -114,8 +114,8 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
                 .values()
                 .map(|seal| seal.auth_token())
                 .collect::<BTreeSet<_>>();
-            // It is a subset and not equal set since some of the seals might be unknown to us: we know their
-            // commitment auth token, but do not know definition.
+            // It is a subset and not equal set since some seals might be unknown to us:
+            // we know their commitment auth token, but do not know the definition.
             if !reported.is_subset(&defined) {
                 let sources = header
                     .defined_seals
@@ -136,14 +136,14 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
 
             // If the operation was validated before, we need to skip its validation, since its inputs are not a
             // part of the state anymore.
-            let operation = if !self.is_known(opid) {
+            let operation = if self.is_known(opid) {
+                None
+            } else {
                 // Verify the operation
                 let verified = self
                     .codex()
                     .verify(contract_id, header.operation, self.memory(), self.repo())?;
                 Some(verified)
-            } else {
-                None
             };
 
             // This convoluted logic happens since we use a state machine which ensures the client can't lie to
@@ -178,10 +178,14 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
             }
 
             seals.extend(seal_sources);
-            if first {
-                first = false
+            if is_genesis {
+                is_genesis = false
             } else if let Some(operation) = operation {
-                self.apply_operation(operation, header.defined_seals);
+                self.apply_operation(operation);
+            }
+
+            if !header.defined_seals.is_empty() {
+                self.apply_seals(opid, header.defined_seals);
             }
         }
 
