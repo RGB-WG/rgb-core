@@ -5,12 +5,12 @@ on:
     branches:
       - master
     tags:
-      - 'v\d+\.*'
+      - 'v[0-9]+.*'
   pull_request:
     branches:
       - master
       - develop
-      - 'v\d+(\.\d+)*'
+      - 'v[0-9]+.?*'
 
 env:
   CARGO_TERM_COLOR: always
