@@ -21,36 +21,10 @@
 // limitations under the License.
 
 use amplify::num::u24;
-use commit_verify::ReservedBytes;
 use strict_encoding::Primitive;
 use strict_types::SemId;
 
 use crate::{StateType, LIB_NAME_RGB_COMMIT};
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase", tag = "type")
-)]
-#[non_exhaustive]
-#[repr(u8)]
-pub enum MediaType {
-    #[display("*/*")]
-    #[strict_type(dumb)]
-    Any = 0xFF,
-    // TODO: Complete MIME type implementation
-}
-
-impl MediaType {
-    pub fn conforms(&self, other: &MediaType) -> bool {
-        match (self, other) {
-            (MediaType::Any, MediaType::Any) => true,
-        }
-    }
-}
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -65,8 +39,6 @@ pub enum OwnedStateSchema {
     Declarative,
     Fungible(FungibleType),
     Structured(SemId),
-    Attachment(MediaType),
-    // TODO: Computed state (RCP240327A) will be added here
 }
 
 impl OwnedStateSchema {
@@ -75,7 +47,6 @@ impl OwnedStateSchema {
             OwnedStateSchema::Declarative => StateType::Void,
             OwnedStateSchema::Fungible(_) => StateType::Fungible,
             OwnedStateSchema::Structured(_) => StateType::Structured,
-            OwnedStateSchema::Attachment(_) => StateType::Attachment,
         }
     }
 
@@ -88,13 +59,6 @@ impl OwnedStateSchema {
     }
 }
 
-/// Today we support only a single format of confidential data, because of the
-/// limitations of the underlying secp256k1-zkp library: it works only with
-/// u64 numbers. Nevertheless, homomorphic commitments can be created to
-/// everything that has up to 256 bits and commutative arithmetics, so in the
-/// future we plan to support more types. We reserve this possibility by
-/// internally encoding [`ConfidentialFormat`] with the same type specification
-/// details as used for [`DateFormat`]
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Display)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
@@ -119,9 +83,6 @@ pub enum FungibleType {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct GlobalStateSchema {
-    // TODO: Reserved for computed state (RCP240327A): will be used as an enum tag with computed
-    //       state having value 1.
-    pub reserved: ReservedBytes<1>,
     pub sem_id: SemId,
     pub max_items: u24,
 }
@@ -129,7 +90,6 @@ pub struct GlobalStateSchema {
 impl GlobalStateSchema {
     pub fn once(sem_id: SemId) -> Self {
         GlobalStateSchema {
-            reserved: default!(),
             sem_id,
             max_items: u24::ONE,
         }
@@ -137,7 +97,6 @@ impl GlobalStateSchema {
 
     pub fn many(sem_id: SemId) -> Self {
         GlobalStateSchema {
-            reserved: default!(),
             sem_id,
             max_items: u24::MAX,
         }

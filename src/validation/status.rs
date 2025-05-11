@@ -21,19 +21,23 @@
 // limitations under the License.
 
 use core::ops::AddAssign;
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::{self, Display, Formatter};
 
 use amplify::num::u24;
+use bp::seals::txout::CloseMethod;
+use bp::Txid;
 use commit_verify::mpc::InvalidProof;
 use strict_types::SemId;
 
 use crate::schema::{self, SchemaId};
 use crate::validation::WitnessResolverError;
-use crate::vm::XWitnessId;
 use crate::{
-    BundleId, ContractId, Layer1, OccurrencesMismatch, OpFullType, OpId, Opout, StateType, Vin,
-    XGraphSeal, XOutputSeal,
+    BundleId, ChainNet, ContractId, OccurrencesMismatch, OpFullType, OpId, Opout,
+    SealClosingStrategy, StateType, Vin,
 };
+
+pub type UnsafeHistoryMap = HashMap<u32, HashSet<Txid>>;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[repr(u8)]
@@ -58,6 +62,7 @@ pub struct Status {
     pub failures: Vec<Failure>,
     pub warnings: Vec<Warning>,
     pub info: Vec<Info>,
+    pub validated_opids: BTreeSet<OpId>,
 }
 
 impl Display for Status {
@@ -105,6 +110,7 @@ impl Status {
             failures: vec![v],
             warnings: vec![],
             info: vec![],
+            validated_opids: bset![],
         }
     }
 }
@@ -162,9 +168,13 @@ impl Status {
 )]
 #[display(doc_comments)]
 pub enum Failure {
-    /// the contract network doesn't match (validator runs in testnet={0}
+    /// the contract chain-network pair doesn't match (validator runs in chain_net={0}
     /// configuration).
-    NetworkMismatch(bool),
+    ContractChainNetMismatch(ChainNet),
+
+    /// the resolver chain-network pair doesn't match (validator runs in chain_net={0}
+    /// configuration).
+    ResolverChainNetMismatch(ChainNet),
 
     /// schema {actual} provided for the consignment validation doesn't match
     /// schema {expected} used by the contract. This means that the consignment
@@ -175,8 +185,6 @@ pub enum Failure {
         /// Actual schema id provided by the consignment.
         actual: SchemaId,
     },
-    /// schema uses reserved type for the blank state transition.
-    SchemaBlankTransitionRedefined,
 
     /// schema global state #{0} uses semantic data type absent in type library
     /// ({1}).
@@ -196,11 +204,7 @@ pub enum Failure {
     SchemaOpGlobalTypeUnknown(OpFullType, schema::GlobalStateType),
     /// schema for {0} references undeclared owned state type {1}.
     SchemaOpAssignmentTypeUnknown(OpFullType, schema::AssignmentType),
-    /// schema for {0} references undeclared valency type {1}.
-    SchemaOpValencyTypeUnknown(OpFullType, schema::ValencyType),
 
-    /// operation {0} uses invalid state extension type {1}.
-    SchemaUnknownExtensionType(OpId, schema::ExtensionType),
     /// operation {0} uses invalid state transition type {1}.
     SchemaUnknownTransitionType(OpId, schema::TransitionType),
     /// operation {0} uses invalid metadata type {1}.
@@ -209,8 +213,8 @@ pub enum Failure {
     SchemaUnknownGlobalStateType(OpId, schema::GlobalStateType),
     /// operation {0} uses invalid assignment type {1}.
     SchemaUnknownAssignmentType(OpId, schema::AssignmentType),
-    /// operation {0} uses invalid valency type {1}.
-    SchemaUnknownValencyType(OpId, schema::ValencyType),
+    /// operation {0} uses invalid seal closing strategy {1}.
+    SchemaUnknownSealClosingStrategy(OpId, SealClosingStrategy),
 
     /// invalid number of global state entries of type {1} in operation {0} -
     /// {2}
@@ -248,9 +252,11 @@ pub enum Failure {
     /// bundle {0} public witness {1} is not known to the resolver; validation
     /// stopped since operations can't be consensus-ordered. The resolver
     /// responded with error {2}
-    WitnessUnresolved(BundleId, XWitnessId, WitnessResolverError),
+    WitnessUnresolved(BundleId, Txid, WitnessResolverError),
     /// operation {0} is under a different contract {1}.
     ContractMismatch(OpId, ContractId),
+    /// opout {0} appears more than once as input
+    DoubleSpend(Opout),
 
     // Errors checking bundle commitments
     /// transition bundle {0} references state transition {1} which is not
@@ -258,17 +264,10 @@ pub enum Failure {
     BundleExtraTransition(BundleId, OpId),
     /// transition bundle {0} references non-existing input in witness {2} for
     /// the state transition {1}.
-    BundleInvalidInput(BundleId, OpId, XWitnessId),
+    BundleInvalidInput(BundleId, OpId, Txid),
     /// transition bundle {0} doesn't commit to the input {1} in the witness {2}
     /// which is an input of the state transition {3}.
-    BundleInvalidCommitment(BundleId, Vin, XWitnessId, OpId),
-
-    // Errors checking asset tags
-    /// asset type provided in genesis references unknown fungible state of type
-    /// {0}.
-    AssetTagNoState(schema::AssignmentType),
-    /// fungible state {0} has no asset tag defined.
-    FungibleStateNoTag(schema::AssignmentType),
+    BundleInvalidCommitment(BundleId, Vin, Txid, OpId),
 
     // Errors checking seal closing
     /// transition {opid} references state type {state_type} absent in the
@@ -285,42 +284,21 @@ pub enum Failure {
     ConfidentialSeal(Opout),
     /// bundle {0} public witness {1} is not known to the resolver. Resolver
     /// reported error {2}
-    SealNoPubWitness(BundleId, XWitnessId, WitnessResolverError),
-    /// witness layer 1 {anchor} doesn't match seal definition {seal}.
-    SealWitnessLayer1Mismatch { seal: Layer1, anchor: Layer1 },
-    /// seal {1} is defined on {0} which is not in the set of layers allowed
-    /// by the contract genesis.
-    SealLayerMismatch(Layer1, XGraphSeal),
-    /// seal {1} has a different closing method from the bundle {0} requirement.
-    SealInvalidMethod(BundleId, XOutputSeal),
+    SealNoPubWitness(BundleId, Txid, WitnessResolverError),
     /// transition bundle {0} doesn't close seal with the witness {1}. Details:
     /// {2}
-    SealsInvalid(BundleId, XWitnessId, String),
+    SealsInvalid(BundleId, Txid, String),
     /// single-use seals for the operation {0} were not validated, which
     /// probably indicates unanchored state transition.
     SealsUnvalidated(OpId),
-    /// anchor provides different type of DBC proof than required by the bundle
-    /// {0}.
-    AnchorMethodMismatch(BundleId),
     /// transition bundle {0} is not properly anchored to the witness {1}.
     /// Details: {2}
-    MpcInvalid(BundleId, XWitnessId, InvalidProof),
-
-    // State extensions errors
-    /// valency {valency} redeemed by state extension {opid} references
-    /// non-existing operation {prev_id}
-    ValencyNoParent {
-        opid: OpId,
-        prev_id: OpId,
-        valency: schema::ValencyType,
-    },
-    /// state extension {opid} references valency {valency} absent in the parent
-    /// {prev_id}.
-    NoPrevValency {
-        opid: OpId,
-        prev_id: OpId,
-        valency: schema::ValencyType,
-    },
+    MpcInvalid(BundleId, Txid, InvalidProof),
+    /// witness transaction {0} has no taproot or OP_RETURN output.
+    NoDbcOutput(Txid),
+    /// first DBC-compatible output of witness transaction {0} doesn't match the provided proof
+    /// type ({1})
+    InvalidProofType(Txid, CloseMethod),
 
     // State check errors
     /// state in {opid}/{state_type} is of {found} type, while schema requires
@@ -333,22 +311,12 @@ pub enum Failure {
     },
     /// state in {opid}/{state_type} is of {found} type, while schema requires
     /// it to be {expected}.
-    MediaTypeMismatch {
-        opid: OpId,
-        state_type: schema::AssignmentType,
-        expected: schema::MediaType,
-        found: schema::MediaType,
-    },
-    /// state in {opid}/{state_type} is of {found} type, while schema requires
-    /// it to be {expected}.
     FungibleTypeMismatch {
         opid: OpId,
         state_type: schema::AssignmentType,
         expected: schema::FungibleType,
         found: schema::FungibleType,
     },
-    /// invalid bulletproofs in {0}:{1}: {2}
-    BulletproofsInvalid(OpId, schema::AssignmentType, String),
     /// evaluation of AluVM script for operation {0} has failed with the code
     /// {1:?} and message {2:?}.
     ScriptFailure(OpId, Option<u8>, Option<String>),
@@ -368,9 +336,8 @@ pub enum Failure {
 )]
 #[display(doc_comments)]
 pub enum Warning {
-    /// operation {0} contains state in assignment {1} which is confidential and
-    /// thus was not validated.
-    UncheckableConfidentialState(OpId, schema::AssignmentType),
+    /// Map of transfer history TXs with potentially unsafe height.
+    UnsafeHistory(UnsafeHistoryMap),
 
     /// Custom warning by external services on top of RGB Core.
     #[display(inner)]

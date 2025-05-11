@@ -20,15 +20,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{btree_map, BTreeMap};
+use std::collections::btree_set;
+use std::iter;
 
-use amplify::confinement::{Confined, U16 as U16MAX};
+use amplify::confinement::{NonEmptyOrdMap, NonEmptyOrdSet, U16 as U16MAX};
 use amplify::{Bytes32, Wrapper};
-use bp::seals::txout::CloseMethod;
 use bp::Vout;
 use commit_verify::{mpc, CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
 use strict_encoding::{StrictDumb, StrictEncode};
 
+use super::GraphSeal;
+use crate::operation::operations::Operation;
 use crate::{OpId, Transition, LIB_NAME_RGB_COMMIT};
 
 pub type Vin = Vout;
@@ -69,36 +71,25 @@ impl From<mpc::Message> for BundleId {
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, dumb = Self(NonEmptyOrdSet::with(OpId::strict_dumb())))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct InputMap(Confined<BTreeMap<Vin, OpId>, 1, U16MAX>);
+pub struct InputOpids(NonEmptyOrdSet<OpId, U16MAX>);
 
-impl StrictDumb for InputMap {
-    fn strict_dumb() -> Self { Self(Confined::with_key_value(strict_dumb!(), strict_dumb!())) }
+impl<'a> IntoIterator for &'a InputOpids {
+    type Item = OpId;
+    type IntoIter = iter::Copied<btree_set::Iter<'a, OpId>>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter().copied() }
 }
 
-impl InputMap {
-    pub fn with(input: Vin, id: OpId) -> Self { InputMap(Confined::with((input, id))) }
-}
-
-impl IntoIterator for InputMap {
-    type Item = (Vin, OpId);
-    type IntoIter = btree_map::IntoIter<Vin, OpId>;
-
-    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
-}
-
-impl<'a> IntoIterator for &'a InputMap {
-    type Item = (&'a Vin, &'a OpId);
-    type IntoIter = btree_map::Iter<'a, Vin, OpId>;
-
-    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
-}
+#[derive(Clone, Eq, PartialEq, Debug, Display, Error)]
+#[display("state transition {0} is not a part of the bundle.")]
+pub struct UnrelatedTransition(OpId, Transition);
 
 #[derive(Clone, PartialEq, Eq, Debug, From)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
@@ -109,30 +100,54 @@ impl<'a> IntoIterator for &'a InputMap {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub struct TransitionBundle {
-    pub close_method: CloseMethod,
-    pub input_map: InputMap,
-    pub known_transitions: Confined<BTreeMap<OpId, Transition>, 1, U16MAX>,
+    pub input_map: NonEmptyOrdMap<Vin, InputOpids, U16MAX>,
+    pub known_transitions: NonEmptyOrdMap<OpId, Transition, U16MAX>,
 }
 
 impl CommitEncode for TransitionBundle {
     type CommitmentId = BundleId;
 
-    fn commit_encode(&self, e: &mut CommitEngine) {
-        e.commit_to_serialized(&self.close_method);
-        e.commit_to_serialized(&self.input_map);
-    }
+    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_map(&self.input_map); }
 }
 
 impl StrictDumb for TransitionBundle {
     fn strict_dumb() -> Self {
         Self {
-            close_method: strict_dumb!(),
-            input_map: strict_dumb!(),
-            known_transitions: Confined::with_key_value(strict_dumb!(), strict_dumb!()),
+            input_map: NonEmptyOrdMap::with_key_value(strict_dumb!(), strict_dumb!()),
+            known_transitions: NonEmptyOrdMap::with_key_value(strict_dumb!(), strict_dumb!()),
         }
     }
 }
 
 impl TransitionBundle {
     pub fn bundle_id(&self) -> BundleId { self.commit_id() }
+
+    pub fn reveal_seal(&mut self, bundle_id: BundleId, seal: GraphSeal) -> bool {
+        if self.bundle_id() != bundle_id {
+            return false;
+        }
+        self.known_transitions
+            .values_mut()
+            .flat_map(|t| t.assignments.values_mut())
+            .for_each(|a| a.reveal_seal(seal));
+
+        true
+    }
+
+    pub fn reveal_transition(
+        &mut self,
+        transition: Transition,
+    ) -> Result<bool, UnrelatedTransition> {
+        let opid = transition.id();
+        if self.input_map.values().all(|ids| !ids.contains(&opid)) {
+            return Err(UnrelatedTransition(opid, transition));
+        }
+        if self.known_transitions.contains_key(&opid) {
+            return Ok(false);
+        }
+        self.known_transitions
+            .insert(opid, transition)
+            .expect("same size as input map");
+        Ok(true)
+    }
 }

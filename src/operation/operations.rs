@@ -20,32 +20,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cmp::Ordering;
-use std::collections::{btree_map, btree_set, BTreeMap};
+use std::collections::{btree_set, BTreeMap};
 use std::iter;
 use std::num::ParseIntError;
-use std::str::FromStr;
 
-use amplify::confinement::{Confined, SmallOrdSet, TinyOrdMap, TinyOrdSet};
-use amplify::{hex, Wrapper};
-use commit_verify::{
-    CommitEncode, CommitEngine, CommitId, Conceal, MerkleHash, MerkleLeaves, ReservedBytes,
-    StrictHash,
-};
+use amplify::confinement::{Confined, NonEmptyOrdSet, TinyOrdSet, U16};
+use amplify::{hex, Bytes64, Wrapper};
+use commit_verify::{CommitEncode, CommitEngine, CommitId, MerkleHash, MerkleLeaves, StrictHash};
 use strict_encoding::stl::AsciiPrintable;
 use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize};
 
-use crate::schema::{self, ExtensionType, OpFullType, OpType, SchemaId, TransitionType};
+use crate::schema::{OpFullType, SchemaId, TransitionType};
 use crate::{
-    AltLayer1Set, AssetTag, Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef,
-    ConcealedAttach, ConcealedData, ConcealedValue, ContractId, DiscloseHash, ExposedState, Ffv,
-    GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose, OpId, SecretSeal, TypedAssigns,
-    VoidState, XChain, LIB_NAME_RGB_COMMIT,
+    Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ChainNet, ContractId,
+    DiscloseHash, ExposedState, Ffv, GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose,
+    OpId, RevealedData, RevealedValue, SecretSeal, TypedAssigns, VoidState, LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[derive(CommitEncode)]
+#[commit_encode(strategy = strict, id = MerkleHash)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -79,129 +75,30 @@ pub enum OpoutParseError {
     WrongFormat(String),
 }
 
-impl FromStr for Opout {
-    type Err = OpoutParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split('/');
-        match (split.next(), split.next(), split.next(), split.next()) {
-            (Some(op), Some(ty), Some(no), None) => Ok(Opout {
-                op: op.parse()?,
-                ty: ty.parse().map_err(OpoutParseError::InvalidType)?,
-                no: no.parse().map_err(OpoutParseError::InvalidOutputNo)?,
-            }),
-            _ => Err(OpoutParseError::WrongFormat(s.to_owned())),
-        }
-    }
-}
-
-#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 #[wrapper(Deref)]
 #[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict, id = StrictHash)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, dumb = Self(NonEmptyOrdSet::with(Opout::strict_dumb())))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct AssetTags(TinyOrdMap<AssignmentType, AssetTag>);
-
-#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
-#[wrapper(Deref)]
-#[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict, id = StrictHash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct Valencies(TinyOrdSet<schema::ValencyType>);
-
-impl<'a> IntoIterator for &'a Valencies {
-    type Item = schema::ValencyType;
-    type IntoIter = iter::Copied<btree_set::Iter<'a, schema::ValencyType>>;
-
-    fn into_iter(self) -> Self::IntoIter { self.0.iter().copied() }
-}
-
-#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
-#[wrapper(Deref)]
-#[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict, id = StrictHash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-pub struct Redeemed(TinyOrdMap<schema::ValencyType, OpId>);
-
-impl<'a> IntoIterator for &'a Redeemed {
-    type Item = (&'a schema::ValencyType, &'a OpId);
-    type IntoIter = btree_map::Iter<'a, schema::ValencyType, OpId>;
-
-    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
-}
-
-#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, From)]
-#[wrapper(Deref)]
-#[wrapper_mut(DerefMut)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-// TODO: Consider requiring minimum number of inputs to be 1
-pub struct Inputs(SmallOrdSet<Input>);
+pub struct Inputs(NonEmptyOrdSet<Opout, U16>);
 
 impl<'a> IntoIterator for &'a Inputs {
-    type Item = Input;
-    type IntoIter = iter::Copied<btree_set::Iter<'a, Input>>;
+    type Item = Opout;
+    type IntoIter = iter::Copied<btree_set::Iter<'a, Opout>>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.iter().copied() }
 }
 
 impl MerkleLeaves for Inputs {
-    type Leaf = Input;
-    type LeafIter<'tmp> = <TinyOrdSet<Input> as MerkleLeaves>::LeafIter<'tmp>;
+    type Leaf = Opout;
+    type LeafIter<'tmp> = <TinyOrdSet<Opout> as MerkleLeaves>::LeafIter<'tmp>;
 
     fn merkle_leaves(&self) -> Self::LeafIter<'_> { self.0.merkle_leaves() }
-}
-
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict, id = MerkleHash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[display("{prev_out}")]
-pub struct Input {
-    pub prev_out: Opout,
-    #[cfg_attr(feature = "serde", serde(skip))]
-    reserved: ReservedBytes<2>,
-}
-
-impl Input {
-    pub fn with(prev_out: Opout) -> Input {
-        Input {
-            prev_out,
-            reserved: default!(),
-        }
-    }
 }
 
 /// RGB contract operation API, defined as trait
@@ -209,14 +106,7 @@ impl Input {
 /// Implemented by all contract operation types (see [`OpType`]):
 /// - Genesis ([`Genesis`])
 /// - State transitions ([`Transitions`])
-/// - Public state extensions ([`Extensions`])
 pub trait Operation {
-    /// Returns type of the operation (see [`OpType`]). Unfortunately, this
-    /// can't be just a const, since it will break our ability to convert
-    /// concrete `Node` types into `&dyn Node` (entities implementing traits
-    /// with const definitions can't be made into objects)
-    fn op_type(&self) -> OpType;
-
     /// Returns full contract operation type information
     fn full_type(&self) -> OpFullType;
 
@@ -227,17 +117,8 @@ pub trait Operation {
     /// Returns [`ContractId`] this operation belongs to.
     fn contract_id(&self) -> ContractId;
 
-    /// Returns nonce used in consensus ordering of state transitions and
-    /// extensions.
+    /// Returns nonce used in consensus ordering of state transitions
     fn nonce(&self) -> u64;
-
-    /// Returns [`Option::Some`]`(`[`TransitionType`]`)` for transitions or
-    /// [`Option::None`] for genesis and extension operation types
-    fn transition_type(&self) -> Option<TransitionType>;
-
-    /// Returns [`Option::Some`]`(`[`ExtensionType`]`)` for extension nodes or
-    /// [`Option::None`] for genesis and state transitions
-    fn extension_type(&self) -> Option<ExtensionType>;
 
     /// Returns metadata associated with the operation, if any.
     fn metadata(&self) -> &Metadata;
@@ -245,40 +126,34 @@ pub trait Operation {
     /// Returns reference to a full set of metadata (in form of [`GlobalState`]
     /// wrapper structure) for the contract operation.
     fn globals(&self) -> &GlobalState;
-    fn valencies(&self) -> &Valencies;
 
     fn assignments(&self) -> AssignmentsRef;
 
     fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>>;
-
-    /// For genesis and public state extensions always returns an empty list.
-    /// While public state extension do have parent nodes, they do not contain
-    /// indexed rights.
-    fn inputs(&self) -> Inputs;
 
     /// Provides summary about parts of the operation which are revealed.
     fn disclose(&self) -> OpDisclose {
         fn proc_seals<State: ExposedState>(
             ty: AssignmentType,
             a: &[Assign<State, GraphSeal>],
-            seals: &mut BTreeMap<AssignmentIndex, XChain<SecretSeal>>,
-            state: &mut BTreeMap<AssignmentIndex, State::Concealed>,
+            seals: &mut BTreeMap<AssignmentIndex, SecretSeal>,
+            state: &mut BTreeMap<AssignmentIndex, State>,
         ) {
             for (index, assignment) in a.iter().enumerate() {
                 if let Some(seal) = assignment.revealed_seal() {
                     seals.insert(AssignmentIndex::new(ty, index as u16), seal.to_secret_seal());
                 }
-                if let Some(revealed) = assignment.as_revealed_state() {
-                    state.insert(AssignmentIndex::new(ty, index as u16), revealed.conceal());
-                }
+                state.insert(
+                    AssignmentIndex::new(ty, index as u16),
+                    assignment.as_revealed_state().clone(),
+                );
             }
         }
 
-        let mut seals: BTreeMap<AssignmentIndex, XChain<SecretSeal>> = bmap!();
+        let mut seals: BTreeMap<AssignmentIndex, SecretSeal> = bmap!();
         let mut void: BTreeMap<AssignmentIndex, VoidState> = bmap!();
-        let mut fungible: BTreeMap<AssignmentIndex, ConcealedValue> = bmap!();
-        let mut data: BTreeMap<AssignmentIndex, ConcealedData> = bmap!();
-        let mut attach: BTreeMap<AssignmentIndex, ConcealedAttach> = bmap!();
+        let mut fungible: BTreeMap<AssignmentIndex, RevealedValue> = bmap!();
+        let mut data: BTreeMap<AssignmentIndex, RevealedData> = bmap!();
         for (ty, assigns) in self.assignments().flat() {
             match assigns {
                 TypedAssigns::Declarative(a) => {
@@ -290,20 +165,14 @@ pub trait Operation {
                 TypedAssigns::Structured(a) => {
                     proc_seals(ty, &a, &mut seals, &mut data);
                 }
-                TypedAssigns::Attachment(a) => {
-                    proc_seals(ty, &a, &mut seals, &mut attach);
-                }
             }
         }
 
         OpDisclose {
             id: self.id(),
             seals: Confined::from_checked(seals),
-            fungible: Confined::from_iter_checked(
-                fungible.into_iter().map(|(k, s)| (k, s.commitment)),
-            ),
+            fungible: Confined::from_iter_checked(fungible),
             data: Confined::from_checked(data),
-            attach: Confined::from_checked(attach),
         }
     }
 
@@ -340,9 +209,21 @@ impl From<&'static str> for Identity {
     fn from(s: &'static str) -> Self { Self(RString::from(s)) }
 }
 
-impl Identity {
-    pub fn is_empty(&self) -> bool { self.is_anonymous() }
-    pub fn is_anonymous(&self) -> bool { self == &default!() }
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[display(inner)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[repr(u8)]
+#[derive(Default)]
+#[non_exhaustive]
+pub enum SealClosingStrategy {
+    #[default]
+    FirstOpretOrTapret = 0,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -356,23 +237,21 @@ impl Identity {
 pub struct Genesis {
     pub ffv: Ffv,
     pub schema_id: SchemaId,
-    pub flags: ReservedBytes<1, 0>,
     pub timestamp: i64,
     pub issuer: Identity,
-    pub testnet: bool,
-    pub alt_layers1: AltLayer1Set,
-    pub asset_tags: AssetTags,
+    pub chain_net: ChainNet,
+    pub seal_closing_strategy: SealClosingStrategy,
     pub metadata: Metadata,
     pub globals: GlobalState,
     pub assignments: Assignments<GenesisSeal>,
-    pub valencies: Valencies,
-    pub validator: ReservedBytes<1, 0>,
 }
 
 impl StrictSerialize for Genesis {}
 impl StrictDeserialize for Genesis {}
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+#[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(
@@ -380,30 +259,7 @@ impl StrictDeserialize for Genesis {}
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct Extension {
-    pub ffv: Ffv,
-    pub contract_id: ContractId,
-    pub nonce: u64,
-    pub extension_type: ExtensionType,
-    pub metadata: Metadata,
-    pub globals: GlobalState,
-    pub assignments: Assignments<GenesisSeal>,
-    pub redeemed: Redeemed,
-    pub valencies: Valencies,
-    pub validator: ReservedBytes<1, 0>,
-    pub witness: ReservedBytes<2, 0>,
-}
-
-impl StrictSerialize for Extension {}
-impl StrictDeserialize for Extension {}
-
-impl Ord for Extension {
-    fn cmp(&self, other: &Self) -> Ordering { self.id().cmp(&other.id()) }
-}
-
-impl PartialOrd for Extension {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
+pub struct Signature(Bytes64);
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -422,57 +278,11 @@ pub struct Transition {
     pub globals: GlobalState,
     pub inputs: Inputs,
     pub assignments: Assignments<GraphSeal>,
-    pub valencies: Valencies,
-    pub validator: ReservedBytes<1, 0>,
-    pub witness: ReservedBytes<2, 0>,
+    pub signature: Option<Signature>,
 }
 
 impl StrictSerialize for Transition {}
 impl StrictDeserialize for Transition {}
-
-impl Ord for Transition {
-    fn cmp(&self, other: &Self) -> Ordering { self.id().cmp(&other.id()) }
-}
-
-impl PartialOrd for Transition {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-impl Conceal for Genesis {
-    type Concealed = Self;
-    fn conceal(&self) -> Self::Concealed {
-        let mut concealed = self.clone();
-        concealed
-            .assignments
-            .keyed_values_mut()
-            .for_each(|(_, a)| *a = a.conceal());
-        concealed
-    }
-}
-
-impl Conceal for Transition {
-    type Concealed = Self;
-    fn conceal(&self) -> Self::Concealed {
-        let mut concealed = self.clone();
-        concealed
-            .assignments
-            .keyed_values_mut()
-            .for_each(|(_, a)| *a = a.conceal());
-        concealed
-    }
-}
-
-impl Conceal for Extension {
-    type Concealed = Self;
-    fn conceal(&self) -> Self::Concealed {
-        let mut concealed = self.clone();
-        concealed
-            .assignments
-            .keyed_values_mut()
-            .for_each(|(_, a)| *a = a.conceal());
-        concealed
-    }
-}
 
 impl CommitEncode for Genesis {
     type CommitmentId = OpId;
@@ -484,31 +294,14 @@ impl CommitEncode for Transition {
     fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_serialized(&self.commit()) }
 }
 
-impl CommitEncode for Extension {
-    type CommitmentId = OpId;
-    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_serialized(&self.commit()) }
-}
-
 impl Transition {
     /// Returns reference to information about the owned rights in form of
     /// [`Inputs`] wrapper structure which this operation updates with
     /// state transition ("parent owned rights").
-    pub fn prev_state(&self) -> &Inputs { &self.inputs }
-}
-
-impl Extension {
-    /// Returns reference to information about the public rights (in form of
-    /// [`Redeemed`] wrapper structure), defined with "parent" state
-    /// extensions (i.e. those finalized with the current state transition) or
-    /// referenced by another state extension, which this operation updates
-    /// ("parent public rights").
-    pub fn redeemed(&self) -> &Redeemed { &self.redeemed }
+    pub fn inputs(&self) -> &Inputs { &self.inputs }
 }
 
 impl Operation for Genesis {
-    #[inline]
-    fn op_type(&self) -> OpType { OpType::Genesis }
-
     #[inline]
     fn full_type(&self) -> OpFullType { OpFullType::Genesis }
 
@@ -522,19 +315,10 @@ impl Operation for Genesis {
     fn nonce(&self) -> u64 { u64::MAX }
 
     #[inline]
-    fn transition_type(&self) -> Option<TransitionType> { None }
-
-    #[inline]
-    fn extension_type(&self) -> Option<ExtensionType> { None }
-
-    #[inline]
     fn metadata(&self) -> &Metadata { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
-
-    #[inline]
-    fn valencies(&self) -> &Valencies { &self.valencies }
 
     #[inline]
     fn assignments(&self) -> AssignmentsRef { (&self.assignments).into() }
@@ -545,60 +329,9 @@ impl Operation for Genesis {
             .get(&t)
             .map(TypedAssigns::transmutate_seals)
     }
-
-    #[inline]
-    fn inputs(&self) -> Inputs { empty!() }
-}
-
-impl Operation for Extension {
-    #[inline]
-    fn op_type(&self) -> OpType { OpType::StateExtension }
-
-    #[inline]
-    fn full_type(&self) -> OpFullType { OpFullType::StateExtension(self.extension_type) }
-
-    #[inline]
-    fn id(&self) -> OpId { self.commit_id() }
-
-    #[inline]
-    fn contract_id(&self) -> ContractId { self.contract_id }
-
-    #[inline]
-    fn nonce(&self) -> u64 { self.nonce }
-
-    #[inline]
-    fn transition_type(&self) -> Option<TransitionType> { None }
-
-    #[inline]
-    fn extension_type(&self) -> Option<ExtensionType> { Some(self.extension_type) }
-
-    #[inline]
-    fn metadata(&self) -> &Metadata { &self.metadata }
-
-    #[inline]
-    fn globals(&self) -> &GlobalState { &self.globals }
-
-    #[inline]
-    fn valencies(&self) -> &Valencies { &self.valencies }
-
-    #[inline]
-    fn assignments(&self) -> AssignmentsRef { (&self.assignments).into() }
-
-    #[inline]
-    fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
-        self.assignments
-            .get(&t)
-            .map(TypedAssigns::transmutate_seals)
-    }
-
-    #[inline]
-    fn inputs(&self) -> Inputs { empty!() }
 }
 
 impl Operation for Transition {
-    #[inline]
-    fn op_type(&self) -> OpType { OpType::StateTransition }
-
     #[inline]
     fn full_type(&self) -> OpFullType { OpFullType::StateTransition(self.transition_type) }
 
@@ -612,19 +345,10 @@ impl Operation for Transition {
     fn nonce(&self) -> u64 { self.nonce }
 
     #[inline]
-    fn transition_type(&self) -> Option<TransitionType> { Some(self.transition_type) }
-
-    #[inline]
-    fn extension_type(&self) -> Option<ExtensionType> { None }
-
-    #[inline]
     fn metadata(&self) -> &Metadata { &self.metadata }
 
     #[inline]
     fn globals(&self) -> &GlobalState { &self.globals }
-
-    #[inline]
-    fn valencies(&self) -> &Valencies { &self.valencies }
 
     #[inline]
     fn assignments(&self) -> AssignmentsRef { (&self.assignments).into() }
@@ -633,12 +357,12 @@ impl Operation for Transition {
     fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>> {
         self.assignments.get(&t).cloned()
     }
-
-    fn inputs(&self) -> Inputs { self.inputs.clone() }
 }
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
     use amplify::ByteArray;
     use baid64::DisplayBaid64;
 

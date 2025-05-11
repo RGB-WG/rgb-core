@@ -141,7 +141,7 @@ Here are more details on each type of the commitments:
 | Commitment ID        | Produced by                          | Procedure                                                                                      | Tag URN suffix(1)             |
 |----------------------|--------------------------------------|------------------------------------------------------------------------------------------------|-------------------------------|
 | `SchemaID`           | `RootSchema`, `SubSchema`            | strict serialization                                                                           | `rgb:schema#2024-02-03`       |
-| `OpId`, `ContractId` | `Genesis`, `Transition`, `Extension` | nested commitments with concealing, merklization etc via intermediate `OpCommitment` structure | `rgb:operation#2024-02-03`    |
+| `OpId`, `ContractId` | `Genesis`, `Transition`              | nested commitments with concealing, merklization etc via intermediate `OpCommitment` structure | `rgb:operation#2024-02-03`    |
 | `BundleId`           | `TransitionBundle`                   | conceal and partial strict serialization                                                       | `rgb:bundle#2024-02-03`       |
 | `SecretSeal`         | `BlindSeal`                          | strict serialization                                                                           | `seals:secret#2024-02-03`     |
 | `ConcealedData`      | `RevealedData`                       | strict serialization                                                                           | `rgb:state-data#2024-02-12`   |
@@ -187,8 +187,8 @@ code.
  
 ### Operation ID and Contract ID
 
-Operation id is represented by a `OpId` type and produced for `Genesis`, 
-`Transition` and `Extension` types via custom algorithm, which first creates a
+Operation id is represented by a `OpId` type and produced for `Genesis` and
+`Transition` types via custom algorithm, which first creates a
 dedicated `OpCommitment` structure, and strict-serializes it to hasher, 
 initialized with `urn:lnp-bp:rgb:operation#2024-02-03` hash tag. 
   
@@ -201,10 +201,9 @@ assignments are concealed before the merklization, and range proofs are
 removed from the commitment, such that an aggregation of the historical proofs
 can be applied without changing the operation ids. 
  
-To ensure succinctness, other types of collections, such as redeemed and 
-defined valencies and list of alternate layer 1 in genesis are not merklized 
-and strict-serialized producing `StrictHash`, which participates in the final 
-`OpCommitment` structure.
+To ensure succinctness, other types of collections, such as metadata, are not
+merklized and strict-serialized producing `StrictHash`, which participates in
+the final `OpCommitment` structure.
 
 ```mermaid
 flowchart LR
@@ -215,24 +214,16 @@ flowchart LR
     Globals -- Merklize --> OpCommitment
     Inputs -- Merklize --> OpCommitment
     Assignments -- "Conceal\n + Merklize" --> OpCommitment
-    Redeemed -- StrictHash --> OpCommitment
-    Valencies -- StrictHash --> OpCommitment
   end
 
   subgraph "Genesis"
     schemaId --> BaseCommitment
-    testnet --> BaseCommitment
-    altLayers1 -- StrictHash --> BaseCommitment
+    chainNet --> BaseCommitment
   end
 
   subgraph "Transition"
     tcid[contractId] --> TypeCommitment
     transitionType --> TypeCommitment
-  end
-
-  subgraph "Extension"
-    ecid[contractId] --> TypeCommitment
-    extensionType --> TypeCommitment
   end
 
   BaseCommitment --> TypeCommitment

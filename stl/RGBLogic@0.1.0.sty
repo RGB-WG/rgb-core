@@ -1,5 +1,5 @@
 {-
-  Id: stl:mqltqlPk-O9$pYOd-BACRI70-DOMJ6cp-TFvhcK1-ibrOI9U#import-boxer-seminar
+  Id: stl:qolQpjNB-4ZkpJIo-U1tktjI-mwAYyEg-kOGQttY-ZoK3Loo#colombo-famous-erosion
   Name: RGBLogic
   Version: 0.1.0
   Description: Consensus logic layer for RGB smart contracts
@@ -11,20 +11,18 @@
 @context
 typelib RGBLogic
 
-import RGBCommit#harvest-person-orion
-  use TransitionType#picture-reflex-brigade
-  use ExtensionType#apropos-scoop-viva
-  use Layer1#camilla-basket-justin
-  use OpId#picnic-single-gloria
-
-import BPCore#austin-story-retro
+import BPCore#juliet-super-dominic
   use TapretNodePartner#roger-member-educate
   use TapretProof#marco-border-sample
   use TapretPathProof#kiwi-mirror-paris
   use TapretRightBranch#miracle-patriot-touch
   use OpretProof#good-village-flex
 
-import Bitcoin#signal-color-cipher
+import RGBCommit#support-iris-depend
+  use TransitionType#picture-reflex-brigade
+  use OpId#picnic-single-gloria
+
+import Bitcoin#quiz-patent-exit
   use ScriptBytes#equator-cockpit-gong
   use TapNodeHash#paprika-amanda-hunter
   use LeafScript#bison-doctor-oscar
@@ -40,24 +38,25 @@ data DbcProof          : tapret#1 BPCore.TapretProof
 @mnemonic(east-sunset-extra)
 data GlobalOrd         : opOrd OpOrd, idx U16
 
-@mnemonic(combat-henry-flood)
+@mnemonic(camilla-basket-justin)
+data Layer1            : bitcoin | liquid
+
+
+@mnemonic(disney-mama-rover)
 data OpOrd             : genesis ()
-                       | extension (witness WitnessOrd
-                       , ty RGBCommit.ExtensionType
-                       , nonce U64
-                       , opid RGBCommit.OpId)
                        | transition#255 (witness WitnessOrd
                        , ty RGBCommit.TransitionType
                        , nonce U64
                        , opid RGBCommit.OpId)
 
-@mnemonic(orange-john-cyclone)
-data WitnessOrd        : archived ()
-                       | mined WitnessPos
+@mnemonic(forum-declare-market)
+data WitnessOrd        : mined WitnessPos
                        | tentative ()
+                       | ignored ()
+                       | archived ()
 
-@mnemonic(cliff-enrico-nominal)
-data WitnessPos        : layer1 RGBCommit.Layer1
+@mnemonic(giraffe-melody-aspirin)
+data WitnessPos        : layer1 Layer1
                        , height U32
                        , timestamp I64
 

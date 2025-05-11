@@ -23,32 +23,14 @@
 use core::fmt::Debug;
 use core::hash::Hash;
 
-use commit_verify::Conceal;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
-use crate::{
-    ConcealedAttach, ConcealedData, ConcealedValue, RevealedAttach, RevealedData, RevealedValue,
-};
-
-/// Marker trait for types of state which are just a commitment to the actual
-/// state data.
-pub trait ConfidentialState: Debug + Eq + Copy {
-    fn state_type(&self) -> StateType;
-    fn state_commitment(&self) -> ConcealedState;
-}
+use crate::{RevealedData, RevealedValue};
 
 /// Marker trait for types of state holding explicit state data.
 pub trait ExposedState:
-    Debug
-    + StrictDumb
-    + StrictEncode
-    + StrictDecode
-    + Conceal<Concealed = Self::Confidential>
-    + Eq
-    + Ord
-    + Clone
+    Debug + StrictDumb + StrictEncode + StrictDecode + Eq + Ord + Clone
 {
-    type Confidential: ConfidentialState + StrictEncode + StrictDecode + StrictDumb;
     fn state_type(&self) -> StateType;
     fn state_data(&self) -> RevealedState;
 }
@@ -65,15 +47,11 @@ pub enum StateType {
     /// No state data
     Void,
 
-    /// Value-based state, i.e. which can be committed to with a Pedersen
-    /// commitment
+    /// Value-based state
     Fungible,
 
     /// State defined with custom data
     Structured,
-
-    /// Attached data container
-    Attachment,
 }
 
 /// Categories of the state
@@ -87,7 +65,6 @@ pub enum RevealedState {
     Void,
     Fungible(RevealedValue),
     Structured(RevealedData),
-    Attachment(RevealedAttach),
 }
 
 impl RevealedState {
@@ -96,33 +73,6 @@ impl RevealedState {
             RevealedState::Void => StateType::Void,
             RevealedState::Fungible(_) => StateType::Fungible,
             RevealedState::Structured(_) => StateType::Structured,
-            RevealedState::Attachment(_) => StateType::Attachment,
         }
     }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase", tag = "type")
-)]
-#[allow(clippy::large_enum_variant)]
-pub enum ConcealedState {
-    Void,
-    Fungible(ConcealedValue),
-    Structured(ConcealedData),
-    Attachment(ConcealedAttach),
-}
-
-impl ConfidentialState for ConcealedState {
-    fn state_type(&self) -> StateType {
-        match self {
-            ConcealedState::Void => StateType::Void,
-            ConcealedState::Fungible(_) => StateType::Fungible,
-            ConcealedState::Structured(_) => StateType::Structured,
-            ConcealedState::Attachment(_) => StateType::Attachment,
-        }
-    }
-    fn state_commitment(&self) -> ConcealedState { *self }
 }

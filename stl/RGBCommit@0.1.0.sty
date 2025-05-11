@@ -1,5 +1,5 @@
 {-
-  Id: stl:IFcnrPeI-TANxLfZ-feJax6Q-1TUM4Hq-AjI161s-3tbmxak#harvest-person-orion
+  Id: stl:XbiECcs9-xlyofco-wkXoupT-gJ61JJf-XWL0DWf-INKzIp0#support-iris-depend
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -11,229 +11,109 @@
 @context
 typelib RGBCommit
 
-import StrictTypes#century-comrade-chess
-  use TypeName#edgar-carol-mystery
-  use SemId#logic-absorb-hilton
-
-import BPCore#austin-story-retro
-  use Method#bali-boris-plasma
-  use BlindSealTxPtr#fortune-iron-salmon
+import BPCore#juliet-super-dominic
+  use BlindSealTxid#halt-crash-valid
   use SecretSeal#dollar-iris-wizard
-  use BlindSealTxid#media-judge-anita
+  use BlindSealTxPtr#content-paradox-dominic
   use TxPtr#italian-july-eddie
 
-import AluVM#congo-archive-folio
+import CommitVerify#violet-panther-herbert
+  use MerkleHash#horse-popcorn-bundle
+  use StrictHash#pizza-sherman-sound
+
+import Std#delete-roman-hair
+  use AsciiPrintable#ultra-sunset-format
+  use AlphaNumLodash#percent-bingo-caesar
+  use AlphaCapsLodash#duet-hammer-labor
+  use AlphaSmallLodash#pioneer-eagle-spell
+
+import AluVM#jargon-gorilla-poetic
   use LibSite#ultra-grace-message
   use LibId#germany-culture-olivia
 
-import CommitVerify#miller-pancake-elastic
-  use MerkleHash#horse-popcorn-bundle
-  use StrictHash#pizza-sherman-sound
-  use ReservedBytes1#origin-roger-relax
-  use ReservedBytes2#florida-libra-circus
-  use ReservedBytes8#rudolf-tape-adrian
-
-import Std#ralph-blue-lucky
-  use AsciiPrintable#ultra-sunset-format
-  use Bool#oxygen-complex-duet
-  use AlphaNumLodash#percent-bingo-caesar
-  use AlphaCapsLodash#duet-hammer-labor
+import StrictTypes#henry-heart-survive
+  use FieldName#present-flute-herman
+  use TypeName#edgar-carol-mystery
+  use SemId#logic-absorb-hilton
 
 import Bitcoin#signal-color-cipher
   use Vout#brush-gloria-heroic
   use Txid#shallow-light-reverse
 
 
-@mnemonic(edison-survive-nitro)
-data AltLayer1         : liquid#1 | (|)
+@mnemonic(control-basic-labor)
+data AssignRevealedDataBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, state RevealedData)
+                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedData)
 
+@mnemonic(passage-circus-compact)
+data AssignRevealedDataBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state RevealedData)
+                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedData)
 
-@mnemonic(almond-office-pulse)
-data AltLayer1Set      : {AltLayer1 ^ ..0xff}
+@mnemonic(beatles-service-husband)
+data AssignRevealedValueBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, state RevealedValue)
+                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedValue)
 
-@mnemonic(slang-amber-club)
-data AssetTag          : [Byte ^ 32]
+@mnemonic(address-natural-neptune)
+data AssignRevealedValueBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state RevealedValue)
+                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedValue)
 
-@mnemonic(crash-singer-corner)
-data AssetTags         : {AssignmentType -> ^ ..0xff AssetTag}
+@mnemonic(critic-alcohol-actor)
+data AssignVecAssignRevealedDataBlindSealTxPtr : [AssignRevealedDataBlindSealTxPtr ^ 1..]
 
-@mnemonic(airport-ladder-joseph)
-data AssignRevealedAttachBlindSealTxPtr : confidential (seal XChainSecretSeal
-                       , state ConcealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxPtr
-                       , state ConcealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
-                       , state RevealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxPtr
-                       , state RevealedAttach
-                       , lock CommitVerify.ReservedBytes2)
+@mnemonic(sonata-food-tina)
+data AssignVecAssignRevealedDataBlindSealTxid : [AssignRevealedDataBlindSealTxid ^ 1..]
 
-@mnemonic(member-camera-parking)
-data AssignRevealedAttachBlindSealTxid : confidential (seal XChainSecretSeal
-                       , state ConcealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxid
-                       , state ConcealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
-                       , state RevealedAttach
-                       , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxid
-                       , state RevealedAttach
-                       , lock CommitVerify.ReservedBytes2)
+@mnemonic(magic-pupil-model)
+data AssignVecAssignRevealedValueBlindSealTxPtr : [AssignRevealedValueBlindSealTxPtr ^ 1..]
 
-@mnemonic(genius-editor-formula)
-data AssignRevealedDataBlindSealTxPtr : confidential (seal XChainSecretSeal
-                       , state ConcealedData
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxPtr
-                       , state ConcealedData
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
-                       , state RevealedData
-                       , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxPtr
-                       , state RevealedData
-                       , lock CommitVerify.ReservedBytes2)
+@mnemonic(equator-sector-regard)
+data AssignVecAssignRevealedValueBlindSealTxid : [AssignRevealedValueBlindSealTxid ^ 1..]
 
-@mnemonic(soda-edison-music)
-data AssignRevealedDataBlindSealTxid : confidential (seal XChainSecretSeal
-                       , state ConcealedData
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxid
-                       , state ConcealedData
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
-                       , state RevealedData
-                       , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxid
-                       , state RevealedData
-                       , lock CommitVerify.ReservedBytes2)
+@mnemonic(begin-process-outside)
+data AssignVecAssignVoidStateBlindSealTxPtr : [AssignVoidStateBlindSealTxPtr ^ 1..]
 
-@mnemonic(rachel-unique-logic)
-data AssignRevealedValueBlindSealTxPtr : confidential (seal XChainSecretSeal
-                       , state ConcealedFungible
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxPtr
-                       , state ConcealedFungible
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
-                       , state RevealedFungible
-                       , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxPtr
-                       , state RevealedFungible
-                       , lock CommitVerify.ReservedBytes2)
+@mnemonic(arena-neuron-cantina)
+data AssignVecAssignVoidStateBlindSealTxid : [AssignVoidStateBlindSealTxid ^ 1..]
 
-@mnemonic(cadet-book-pablo)
-data AssignRevealedValueBlindSealTxid : confidential (seal XChainSecretSeal
-                       , state ConcealedFungible
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxid
-                       , state ConcealedFungible
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
-                       , state RevealedFungible
-                       , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxid
-                       , state RevealedFungible
-                       , lock CommitVerify.ReservedBytes2)
+@mnemonic(magnum-tango-bronze)
+data AssignVoidStateBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, state VoidState)
+                       | confidentialSeal (seal BPCore.SecretSeal, state VoidState)
 
-@mnemonic(cycle-panther-cave)
-data AssignVoidStateBlindSealTxPtr : confidential (seal XChainSecretSeal
-                       , state VoidState
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxPtr
-                       , state VoidState
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
-                       , state VoidState
-                       , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxPtr
-                       , state VoidState
-                       , lock CommitVerify.ReservedBytes2)
+@mnemonic(shelf-korea-begin)
+data AssignVoidStateBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state VoidState)
+                       | confidentialSeal (seal BPCore.SecretSeal, state VoidState)
 
-@mnemonic(dynasty-iron-athena)
-data AssignVoidStateBlindSealTxid : confidential (seal XChainSecretSeal
-                       , state VoidState
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialState (seal XChainBlindSealTxid
-                       , state VoidState
-                       , lock CommitVerify.ReservedBytes2)
-                       | confidentialSeal (seal XChainSecretSeal
-                       , state VoidState
-                       , lock CommitVerify.ReservedBytes2)
-                       | revealed (seal XChainBlindSealTxid
-                       , state VoidState
-                       , lock CommitVerify.ReservedBytes2)
+@mnemonic(sabine-magic-deal)
+data AssignmentDetails : ownedStateSchema OwnedStateSchema
+                       , name StrictTypes.FieldName
+                       , defaultTransition TransitionType
 
 @mnemonic(secret-penguin-limit)
 data AssignmentType    : U16
 
-@mnemonic(target-valid-tiger)
-data AssignmentsBlindSealTxPtr : {AssignmentType -> ^ ..0xff TypedAssignsBlindSealTxPtr}
+@mnemonic(mercy-first-clone)
+data AssignmentsBlindSealTxPtr : {AssignmentType -> TypedAssignsBlindSealTxPtr}
 
-@mnemonic(baker-size-sonar)
-data AssignmentsBlindSealTxid : {AssignmentType -> ^ ..0xff TypedAssignsBlindSealTxid}
+@mnemonic(extra-signal-alaska)
+data AssignmentsBlindSealTxid : {AssignmentType -> TypedAssignsBlindSealTxid}
 
-@mnemonic(factor-hair-everest)
-data AttachId          : [Byte ^ 32]
-
-@mnemonic(harvard-burma-bicycle)
-data AttachState       : id AttachId, mediaType MediaType
-
-@mnemonic(amadeus-sunday-casino)
-data BaseCommitment    : flags CommitVerify.ReservedBytes1
-                       , schemaId SchemaId
+@mnemonic(fiesta-gilbert-fiber)
+data BaseCommitment    : schemaId SchemaId
                        , timestamp I64
                        , issuer CommitVerify.StrictHash
-                       , testnet Std.Bool
-                       , altLayers1 CommitVerify.StrictHash
-                       , assetTags CommitVerify.StrictHash
+                       , chainNet ChainNet
+                       , sealClosingStrategy SealClosingStrategy
 
-@mnemonic(animal-plume-minus)
-data BlindingFactor    : [Byte ^ 32]
+@mnemonic(carmen-farmer-diesel)
+data BundleId          : [Byte ^ 32]
 
-@mnemonic(meter-arizona-albino)
-data ConcealedAttach   : [Byte ^ 32]
+@mnemonic(ringo-fashion-enrico)
+data ChainNet          : bitcoinMainnet | bitcoinTestnet3 | bitcoinTestnet4 | bitcoinSignet
+                       | bitcoinRegtest | liquidMainnet | liquidTestnet
 
-@mnemonic(ivan-tripod-young)
-data ConcealedData     : [Byte ^ 32]
-
-@mnemonic(arizona-basic-moment)
-data ConcealedFungible : commitment PedersenCommitment, rangeProof PedersenCommitment
 
 @mnemonic(uniform-welcome-papa)
 data ContractId        : [Byte ^ 32]
-
-@mnemonic(short-noise-postal)
-data DataState         : [Byte]
-
-@mnemonic(reform-garden-ballet)
-data Extension         : ffv Ffv
-                       , contractId ContractId
-                       , nonce U64
-                       , extensionType ExtensionType
-                       , metadata Metadata
-                       , globals GlobalState
-                       , assignments AssignmentsBlindSealTxid
-                       , redeemed Redeemed
-                       , valencies Valencies
-                       , validator CommitVerify.ReservedBytes1
-                       , witness CommitVerify.ReservedBytes2
-
-@mnemonic(delta-elastic-germany)
-data ExtensionSchema   : metadata {MetaType ^ ..0xff}
-                       , globals {GlobalStateType -> ^ ..0xff Occurrences}
-                       , redeems {ValencyType ^ ..0xff}
-                       , assignments {AssignmentType -> ^ ..0xff Occurrences}
-                       , valencies {ValencyType ^ ..0xff}
-                       , validator AluVM.LibSite?
-
-@mnemonic(apropos-scoop-viva)
-data ExtensionType     : U16
 
 @mnemonic(pigment-career-hippie)
 data Ffv               : U16
@@ -245,57 +125,49 @@ data FungibleState     : bits64#8 U64 | (|)
 data FungibleType      : unsigned64Bit#8 | (|)
 
 
-@mnemonic(fashion-delta-polka)
+@mnemonic(salami-water-climax)
 data Genesis           : ffv Ffv
                        , schemaId SchemaId
-                       , flags CommitVerify.ReservedBytes1
                        , timestamp I64
                        , issuer Identity
-                       , testnet Std.Bool
-                       , altLayers1 AltLayer1Set
-                       , assetTags AssetTags
+                       , chainNet ChainNet
+                       , sealClosingStrategy SealClosingStrategy
                        , metadata Metadata
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
-                       , valencies Valencies
-                       , validator CommitVerify.ReservedBytes1
 
-@mnemonic(concept-gloria-shock)
+@mnemonic(strong-mister-version)
 data GenesisSchema     : metadata {MetaType ^ ..0xff}
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
-                       , valencies {ValencyType ^ ..0xff}
                        , validator AluVM.LibSite?
+
+@mnemonic(eddie-super-cartoon)
+data GlobalDetails     : globalStateSchema GlobalStateSchema, name StrictTypes.FieldName
 
 @mnemonic(initial-malta-sierra)
 data GlobalState       : {GlobalStateType -> ^ ..0xff GlobalValues}
 
-@mnemonic(silk-college-august)
-data GlobalStateSchema : reserved CommitVerify.ReservedBytes1
-                       , semId StrictTypes.SemId
-                       , maxItems U24
+@mnemonic(zipper-pioneer-visa)
+data GlobalStateSchema : semId StrictTypes.SemId, maxItems U24
 
 @mnemonic(yoga-quick-jasmine)
 data GlobalStateType   : U16
 
-@mnemonic(charter-fractal-maze)
-data GlobalValues      : [DataState ^ 1..]
+@mnemonic(henry-kevin-carrot)
+data GlobalValues      : [RevealedData ^ 1..]
 
 @mnemonic(smart-pioneer-nominal)
 data Identity          : Std.AsciiPrintable, [Std.AsciiPrintable ^ ..0xfff]
 
-@mnemonic(kevin-morgan-shrink)
-data Input             : prevOut Opout, reserved CommitVerify.ReservedBytes2
+@mnemonic(legal-milk-gold)
+data InputOpids        : {OpId ^ 1..}
 
-@mnemonic(tobacco-open-join)
-data InputMap          : {Bitcoin.Vout -> ^ 1.. OpId}
+@mnemonic(judo-invest-thermos)
+data Inputs            : {Opout ^ 1..}
 
-@mnemonic(sector-charlie-diagram)
-data Inputs            : {Input}
-
-@mnemonic(isabel-heaven-north)
-data MediaType         : any#255 | (|)
-
+@mnemonic(arena-janet-prepare)
+data MetaDetails       : semId StrictTypes.SemId, name StrictTypes.FieldName
 
 @mnemonic(quebec-mission-quota)
 data MetaType          : U16
@@ -309,7 +181,7 @@ data Metadata          : {MetaType -> ^ ..0xff MetaValue}
 @mnemonic(source-olga-mirage)
 data Occurrences       : min U16, max U16
 
-@mnemonic(survive-citizen-harris)
+@mnemonic(oregano-dexter-exact)
 data OpCommitment      : ffv Ffv
                        , nonce U64
                        , opType TypeCommitment
@@ -317,10 +189,6 @@ data OpCommitment      : ffv Ffv
                        , globals CommitVerify.MerkleHash
                        , inputs CommitVerify.MerkleHash
                        , assignments CommitVerify.MerkleHash
-                       , redeemed CommitVerify.StrictHash
-                       , valencies CommitVerify.StrictHash
-                       , witness CommitVerify.MerkleHash
-                       , validator CommitVerify.StrictHash
 
 @mnemonic(picnic-single-gloria)
 data OpId              : [Byte ^ 32]
@@ -330,48 +198,38 @@ data Opout             : op OpId
                        , ty AssignmentType
                        , no U16
 
-@mnemonic(neutral-mixer-visual)
+@mnemonic(sincere-teacher-stella)
 data OwnedStateSchema  : declarative ()
                        | fungible FungibleType
                        | structured StrictTypes.SemId
-                       | attachment MediaType
 
-@mnemonic(pupil-scale-jerome)
-data PedersenCommitment : [Byte ^ 33]
+@mnemonic(salon-clarion-factor)
+data RevealedData      : [Byte]
 
-@mnemonic(anita-vega-pirate)
-data Redeemed          : {ValencyType -> ^ ..0xff OpId}
+@mnemonic(chance-stage-kermit)
+data RevealedValue     : FungibleState
 
-@mnemonic(simple-bombay-salute)
-data RevealedAttach    : file AttachState, salt U64
-
-@mnemonic(sleep-source-figure)
-data RevealedData      : value DataState, salt U128
-
-@mnemonic(source-contact-member)
-data RevealedFungible  : value FungibleState
-                       , blinding BlindingFactor
-                       , tag AssetTag
-
-@mnemonic(corona-igloo-sierra)
+@mnemonic(burma-bambino-nobody)
 data Schema            : ffv Ffv
-                       , flags CommitVerify.ReservedBytes1
                        , name StrictTypes.TypeName
-                       , timestamp I64
-                       , developer Identity
-                       , metaTypes {MetaType -> ^ ..0xff StrictTypes.SemId}
-                       , globalTypes {GlobalStateType -> ^ ..0xff GlobalStateSchema}
-                       , ownedTypes {AssignmentType -> ^ ..0xff OwnedStateSchema}
-                       , valencyTypes {ValencyType ^ ..0xff}
+                       , metaTypes {MetaType -> ^ ..0xff MetaDetails}
+                       , globalTypes {GlobalStateType -> ^ ..0xff GlobalDetails}
+                       , ownedTypes {AssignmentType -> ^ ..0xff AssignmentDetails}
                        , genesis GenesisSchema
-                       , extensions {ExtensionType -> ^ ..0xff ExtensionSchema}
-                       , transitions {TransitionType -> ^ ..0xff TransitionSchema}
-                       , reserved CommitVerify.ReservedBytes8
+                       , transitions {TransitionType -> ^ ..0xff TransitionDetails}
+                       , defaultAssignment AssignmentType?
 
 @mnemonic(ramirez-patron-simon)
 data SchemaId          : [Byte ^ 32]
 
-@mnemonic(michael-exact-eric)
+@mnemonic(exile-target-catalog)
+data SealClosingStrategy : firstOpretOrTapret | (|)
+
+
+@mnemonic(ferrari-zebra-tempo)
+data Signature         : [Byte ^ 64]
+
+@mnemonic(remark-gravity-vitamin)
 data Transition        : ffv Ffv
                        , contractId ContractId
                        , nonce U64
@@ -380,66 +238,39 @@ data Transition        : ffv Ffv
                        , globals GlobalState
                        , inputs Inputs
                        , assignments AssignmentsBlindSealTxPtr
-                       , valencies Valencies
-                       , validator CommitVerify.ReservedBytes1
-                       , witness CommitVerify.ReservedBytes2
+                       , signature Signature?
 
-@mnemonic(antonio-adios-analyze)
-data TransitionBundle  : closeMethod BPCore.Method
-                       , inputMap InputMap
-                       , knownTransitions {OpId -> ^ 1.. Transition}
+@mnemonic(isabel-duet-cover)
+data TransitionBundle  : inputMap {Bitcoin.Vout -> ^ 1.. InputOpids}, knownTransitions {OpId -> ^ 1.. Transition}
 
-@mnemonic(pirate-lithium-side)
+@mnemonic(orbit-pattern-goblin)
+data TransitionDetails : transitionSchema TransitionSchema, name StrictTypes.FieldName
+
+@mnemonic(scratch-magnum-polaris)
 data TransitionSchema  : metadata {MetaType ^ ..0xff}
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , inputs {AssignmentType -> ^ ..0xff Occurrences}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
-                       , valencies {ValencyType ^ ..0xff}
                        , validator AluVM.LibSite?
 
 @mnemonic(picture-reflex-brigade)
 data TransitionType    : U16
 
-@mnemonic(biscuit-pandora-bagel)
+@mnemonic(yellow-young-stone)
 data TypeCommitment    : genesis BaseCommitment
                        | transition (ContractId, TransitionType)
-                       | extension (ContractId, ExtensionType)
 
-@mnemonic(giant-trinity-lagoon)
-data TypedAssignsBlindSealTxPtr : declarative [AssignVoidStateBlindSealTxPtr]
-                       | fungible [AssignRevealedValueBlindSealTxPtr]
-                       | structured [AssignRevealedDataBlindSealTxPtr]
-                       | attachment#255 [AssignRevealedAttachBlindSealTxPtr]
+@mnemonic(ship-trilogy-clara)
+data TypedAssignsBlindSealTxPtr : declarative AssignVecAssignVoidStateBlindSealTxPtr
+                       | fungible AssignVecAssignRevealedValueBlindSealTxPtr
+                       | structured AssignVecAssignRevealedDataBlindSealTxPtr
 
-@mnemonic(penguin-raja-machine)
-data TypedAssignsBlindSealTxid : declarative [AssignVoidStateBlindSealTxid]
-                       | fungible [AssignRevealedValueBlindSealTxid]
-                       | structured [AssignRevealedDataBlindSealTxid]
-                       | attachment#255 [AssignRevealedAttachBlindSealTxid]
-
-@mnemonic(shock-jester-orion)
-data Valencies         : {ValencyType ^ ..0xff}
-
-@mnemonic(aloha-dublin-brush)
-data ValencyType       : U16
+@mnemonic(felix-compare-history)
+data TypedAssignsBlindSealTxid : declarative AssignVecAssignVoidStateBlindSealTxid
+                       | fungible AssignVecAssignRevealedValueBlindSealTxid
+                       | structured AssignVecAssignRevealedDataBlindSealTxid
 
 @mnemonic(email-snow-safari)
 data VoidState         : ()
-
-@mnemonic(senator-limbo-raymond)
-data XChainBlindSealTxPtr : bitcoin BPCore.BlindSealTxPtr
-                       | liquid BPCore.BlindSealTxPtr
-
-@mnemonic(dynamic-life-brown)
-data XChainBlindSealTxid : bitcoin BPCore.BlindSealTxid
-                       | liquid BPCore.BlindSealTxid
-
-@mnemonic(alex-griffin-left)
-data XChainSecretSeal  : bitcoin BPCore.SecretSeal
-                       | liquid BPCore.SecretSeal
-
-@mnemonic(liquid-river-absorb)
-data XChainTxid        : bitcoin Bitcoin.Txid
-                       | liquid Bitcoin.Txid
 
 

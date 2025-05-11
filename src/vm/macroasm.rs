@@ -24,7 +24,7 @@
 macro_rules! rgbasm {
     ($( $tt:tt )+) => {{ #[allow(unused_imports)] {
         use amplify::num::{u4, u5};
-        use $crate::vm::{RgbIsa, ContractOp, TimechainOp};
+        use $crate::vm::{RgbIsa, ContractOp};
         use $crate::vm::aluasm_isa;
         use $crate::isa_instr;
         aluasm_isa! { RgbIsa<_> => $( $tt )+ }
@@ -33,20 +33,23 @@ macro_rules! rgbasm {
 
 #[macro_export]
 macro_rules! isa_instr {
-    (pcvs $no:ident) => {{
-        RgbIsa::Contract(ContractOp::Pcvs($no))
+    (svs $no:ident) => {{
+        RgbIsa::Contract(ContractOp::Svs($no))
     }};
-    (pcas $no:ident) => {{
-        RgbIsa::Contract(ContractOp::Pcas($no))
+    (sas $no:ident) => {{
+        RgbIsa::Contract(ContractOp::Sas($no))
     }};
-    (pcps $no:ident) => {{
-        RgbIsa::Contract(ContractOp::Pcps($no))
+    (sps $no:ident) => {{
+        RgbIsa::Contract(ContractOp::Sps($no))
     }};
     (cng $t:ident,a8[$a_idx:literal]) => {{
         RgbIsa::Contract(ContractOp::CnG($t, Reg32::from(u5::with($a_idx))))
     }};
     (cnc $t:ident,a16[$a_idx:literal]) => {{
         RgbIsa::Contract(ContractOp::CnC($t, Reg32::from(u5::with($a_idx))))
+    }};
+    (ldc $t:ident,a32[$a_idx:literal],s16[$s_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::LdC($t, Reg16::from(u4::with($a_idx)), RegS::from($s_idx)))
     }};
     (ldm $t:ident,s16[$s_idx:literal]) => {{
         RgbIsa::Contract(ContractOp::LdM($t, RegS::from($s_idx)))
@@ -59,6 +62,9 @@ macro_rules! isa_instr {
     }};
     (lds $t:ident,a16[$a_idx:literal],s16[$s_idx:literal]) => {{
         RgbIsa::Contract(ContractOp::LdS($t, Reg16::from(u4::with($a_idx)), RegS::from($s_idx)))
+    }};
+    (vts s16[$s_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::Vts(RegS::from($s_idx)))
     }};
     ($op:ident $($tt:tt)+) => {{
         compile_error!(concat!("unknown RGB assembly opcode `", stringify!($op), "`"))

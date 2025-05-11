@@ -22,41 +22,40 @@
 
 use strict_types::TypeSystem;
 
-use crate::{validation, OpFullType, OpSchema, OwnedStateSchema, Schema, TransitionType};
+use crate::{validation, OpFullType, OpSchema, OwnedStateSchema, Schema};
 
 impl Schema {
     pub fn verify(&self, types: &TypeSystem) -> validation::Status {
         let mut status = validation::Status::new();
 
         status += self.verify_operation(OpFullType::Genesis, &self.genesis);
-        for (type_id, schema) in &self.transitions {
-            status += self.verify_operation(OpFullType::StateTransition(*type_id), schema);
-        }
-        for (type_id, schema) in &self.extensions {
-            status += self.verify_operation(OpFullType::StateExtension(*type_id), schema);
-        }
-        // Check that the schema doesn't contain reserved type ids
-        if self.transitions.contains_key(&TransitionType::BLANK) {
-            status.add_failure(validation::Failure::SchemaBlankTransitionRedefined);
+        for (type_id, transition_details) in &self.transitions {
+            status += self.verify_operation(
+                OpFullType::StateTransition(*type_id),
+                &transition_details.transition_schema,
+            );
         }
 
-        for (type_id, sem_id) in &self.meta_types {
-            if !types.contains_key(sem_id) {
-                status.add_failure(validation::Failure::SchemaMetaSemIdUnknown(*type_id, *sem_id));
-            }
-        }
-
-        for (type_id, schema) in &self.global_types {
-            if !types.contains_key(&schema.sem_id) {
-                status.add_failure(validation::Failure::SchemaGlobalSemIdUnknown(
+        for (type_id, meta_details) in &self.meta_types {
+            if !types.contains_key(&meta_details.sem_id) {
+                status.add_failure(validation::Failure::SchemaMetaSemIdUnknown(
                     *type_id,
-                    schema.sem_id,
+                    meta_details.sem_id,
                 ));
             }
         }
 
-        for (type_id, schema) in &self.owned_types {
-            if let OwnedStateSchema::Structured(sem_id) = schema {
+        for (type_id, global_details) in &self.global_types {
+            if !types.contains_key(&global_details.global_state_schema.sem_id) {
+                status.add_failure(validation::Failure::SchemaGlobalSemIdUnknown(
+                    *type_id,
+                    global_details.global_state_schema.sem_id,
+                ));
+            }
+        }
+
+        for (type_id, assignment_details) in &self.owned_types {
+            if let OwnedStateSchema::Structured(sem_id) = &assignment_details.owned_state_schema {
                 if !types.contains_key(sem_id) {
                     status.add_failure(validation::Failure::SchemaOwnedSemIdUnknown(
                         *type_id, *sem_id,
@@ -79,9 +78,6 @@ impl Schema {
         if matches!(schema.inputs(), Some(inputs) if inputs.is_empty()) {
             status.add_failure(validation::Failure::SchemaOpEmptyInputs(op_type));
         }
-        if matches!(schema.redeems(), Some(inputs) if inputs.is_empty()) {
-            status.add_failure(validation::Failure::SchemaOpEmptyInputs(op_type));
-        }
         for type_id in schema.globals().keys() {
             if !self.global_types.contains_key(type_id) {
                 status
@@ -91,13 +87,6 @@ impl Schema {
         for type_id in schema.assignments().keys() {
             if !self.owned_types.contains_key(type_id) {
                 status.add_failure(validation::Failure::SchemaOpAssignmentTypeUnknown(
-                    op_type, *type_id,
-                ));
-            }
-        }
-        for type_id in schema.valencies() {
-            if !self.valency_types.contains(type_id) {
-                status.add_failure(validation::Failure::SchemaOpValencyTypeUnknown(
                     op_type, *type_id,
                 ));
             }

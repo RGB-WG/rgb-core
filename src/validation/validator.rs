@@ -21,23 +21,23 @@
 // limitations under the License.
 
 use std::cell::RefCell;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::num::NonZeroU32;
 use std::rc::Rc;
 
-use bp::dbc::{Anchor, Proof};
-use bp::seals::txout::{TxoSeal, Witness};
-use bp::{dbc, Outpoint};
+use bp::dbc::Anchor;
+use bp::seals::txout::{CloseMethod, Witness};
+use bp::{dbc, Outpoint, Tx, Txid};
 use commit_verify::mpc;
 use single_use_seals::SealWitness;
 
-use super::status::Failure;
-use super::{CheckedConsignment, ConsignmentApi, DbcProof, EAnchor, OpRef, Status, Validity};
-use crate::vm::{
-    ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd, XWitnessId, XWitnessTx,
-};
+use super::status::{Failure, Warning};
+use super::{CheckedConsignment, ConsignmentApi, EAnchor, Status, Validity};
+use crate::operation::seal::ExposedSeal;
+use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd};
 use crate::{
-    validation, AltLayer1, BundleId, ContractId, Layer1, OpId, OpType, Operation, Opout, Schema,
-    SchemaId, TransitionBundle, XChain, XOutpoint, XOutputSeal,
+    validation, BundleId, ChainNet, ContractId, OpFullType, OpId, Operation, Opout, OutputSeal,
+    Schema, SchemaId, TransitionBundle,
 };
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
@@ -49,42 +49,38 @@ use crate::{
 )]
 pub enum WitnessResolverError {
     /// actual witness id {actual} doesn't match expected id {expected}.
-    IdMismatch {
-        actual: XWitnessId,
-        expected: XWitnessId,
-    },
+    IdMismatch { actual: Txid, expected: Txid },
     /// witness {0} does not exist.
-    Unknown(XWitnessId),
+    Unknown(Txid),
     /// unable to retrieve witness {0}, {1}
-    Other(XWitnessId, String),
+    Other(Txid, String),
+    /// resolver is for another chain-network pair
+    WrongChainNet,
 }
 
 pub trait ResolveWitness {
-    // TODO: Return with SPV proof data
-    fn resolve_pub_witness(
-        &self,
-        witness_id: XWitnessId,
-    ) -> Result<XWitnessTx, WitnessResolverError>;
+    fn resolve_pub_witness(&self, witness_id: Txid) -> Result<Tx, WitnessResolverError>;
 
-    fn resolve_pub_witness_ord(
-        &self,
-        witness_id: XWitnessId,
-    ) -> Result<WitnessOrd, WitnessResolverError>;
+    fn resolve_pub_witness_ord(&self, witness_id: Txid)
+        -> Result<WitnessOrd, WitnessResolverError>;
+
+    fn check_chain_net(&self, chain_net: ChainNet) -> Result<(), WitnessResolverError>;
 }
 
 impl<T: ResolveWitness> ResolveWitness for &T {
-    fn resolve_pub_witness(
-        &self,
-        witness_id: XWitnessId,
-    ) -> Result<XWitnessTx, WitnessResolverError> {
+    fn resolve_pub_witness(&self, witness_id: Txid) -> Result<Tx, WitnessResolverError> {
         ResolveWitness::resolve_pub_witness(*self, witness_id)
     }
 
     fn resolve_pub_witness_ord(
         &self,
-        witness_id: XWitnessId,
+        witness_id: Txid,
     ) -> Result<WitnessOrd, WitnessResolverError> {
         ResolveWitness::resolve_pub_witness_ord(*self, witness_id)
+    }
+
+    fn check_chain_net(&self, chain_net: ChainNet) -> Result<(), WitnessResolverError> {
+        ResolveWitness::check_chain_net(*self, chain_net)
     }
 }
 
@@ -97,12 +93,9 @@ impl<R: ResolveWitness> From<R> for CheckedWitnessResolver<R> {
 }
 
 impl<R: ResolveWitness> ResolveWitness for CheckedWitnessResolver<R> {
-    fn resolve_pub_witness(
-        &self,
-        witness_id: XWitnessId,
-    ) -> Result<XWitnessTx, WitnessResolverError> {
+    fn resolve_pub_witness(&self, witness_id: Txid) -> Result<Tx, WitnessResolverError> {
         let witness = self.inner.resolve_pub_witness(witness_id)?;
-        let actual_id = witness.witness_id();
+        let actual_id = witness.txid();
         if actual_id != witness_id {
             return Err(WitnessResolverError::IdMismatch {
                 actual: actual_id,
@@ -115,9 +108,13 @@ impl<R: ResolveWitness> ResolveWitness for CheckedWitnessResolver<R> {
     #[inline]
     fn resolve_pub_witness_ord(
         &self,
-        witness_id: XWitnessId,
+        witness_id: Txid,
     ) -> Result<WitnessOrd, WitnessResolverError> {
         self.inner.resolve_pub_witness_ord(witness_id)
+    }
+
+    fn check_chain_net(&self, chain_net: ChainNet) -> Result<(), WitnessResolverError> {
+        self.inner.check_chain_net(chain_net)
     }
 }
 
@@ -134,12 +131,15 @@ pub struct Validator<
 
     schema_id: SchemaId,
     contract_id: ContractId,
-    layers1: BTreeSet<Layer1>,
+    chain_net: ChainNet,
 
     contract_state: Rc<RefCell<S>>,
-    validated_op_seals: RefCell<BTreeSet<OpId>>,
+    input_assignments: RefCell<BTreeSet<Opout>>,
 
+    // Operations in this set will not be validated
+    trusted_op_seals: BTreeSet<OpId>,
     resolver: CheckedWitnessResolver<&'resolver R>,
+    safe_height: Option<NonZeroU32>,
 }
 
 impl<
@@ -150,7 +150,13 @@ impl<
         R: ResolveWitness,
     > Validator<'consignment, 'resolver, S, C, R>
 {
-    fn init(consignment: &'consignment C, resolver: &'resolver R, context: S::Context<'_>) -> Self {
+    fn init(
+        consignment: &'consignment C,
+        resolver: &'resolver R,
+        context: S::Context<'_>,
+        safe_height: Option<NonZeroU32>,
+        trusted_op_seals: BTreeSet<OpId>,
+    ) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
         let status = Status::default();
@@ -160,22 +166,21 @@ impl<
         let genesis = consignment.genesis();
         let contract_id = genesis.contract_id();
         let schema_id = genesis.schema_id;
+        let chain_net = genesis.chain_net;
 
-        // Prevent repeated validation of single-use seals
-        let validated_op_seals = RefCell::new(BTreeSet::<OpId>::new());
-
-        let mut layers1 = bset! { Layer1::Bitcoin };
-        layers1.extend(genesis.alt_layers1.iter().map(AltLayer1::layer1));
+        let input_transitions = RefCell::new(BTreeSet::<Opout>::new());
 
         Self {
             consignment,
             status: RefCell::new(status),
             schema_id,
             contract_id,
-            layers1,
-            validated_op_seals,
+            chain_net,
+            trusted_op_seals,
+            input_assignments: input_transitions,
             resolver: CheckedWitnessResolver::from(resolver),
             contract_state: Rc::new(RefCell::new(S::init(context))),
+            safe_height,
         }
     }
 
@@ -191,17 +196,27 @@ impl<
     pub fn validate(
         consignment: &'consignment C,
         resolver: &'resolver R,
-        testnet: bool,
+        chain_net: ChainNet,
         context: S::Context<'_>,
+        safe_height: Option<NonZeroU32>,
+        trusted_op_seals: BTreeSet<OpId>,
     ) -> Status {
-        let mut validator = Self::init(consignment, resolver, context);
-        // If the network mismatches there is no point in validating the contract since
-        // all witness transactions will be missed.
-        if testnet != validator.consignment.genesis().testnet {
+        let mut validator =
+            Self::init(consignment, resolver, context, safe_height, trusted_op_seals);
+        // If the chain-network pair doesn't match there is no point in validating the contract
+        // since all witness transactions will be missed.
+        if validator.chain_net != chain_net {
             validator
                 .status
                 .borrow_mut()
-                .add_failure(Failure::NetworkMismatch(testnet));
+                .add_failure(Failure::ContractChainNetMismatch(chain_net));
+            return validator.status.into_inner();
+        }
+        if resolver.check_chain_net(chain_net).is_err() {
+            validator
+                .status
+                .borrow_mut()
+                .add_failure(Failure::ResolverChainNetMismatch(chain_net));
             return validator.status.into_inner();
         }
 
@@ -259,6 +274,7 @@ impl<
         // [VALIDATION]: Iterating over all consignment operations, ordering them according to the
         //               consensus ordering rules.
         let mut ops = BTreeSet::<OrdOpRef>::new();
+        let mut unsafe_history_map: HashMap<u32, HashSet<Txid>> = HashMap::new();
         for bundle_id in self.consignment.bundle_ids() {
             let bundle = self
                 .consignment
@@ -279,32 +295,30 @@ impl<
                         return;
                     }
                 };
-            for op in bundle.known_transitions.values() {
-                ops.insert(OrdOpRef::Transition(op, witness_id, witness_ord));
-                for input in &op.inputs {
-                    // We will error in `validate_operations` below on the absent extension from the
-                    // consignment.
-                    if let Some(OpRef::Extension(extension)) =
-                        self.consignment.operation(input.prev_out.op)
-                    {
-                        let ext = OrdOpRef::Extension(extension, witness_id, witness_ord);
-                        // Account only for the first time when extension seal was closed
-                        let prev = ops.iter().find(|r| matches!(r, OrdOpRef::Extension(ext, ..) if ext.id() == extension.id())).copied();
-                        match prev {
-                            Some(old) if old > ext => {
-                                ops.remove(&old);
-                                ops.insert(ext)
-                            }
-                            None => ops.insert(ext),
-                            _ => {
-                                /* the extension is already present in the queue and properly
-                                 * ordered, so we have nothing to add or change */
-                                true
-                            }
-                        };
+            if let Some(safe_height) = self.safe_height {
+                match witness_ord {
+                    WitnessOrd::Mined(witness_pos) => {
+                        let witness_height = witness_pos.height();
+                        if witness_height > safe_height {
+                            unsafe_history_map
+                                .entry(witness_height.into())
+                                .or_default()
+                                .insert(witness_id);
+                        }
+                    }
+                    WitnessOrd::Tentative | WitnessOrd::Ignored | WitnessOrd::Archived => {
+                        unsafe_history_map.entry(0).or_default().insert(witness_id);
                     }
                 }
             }
+            for op in bundle.known_transitions.values() {
+                ops.insert(OrdOpRef::Transition(op, witness_id, witness_ord, bundle_id));
+            }
+        }
+        if self.safe_height.is_some() {
+            self.status
+                .borrow_mut()
+                .add_warning(Warning::UnsafeHistory(unsafe_history_map));
         }
         for op in ops {
             // We do not skip validating archive operations since after a re-org they may
@@ -317,6 +331,9 @@ impl<
     fn validate_operation(&self, operation: OrdOpRef<'consignment>) {
         let schema = self.consignment.schema();
         let opid = operation.id();
+        if self.trusted_op_seals.contains(&opid) {
+            return;
+        }
 
         if operation.contract_id() != self.contract_id {
             self.status
@@ -324,8 +341,8 @@ impl<
                 .add_failure(Failure::ContractMismatch(opid, operation.contract_id()));
         }
 
-        if !self.validated_op_seals.borrow().contains(&opid)
-            && operation.op_type() == OpType::StateTransition
+        if !self.status.borrow_mut().validated_opids.contains(&opid)
+            && matches!(operation.full_type(), OpFullType::StateTransition(_))
         {
             self.status
                 .borrow_mut()
@@ -341,35 +358,10 @@ impl<
             }
             OrdOpRef::Transition(transition, ..) => {
                 for input in &transition.inputs {
-                    if self.consignment.operation(input.prev_out.op).is_none() {
+                    if self.consignment.operation(input.op).is_none() {
                         self.status
                             .borrow_mut()
-                            .add_failure(Failure::OperationAbsent(input.prev_out.op));
-                    }
-                }
-            }
-            OrdOpRef::Extension(extension, ..) => {
-                for (valency, prev_id) in &extension.redeemed {
-                    let Some(prev_op) = self.consignment.operation(*prev_id) else {
-                        self.status
-                            .borrow_mut()
-                            .add_failure(Failure::ValencyNoParent {
-                                opid,
-                                prev_id: *prev_id,
-                                valency: *valency,
-                            });
-                        continue;
-                    };
-
-                    if !prev_op.valencies().contains(valency) {
-                        self.status
-                            .borrow_mut()
-                            .add_failure(Failure::NoPrevValency {
-                                opid,
-                                prev_id: *prev_id,
-                                valency: *valency,
-                            });
-                        continue;
+                            .add_failure(Failure::OperationAbsent(input.op));
                     }
                 }
             }
@@ -392,17 +384,10 @@ impl<
                 continue;
             };
 
-            // [VALIDATION]: We validate that the seals were properly defined on BP-type layers
-            let (seals, input_map) = self.validate_seal_definitions(witness_id.layer1(), bundle);
+            // [VALIDATION]: We validate that the seals were properly defined on BP-type layer
+            let (seals, input_map) = self.validate_seal_definitions(bundle);
 
-            if anchor.dbc_proof.method() != bundle.close_method {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::AnchorMethodMismatch(bundle_id));
-                continue;
-            }
-
-            // [VALIDATION]: We validate that the seals were properly closed on BP-type layers
+            // [VALIDATION]: We validate that the seals were properly closed on BP-type layer
             let Some(witness_tx) =
                 self.validate_seal_commitments(&seals, bundle_id, witness_id, anchor)
             else {
@@ -422,31 +407,34 @@ impl<
         &self,
         bundle_id: BundleId,
         bundle: &TransitionBundle,
-        pub_witness: XWitnessTx,
-        input_map: BTreeMap<OpId, BTreeSet<XOutpoint>>,
+        pub_witness: Tx,
+        input_map: BTreeMap<OpId, BTreeSet<Outpoint>>,
     ) {
-        let witness_id = pub_witness.witness_id();
-        for (vin, opid) in &bundle.input_map {
-            let Some(outpoints) = input_map.get(opid) else {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::BundleExtraTransition(bundle_id, *opid));
-                continue;
-            };
-            let layer1 = pub_witness.layer1();
-            let pub_witness = pub_witness.as_reduced_unsafe();
-            let Some(input) = pub_witness.inputs.get(vin.to_usize()) else {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::BundleInvalidInput(bundle_id, *opid, witness_id));
-                continue;
-            };
-            if !outpoints.contains(&XChain::with(layer1, input.prev_output)) {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::BundleInvalidCommitment(
-                        bundle_id, *vin, witness_id, *opid,
-                    ));
+        let witness_id = pub_witness.txid();
+        for (vin, opids) in &bundle.input_map {
+            for opid in opids {
+                if self.trusted_op_seals.contains(&opid) {
+                    continue;
+                }
+                let Some(outpoints) = input_map.get(&opid) else {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::BundleExtraTransition(bundle_id, opid));
+                    continue;
+                };
+                let Some(input) = pub_witness.inputs.get(vin.to_usize()) else {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::BundleInvalidInput(bundle_id, opid, witness_id));
+                    continue;
+                };
+                if !outpoints.contains(&input.prev_output) {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::BundleInvalidCommitment(
+                            bundle_id, *vin, witness_id, opid,
+                        ));
+                }
             }
         }
     }
@@ -455,11 +443,11 @@ impl<
     /// bitcoin commitments with opret and tapret schema.
     fn validate_seal_commitments(
         &self,
-        seals: impl AsRef<[XOutputSeal]>,
+        seals: impl AsRef<[OutputSeal]>,
         bundle_id: BundleId,
-        witness_id: XWitnessId,
+        witness_id: Txid,
         anchor: &EAnchor,
-    ) -> Option<XWitnessTx> {
+    ) -> Option<Tx> {
         // Check that the anchor is committed into a transaction spending all the
         // transition inputs.
         // Here the method can do SPV proof instead of querying the indexer. The SPV
@@ -482,33 +470,8 @@ impl<
             }
             Ok(pub_witness) => {
                 let seals = seals.as_ref();
-                for seal in seals
-                    .iter()
-                    .filter(|seal| seal.method() != anchor.dbc_proof.method())
-                {
-                    self.status
-                        .borrow_mut()
-                        .add_failure(Failure::SealInvalidMethod(bundle_id, *seal));
-                }
-                match anchor.clone() {
-                    EAnchor {
-                        mpc_proof,
-                        dbc_proof: DbcProof::Tapret(tapret),
-                        ..
-                    } => {
-                        let witness = pub_witness.clone().map(|tx| Witness::with(tx, tapret));
-                        self.validate_seal_closing(seals, bundle_id, witness, mpc_proof)
-                    }
-                    EAnchor {
-                        mpc_proof,
-                        dbc_proof: DbcProof::Opret(opret),
-                        ..
-                    } => {
-                        let witness = pub_witness.clone().map(|tx| Witness::with(tx, opret));
-                        self.validate_seal_closing(seals, bundle_id, witness, mpc_proof)
-                    }
-                }
-
+                let witness = Witness::with(pub_witness.clone(), anchor.dbc_proof.clone());
+                self.validate_seal_closing(seals, bundle_id, witness, anchor.mpc_proof.clone());
                 Some(pub_witness)
             }
         }
@@ -516,19 +479,20 @@ impl<
 
     /// Single-use-seal definition validation.
     ///
-    /// Takes state transition, extracts all seals from its inputs and makes
-    /// sure they are defined or a correct layer1.
+    /// Takes state transition, extracts all seals from its inputs and validates them.
     fn validate_seal_definitions(
         &self,
-        layer1: Layer1,
         bundle: &TransitionBundle,
-    ) -> (Vec<XOutputSeal>, BTreeMap<OpId, BTreeSet<XOutpoint>>) {
-        let mut input_map: BTreeMap<OpId, BTreeSet<XOutpoint>> = bmap!();
+    ) -> (Vec<OutputSeal>, BTreeMap<OpId, BTreeSet<Outpoint>>) {
+        let mut input_map: BTreeMap<OpId, BTreeSet<Outpoint>> = bmap!();
         let mut seals = vec![];
         for (opid, transition) in &bundle.known_transitions {
+            if self.trusted_op_seals.contains(opid) {
+                continue;
+            }
             let opid = *opid;
 
-            if !self.validated_op_seals.borrow_mut().insert(opid) {
+            if !self.status.borrow_mut().validated_opids.insert(opid) {
                 self.status
                     .borrow_mut()
                     .add_failure(Failure::CyclicGraph(opid));
@@ -537,7 +501,12 @@ impl<
             // Checking that witness transaction closes seals defined by transition previous
             // outputs.
             for input in &transition.inputs {
-                let Opout { op, ty, no } = input.prev_out;
+                let Opout { op, ty, no } = input;
+                if !self.input_assignments.borrow_mut().insert(input) {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::DoubleSpend(input));
+                }
 
                 let Some(prev_op) = self.consignment.operation(op) else {
                     // Node, referenced as the ancestor, was not found in the consignment.
@@ -560,7 +529,7 @@ impl<
                 let Ok(seal) = variant.revealed_seal_at(no) else {
                     self.status
                         .borrow_mut()
-                        .add_failure(Failure::NoPrevOut(opid, input.prev_out));
+                        .add_failure(Failure::NoPrevOut(opid, input));
                     continue;
                 };
                 let Some(seal) = seal else {
@@ -568,56 +537,28 @@ impl<
                     // full verification and have to report the failure
                     self.status
                         .borrow_mut()
-                        .add_failure(Failure::ConfidentialSeal(input.prev_out));
+                        .add_failure(Failure::ConfidentialSeal(input));
                     continue;
                 };
 
-                if seal.layer1() != layer1 {
-                    self.status
-                        .borrow_mut()
-                        .add_failure(Failure::SealWitnessLayer1Mismatch {
-                            seal: seal.layer1(),
-                            anchor: layer1,
-                        });
-                    continue;
-                }
-                if !self.layers1.contains(&seal.layer1()) {
-                    self.status
-                        .borrow_mut()
-                        .add_failure(Failure::SealLayerMismatch(seal.layer1(), seal));
-                    continue;
-                }
-
-                let seal = if prev_op.op_type() == OpType::StateTransition {
+                let seal = if matches!(prev_op.full_type(), OpFullType::StateTransition(_)) {
                     let Some(witness_id) = self.consignment.op_witness_id(op) else {
                         self.status
                             .borrow_mut()
                             .add_failure(Failure::OperationAbsent(op));
                         continue;
                     };
-
-                    match seal.try_to_output_seal(witness_id) {
-                        Ok(seal) => seal,
-                        Err(_) => {
-                            self.status.borrow_mut().add_failure(
-                                Failure::SealWitnessLayer1Mismatch {
-                                    seal: seal.layer1(),
-                                    anchor: witness_id.layer1(),
-                                },
-                            );
-                            continue;
-                        }
-                    }
+                    seal.to_output_seal_or_default(witness_id)
                 } else {
                     seal.to_output_seal()
-                        .expect("genesis and state extensions must have explicit seals")
+                        .expect("genesis must have explicit seals")
                 };
 
                 seals.push(seal);
                 input_map
                     .entry(opid)
                     .or_default()
-                    .insert(seal.map(|seal| Outpoint::new(seal.txid, seal.vout)).into());
+                    .insert(Outpoint::new(seal.txid, seal.vout));
             }
         }
         (seals, input_map)
@@ -637,14 +578,14 @@ impl<
         &self,
         seals: impl IntoIterator<Item = &'seal Seal>,
         bundle_id: BundleId,
-        witness: XChain<Witness<Dbc>>,
+        witness: Witness<Dbc>,
         mpc_proof: mpc::MerkleProof,
     ) where
-        XChain<Witness<Dbc>>: SealWitness<Seal, Message = mpc::Commitment>,
+        Witness<Dbc>: SealWitness<Seal, Message = mpc::Commitment>,
     {
         let message = mpc::Message::from(bundle_id);
-        let witness_id = witness.witness_id();
-        let anchor = Anchor::new(mpc_proof, witness.as_reduced_unsafe().proof.clone());
+        let witness_id = witness.txid;
+        let anchor = Anchor::new(mpc_proof, witness.proof.clone());
         // [VALIDATION]: Checking anchor MPC commitment
         match anchor.convolve(self.contract_id, message) {
             Err(err) => {
@@ -655,6 +596,28 @@ impl<
                     .add_failure(Failure::MpcInvalid(bundle_id, witness_id, err));
             }
             Ok(commitment) => {
+                // [VALIDATION]: Verify commitment
+                let Some(output) = witness
+                    .tx
+                    .outputs()
+                    .find(|out| out.script_pubkey.is_op_return() || out.script_pubkey.is_p2tr())
+                else {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::NoDbcOutput(witness_id));
+                    return;
+                };
+                let output_method = if output.script_pubkey.is_op_return() {
+                    CloseMethod::OpretFirst
+                } else {
+                    CloseMethod::TapretFirst
+                };
+                let proof_method = witness.proof.method();
+                if proof_method != output_method {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::InvalidProofType(witness_id, proof_method));
+                }
                 // [VALIDATION]: CHECKING SINGLE-USE-SEALS
                 witness
                     .verify_many_seals(seals, &commitment)
