@@ -27,17 +27,15 @@ use std::fmt::{self, Debug, Display, Formatter};
 use std::num::NonZeroU32;
 use std::rc::Rc;
 
-use amplify::confinement;
 use amplify::num::u24;
-use bp::{Outpoint, Txid};
+use bp::{BlockHeight, Outpoint, Txid};
 use chrono::{MappedLocalTime, TimeZone, Utc};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    AssignmentType, Assignments, AssignmentsRef, AttachState, BundleId, ContractId, DataState,
-    Extension, ExtensionType, FungibleState, Genesis, GlobalState, GlobalStateType, GraphSeal,
-    Inputs, Layer1, Metadata, OpFullType, OpId, OpType, Operation, Transition, TransitionType,
-    TypedAssigns, Valencies, LIB_NAME_RGB_LOGIC,
+    AssignmentType, Assignments, AssignmentsRef, BundleId, ContractId, FungibleState, Genesis,
+    GlobalState, GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType, OpId, Operation,
+    RevealedData, Transition, TransitionType, TypedAssigns, LIB_NAME_RGB_LOGIC,
 };
 
 /// The type is used during validation and computing a contract state. It
@@ -49,7 +47,6 @@ pub enum OrdOpRef<'op> {
     #[from]
     Genesis(&'op Genesis),
     Transition(&'op Transition, Txid, WitnessOrd, BundleId),
-    Extension(&'op Extension, Txid, WitnessOrd),
 }
 
 impl PartialOrd for OrdOpRef<'_> {
@@ -64,15 +61,13 @@ impl OrdOpRef<'_> {
     pub fn witness_id(&self) -> Option<Txid> {
         match self {
             OrdOpRef::Genesis(_) => None,
-            OrdOpRef::Transition(_, witness_id, ..) | OrdOpRef::Extension(_, witness_id, ..) => {
-                Some(*witness_id)
-            }
+            OrdOpRef::Transition(_, witness_id, ..) => Some(*witness_id),
         }
     }
 
     pub fn bundle_id(&self) -> Option<BundleId> {
         match self {
-            OrdOpRef::Genesis(_) | OrdOpRef::Extension(..) => None,
+            OrdOpRef::Genesis(_) => None,
             OrdOpRef::Transition(_, _, _, bundle_id) => Some(*bundle_id),
         }
     }
@@ -86,30 +81,15 @@ impl OrdOpRef<'_> {
                 nonce: op.nonce,
                 opid: op.id(),
             },
-            OrdOpRef::Extension(op, _, witness_ord) => OpOrd::Extension {
-                witness: *witness_ord,
-                ty: op.extension_type,
-                nonce: op.nonce,
-                opid: op.id(),
-            },
         }
     }
 }
 
 impl<'op> Operation for OrdOpRef<'op> {
-    fn op_type(&self) -> OpType {
-        match self {
-            OrdOpRef::Genesis(op) => op.op_type(),
-            OrdOpRef::Transition(op, ..) => op.op_type(),
-            OrdOpRef::Extension(op, ..) => op.op_type(),
-        }
-    }
-
     fn full_type(&self) -> OpFullType {
         match self {
             OrdOpRef::Genesis(op) => op.full_type(),
             OrdOpRef::Transition(op, ..) => op.full_type(),
-            OrdOpRef::Extension(op, ..) => op.full_type(),
         }
     }
 
@@ -117,7 +97,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.id(),
             OrdOpRef::Transition(op, ..) => op.id(),
-            OrdOpRef::Extension(op, ..) => op.id(),
         }
     }
 
@@ -125,7 +104,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.contract_id(),
             OrdOpRef::Transition(op, ..) => op.contract_id(),
-            OrdOpRef::Extension(op, ..) => op.contract_id(),
         }
     }
 
@@ -133,23 +111,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.nonce(),
             OrdOpRef::Transition(op, ..) => op.nonce(),
-            OrdOpRef::Extension(op, ..) => op.nonce(),
-        }
-    }
-
-    fn transition_type(&self) -> Option<TransitionType> {
-        match self {
-            OrdOpRef::Genesis(op) => op.transition_type(),
-            OrdOpRef::Transition(op, ..) => op.transition_type(),
-            OrdOpRef::Extension(op, ..) => op.transition_type(),
-        }
-    }
-
-    fn extension_type(&self) -> Option<ExtensionType> {
-        match self {
-            OrdOpRef::Genesis(op) => op.extension_type(),
-            OrdOpRef::Transition(op, ..) => op.extension_type(),
-            OrdOpRef::Extension(op, ..) => op.extension_type(),
         }
     }
 
@@ -157,7 +118,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.metadata(),
             OrdOpRef::Transition(op, ..) => op.metadata(),
-            OrdOpRef::Extension(op, ..) => op.metadata(),
         }
     }
 
@@ -165,23 +125,13 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.globals(),
             OrdOpRef::Transition(op, ..) => op.globals(),
-            OrdOpRef::Extension(op, ..) => op.globals(),
-        }
-    }
-
-    fn valencies(&self) -> &Valencies {
-        match self {
-            OrdOpRef::Genesis(op) => op.valencies(),
-            OrdOpRef::Transition(op, ..) => op.valencies(),
-            OrdOpRef::Extension(op, ..) => op.valencies(),
         }
     }
 
     fn assignments(&self) -> AssignmentsRef<'op> {
         match self {
-            OrdOpRef::Genesis(op) => (&op.assignments).into(),
-            OrdOpRef::Transition(op, ..) => (&op.assignments).into(),
-            OrdOpRef::Extension(op, ..) => (&op.assignments).into(),
+            OrdOpRef::Genesis(op) => op.assignments(),
+            OrdOpRef::Transition(op, ..) => op.assignments(),
         }
     }
 
@@ -189,15 +139,6 @@ impl<'op> Operation for OrdOpRef<'op> {
         match self {
             OrdOpRef::Genesis(op) => op.assignments_by_type(t),
             OrdOpRef::Transition(op, ..) => op.assignments_by_type(t),
-            OrdOpRef::Extension(op, ..) => op.assignments_by_type(t),
-        }
-    }
-
-    fn inputs(&self) -> Inputs {
-        match self {
-            OrdOpRef::Genesis(op) => op.inputs(),
-            OrdOpRef::Transition(op, ..) => op.inputs(),
-            OrdOpRef::Extension(op, ..) => op.inputs(),
         }
     }
 }
@@ -214,9 +155,8 @@ pub struct WitnessPos {
     #[getter(as_copy)]
     layer1: Layer1,
 
-    // TODO: Move BlockHeight from bp-wallet to bp-consensus and use it here
     #[getter(as_copy)]
-    height: NonZeroU32,
+    height: BlockHeight,
 
     #[getter(as_copy)]
     timestamp: i64,
@@ -310,11 +250,9 @@ impl Display for WitnessPos {
     }
 }
 
-/// RGB consensus information about the status of a witness transaction. This
-/// information is used in ordering state transition and state extension
-/// processing in the AluVM during the validation, as well as consensus ordering
-/// of the contract global state data, as they are presented to all contract
-/// users.
+/// RGB consensus information about the status of a witness transaction. This information is used
+/// in ordering state transitions during the validation, as well as consensus ordering of the
+/// contract global state data, as they are presented to all contract users.
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, From)]
 #[display(lowercase)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
@@ -325,20 +263,6 @@ impl Display for WitnessPos {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub enum WitnessOrd {
-    /// Witness transaction must be ignored by the update witnesses process.
-    Ignored,
-    /// Witness transaction must be excluded from the state processing.
-    ///
-    /// Cases for the exclusion:
-    /// - transaction was removed from blockchain after a re-org and its inputs were spent by other
-    ///   transaction;
-    /// - previous transaction(s) after RBF replacement, once it is excluded from the mempool and
-    ///   replaced by RBFed successors;
-    /// - past state channel transactions once a new channel state is signed (and until they may
-    ///   become valid once again due to an uncooperative channel closing).
-    #[strict_type(dumb)]
-    Archived,
-
     /// Transaction is included into layer 1 blockchain at a specific height and
     /// timestamp.
     ///
@@ -364,6 +288,21 @@ pub enum WitnessOrd {
     /// - transaction is an RBF replacement prepared to be broadcast (with the previous transaction
     ///   set to [`Self::Archived`] at the same moment).
     Tentative,
+
+    /// Witness transaction must be ignored by the update witnesses process.
+    Ignored,
+
+    /// Witness transaction must be excluded from the state processing.
+    ///
+    /// Cases for the exclusion:
+    /// - transaction was removed from blockchain after a re-org and its inputs were spent by other
+    ///   transaction;
+    /// - previous transaction(s) after RBF replacement, once it is excluded from the mempool and
+    ///   replaced by RBFed successors;
+    /// - past state channel transactions once a new channel state is signed (and until they may
+    ///   become valid once again due to an uncooperative channel closing).
+    #[strict_type(dumb)]
+    Archived,
 }
 
 impl WitnessOrd {
@@ -378,8 +317,6 @@ impl WitnessOrd {
 /// - Genesis is processed first.
 /// - Other operations are ordered according to their witness transactions (see [`WitnessOrd`] for
 ///   the details).
-/// - Extensions share witness transaction with the state transition which first to close one of the
-///   seals defined in the extension, but are processed before that state transition.
 /// - If two or more operations share the same witness transaction ordering, they are first ordered
 ///   basing on their `nonce` value, and if it is also the same, basing on their operation id value.
 ///
@@ -395,13 +332,6 @@ impl WitnessOrd {
 pub enum OpOrd {
     #[strict_type(tag = 0x00, dumb)]
     Genesis,
-    #[strict_type(tag = 0x01)]
-    Extension {
-        witness: WitnessOrd,
-        ty: ExtensionType,
-        nonce: u64,
-        opid: OpId,
-    },
     #[strict_type(tag = 0xFF)]
     Transition {
         witness: WitnessOrd,
@@ -414,16 +344,10 @@ pub enum OpOrd {
 impl OpOrd {
     #[inline]
     pub fn is_archived(&self) -> bool {
-        matches!(
-            self,
-            Self::Extension {
-                witness: WitnessOrd::Archived,
-                ..
-            } | Self::Transition {
-                witness: WitnessOrd::Archived,
-                ..
-            }
-        )
+        matches!(self, Self::Transition {
+            witness: WitnessOrd::Archived,
+            ..
+        })
     }
 }
 
@@ -465,27 +389,10 @@ impl GlobalOrd {
             idx,
         }
     }
-    pub fn extension(
-        opid: OpId,
-        idx: u16,
-        ty: ExtensionType,
-        nonce: u64,
-        witness: WitnessOrd,
-    ) -> Self {
-        Self {
-            op_ord: OpOrd::Extension {
-                witness,
-                ty,
-                nonce,
-                opid,
-            },
-            idx,
-        }
-    }
 }
 
 pub trait GlobalStateIter {
-    type Data: Borrow<DataState>;
+    type Data: Borrow<RevealedData>;
     fn size(&mut self) -> u24;
     fn prev(&mut self) -> Option<(GlobalOrd, Self::Data)>;
     fn last(&mut self) -> Option<(GlobalOrd, Self::Data)>;
@@ -529,15 +436,6 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
 
     fn prev_checked(&mut self) -> Option<(GlobalOrd, I::Data)> {
         let (ord, item) = self.iter.prev()?;
-        if self.last_ord.map(|last| ord <= last).unwrap_or_default() {
-            panic!(
-                "global contract state iterator has invalid implementation: it fails to order \
-                 global state according to the consensus ordering"
-            );
-        }
-        if ord.op_ord.is_archived() {
-            panic!("invalid GlobalStateIter implementation returning WitnessOrd::Archived")
-        }
         self.checked_depth += u24::ONE;
         self.last_ord = Some(ord);
         Some((ord, item))
@@ -546,8 +444,8 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     /// Retrieves global state data located `depth` items back from the most
     /// recent global state value. Ensures that the global state ordering is
     /// consensus-based.
-    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<DataState> + '_> {
-        if depth >= self.iter.size() {
+    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<RevealedData> + '_> {
+        if depth > self.iter.size() {
             return None;
         }
         if depth >= self.checked_depth {
@@ -555,7 +453,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
         } else {
             self.iter.reset(self.checked_depth);
             let size = self.iter.size();
-            let to = (depth - self.checked_depth).to_u32();
+            let to = (self.checked_depth - depth).to_u32();
             for inc in 0..to {
                 if self.prev_checked().is_none() {
                     panic!(
@@ -599,21 +497,14 @@ pub trait ContractStateAccess: Debug {
         &self,
         outpoint: Outpoint,
         ty: AssignmentType,
-    ) -> impl DoubleEndedIterator<Item = impl Borrow<DataState>>;
-
-    fn attach(
-        &self,
-        outpoint: Outpoint,
-        ty: AssignmentType,
-    ) -> impl DoubleEndedIterator<Item = impl Borrow<AttachState>>;
+    ) -> impl DoubleEndedIterator<Item = impl Borrow<RevealedData>>;
 }
 
 pub trait ContractStateEvolve {
     type Context<'ctx>;
+    type Error: std::error::Error;
     fn init(context: Self::Context<'_>) -> Self;
-    // TODO: distinguish contract validation failure errors from connectivity
-    //       errors. Allow custom error types here.
-    fn evolve_state(&mut self, op: OrdOpRef) -> Result<(), confinement::Error>;
+    fn evolve_state(&mut self, op: OrdOpRef) -> Result<(), Self::Error>;
 }
 
 pub struct VmContext<'op, S: ContractStateAccess> {
@@ -624,33 +515,20 @@ pub struct VmContext<'op, S: ContractStateAccess> {
 
 pub struct OpInfo<'op> {
     pub id: OpId,
-    pub ty: OpFullType,
-    pub metadata: &'op Metadata,
     pub prev_state: &'op Assignments<GraphSeal>,
-    pub owned_state: AssignmentsRef<'op>,
-    pub redeemed: &'op Valencies,
-    pub valencies: &'op Valencies,
-    pub global: &'op GlobalState,
+    pub op: &'op OrdOpRef<'op>,
 }
 
 impl<'op> OpInfo<'op> {
-    pub fn with(
-        id: OpId,
-        op: &'op OrdOpRef<'op>,
-        prev_state: &'op Assignments<GraphSeal>,
-        redeemed: &'op Valencies,
-    ) -> Self {
-        OpInfo {
-            id,
-            ty: op.full_type(),
-            metadata: op.metadata(),
-            prev_state,
-            owned_state: op.assignments(),
-            redeemed,
-            valencies: op.valencies(),
-            global: op.globals(),
-        }
+    pub fn with(id: OpId, op: &'op OrdOpRef<'op>, prev_state: &'op Assignments<GraphSeal>) -> Self {
+        OpInfo { id, prev_state, op }
     }
+
+    pub fn global(&self) -> &'op GlobalState { self.op.globals() }
+
+    pub fn metadata(&self) -> &'op Metadata { self.op.metadata() }
+
+    pub fn owned_state(&self) -> AssignmentsRef<'op> { self.op.assignments() }
 }
 
 #[cfg(test)]

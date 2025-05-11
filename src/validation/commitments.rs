@@ -25,7 +25,7 @@ use bp::dbc::tapret::TapretProof;
 use bp::dbc::Method;
 use bp::{dbc, Tx};
 use commit_verify::mpc::Commitment;
-use commit_verify::{mpc, ConvolveVerifyError, EmbedVerifyError};
+use commit_verify::{ConvolveVerifyError, EmbedVerifyError};
 use strict_encoding::{StrictDeserialize, StrictDumb, StrictSerialize};
 
 use crate::LIB_NAME_RGB_LOGIC;
@@ -117,4 +117,4 @@ impl dbc::Proof for DbcProof {
 }
 
 /// Anchor which DBC proof is either Tapret or Opret.
-pub type EAnchor<P = mpc::MerkleProof> = dbc::Anchor<P, DbcProof>;
+pub type EAnchor = dbc::Anchor<DbcProof>;

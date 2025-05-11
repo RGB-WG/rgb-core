@@ -27,7 +27,7 @@ use amplify::confinement::{Confined, TinyOrdMap, U16};
 use amplify::{confinement, Wrapper};
 use strict_encoding::StrictDumb;
 
-use crate::{schema, DataState, LIB_NAME_RGB_COMMIT};
+use crate::{schema, RevealedData, LIB_NAME_RGB_COMMIT};
 
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]
@@ -39,19 +39,19 @@ use crate::{schema, DataState, LIB_NAME_RGB_COMMIT};
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct GlobalValues(Confined<Vec<DataState>, 1, U16>);
+pub struct GlobalValues(Confined<Vec<RevealedData>, 1, U16>);
 
 impl StrictDumb for GlobalValues {
-    fn strict_dumb() -> Self { Self(Confined::with(DataState::strict_dumb())) }
+    fn strict_dumb() -> Self { Self(Confined::with(RevealedData::strict_dumb())) }
 }
 
 impl GlobalValues {
-    pub fn with(state: DataState) -> Self { GlobalValues(Confined::with(state)) }
+    pub fn with(state: RevealedData) -> Self { GlobalValues(Confined::with(state)) }
 }
 
 impl IntoIterator for GlobalValues {
-    type Item = DataState;
-    type IntoIter = vec::IntoIter<DataState>;
+    type Item = RevealedData;
+    type IntoIter = vec::IntoIter<RevealedData>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
 }
@@ -72,7 +72,7 @@ impl GlobalState {
     pub fn add_state(
         &mut self,
         ty: schema::GlobalStateType,
-        state: DataState,
+        state: RevealedData,
     ) -> Result<(), confinement::Error> {
         match self.0.get_mut(&ty) {
             Some(vec) => vec.push(state),
@@ -83,7 +83,7 @@ impl GlobalState {
     pub fn extend_state(
         &mut self,
         ty: schema::GlobalStateType,
-        iter: impl IntoIterator<Item = DataState>,
+        iter: impl IntoIterator<Item = RevealedData>,
     ) -> Result<(), confinement::Error> {
         match self.0.get_mut(&ty) {
             Some(vec) => vec.extend(iter),

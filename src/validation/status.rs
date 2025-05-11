@@ -21,6 +21,7 @@
 // limitations under the License.
 
 use core::ops::AddAssign;
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::{self, Display, Formatter};
 
 use amplify::num::u24;
@@ -32,8 +33,11 @@ use strict_types::SemId;
 use crate::schema::{self, SchemaId};
 use crate::validation::WitnessResolverError;
 use crate::{
-    BundleId, ChainNet, ContractId, OccurrencesMismatch, OpFullType, OpId, Opout, StateType, Vin,
+    BundleId, ChainNet, ContractId, OccurrencesMismatch, OpFullType, OpId, Opout,
+    SealClosingStrategy, StateType, Vin,
 };
+
+pub type UnsafeHistoryMap = HashMap<u32, HashSet<Txid>>;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[repr(u8)]
@@ -58,6 +62,7 @@ pub struct Status {
     pub failures: Vec<Failure>,
     pub warnings: Vec<Warning>,
     pub info: Vec<Info>,
+    pub validated_opids: BTreeSet<OpId>,
 }
 
 impl Display for Status {
@@ -105,6 +110,7 @@ impl Status {
             failures: vec![v],
             warnings: vec![],
             info: vec![],
+            validated_opids: bset![],
         }
     }
 }
@@ -179,8 +185,6 @@ pub enum Failure {
         /// Actual schema id provided by the consignment.
         actual: SchemaId,
     },
-    /// schema uses reserved type for the blank state transition.
-    SchemaBlankTransitionRedefined,
 
     /// schema global state #{0} uses semantic data type absent in type library
     /// ({1}).
@@ -200,11 +204,7 @@ pub enum Failure {
     SchemaOpGlobalTypeUnknown(OpFullType, schema::GlobalStateType),
     /// schema for {0} references undeclared owned state type {1}.
     SchemaOpAssignmentTypeUnknown(OpFullType, schema::AssignmentType),
-    /// schema for {0} references undeclared valency type {1}.
-    SchemaOpValencyTypeUnknown(OpFullType, schema::ValencyType),
 
-    /// operation {0} uses invalid state extension type {1}.
-    SchemaUnknownExtensionType(OpId, schema::ExtensionType),
     /// operation {0} uses invalid state transition type {1}.
     SchemaUnknownTransitionType(OpId, schema::TransitionType),
     /// operation {0} uses invalid metadata type {1}.
@@ -213,8 +213,8 @@ pub enum Failure {
     SchemaUnknownGlobalStateType(OpId, schema::GlobalStateType),
     /// operation {0} uses invalid assignment type {1}.
     SchemaUnknownAssignmentType(OpId, schema::AssignmentType),
-    /// operation {0} uses invalid valency type {1}.
-    SchemaUnknownValencyType(OpId, schema::ValencyType),
+    /// operation {0} uses invalid seal closing strategy {1}.
+    SchemaUnknownSealClosingStrategy(OpId, SealClosingStrategy),
 
     /// invalid number of global state entries of type {1} in operation {0} -
     /// {2}
@@ -300,22 +300,6 @@ pub enum Failure {
     /// type ({1})
     InvalidProofType(Txid, CloseMethod),
 
-    // State extensions errors
-    /// valency {valency} redeemed by state extension {opid} references
-    /// non-existing operation {prev_id}
-    ValencyNoParent {
-        opid: OpId,
-        prev_id: OpId,
-        valency: schema::ValencyType,
-    },
-    /// state extension {opid} references valency {valency} absent in the parent
-    /// {prev_id}.
-    NoPrevValency {
-        opid: OpId,
-        prev_id: OpId,
-        valency: schema::ValencyType,
-    },
-
     // State check errors
     /// state in {opid}/{state_type} is of {found} type, while schema requires
     /// it to be {expected}.
@@ -324,14 +308,6 @@ pub enum Failure {
         state_type: schema::AssignmentType,
         expected: StateType,
         found: StateType,
-    },
-    /// state in {opid}/{state_type} is of {found} type, while schema requires
-    /// it to be {expected}.
-    MediaTypeMismatch {
-        opid: OpId,
-        state_type: schema::AssignmentType,
-        expected: schema::MediaType,
-        found: schema::MediaType,
     },
     /// state in {opid}/{state_type} is of {found} type, while schema requires
     /// it to be {expected}.
@@ -360,6 +336,9 @@ pub enum Failure {
 )]
 #[display(doc_comments)]
 pub enum Warning {
+    /// Map of transfer history TXs with potentially unsafe height.
+    UnsafeHistory(UnsafeHistoryMap),
+
     /// Custom warning by external services on top of RGB Core.
     #[display(inner)]
     Custom(String),

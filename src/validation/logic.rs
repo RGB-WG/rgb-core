@@ -21,25 +21,27 @@
 // limitations under the License.
 
 use std::cell::RefCell;
-use std::collections::BTreeSet;
+use std::collections::btree_map::Entry;
+use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
 use aluvm::data::Number;
 use aluvm::isa::Instr;
 use aluvm::reg::{Reg32, RegA};
 use aluvm::Vm;
-use amplify::confinement::Confined;
+use amplify::confinement::{Confined, NonEmptyVec};
 use amplify::Wrapper;
 use strict_types::TypeSystem;
 
-use crate::schema::{AssignmentsSchema, GlobalSchema, ValencySchema};
+use crate::assignments::AssignVec;
+use crate::schema::{AssignmentsSchema, GlobalSchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OrdOpRef, RgbIsa, VmContext};
 use crate::{
     validation, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal, ExposedState,
-    Extension, GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema,
-    Metadata, OpId, Operation, Opout, OwnedStateSchema, RevealedState, Schema, Transition,
-    TypedAssigns, Valencies,
+    GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId,
+    Operation, Opout, OwnedStateSchema, RevealedState, Schema, SealClosingStrategy, Transition,
+    TypedAssigns,
 };
 
 impl Schema {
@@ -57,28 +59,26 @@ impl Schema {
         let mut status = validation::Status::new();
 
         let empty_assign_schema = AssignmentsSchema::default();
-        let empty_valency_schema = ValencySchema::default();
-        let blank_transition = self.blank_transition();
-        let (
-            metadata_schema,
-            global_schema,
-            owned_schema,
-            redeem_schema,
-            assign_schema,
-            valency_schema,
-            validator,
-            ty,
-        ) = match op {
-            OrdOpRef::Genesis(_) => (
-                &self.genesis.metadata,
-                &self.genesis.globals,
-                &empty_assign_schema,
-                &empty_valency_schema,
-                &self.genesis.assignments,
-                &self.genesis.valencies,
-                self.genesis.validator,
-                None::<u16>,
-            ),
+        let (metadata_schema, global_schema, owned_schema, assign_schema, validator, ty) = match op
+        {
+            OrdOpRef::Genesis(genesis) => {
+                if genesis.seal_closing_strategy != SealClosingStrategy::FirstOpretOrTapret {
+                    return validation::Status::with_failure(
+                        validation::Failure::SchemaUnknownSealClosingStrategy(
+                            opid,
+                            genesis.seal_closing_strategy,
+                        ),
+                    );
+                }
+                (
+                    &self.genesis.metadata,
+                    &self.genesis.globals,
+                    &empty_assign_schema,
+                    &self.genesis.assignments,
+                    self.genesis.validator,
+                    None::<u16>,
+                )
+            }
             OrdOpRef::Transition(
                 Transition {
                     transition_type, ..
@@ -95,7 +95,6 @@ impl Schema {
                  */
 
                 let transition_schema = match self.transitions.get(transition_type) {
-                    None if transition_type.is_blank() => &blank_transition,
                     None => {
                         return validation::Status::with_failure(
                             validation::Failure::SchemaUnknownTransitionType(
@@ -104,54 +103,20 @@ impl Schema {
                             ),
                         );
                     }
-                    Some(transition_schema) => transition_schema,
+                    Some(transition_details) => &transition_details.transition_schema,
                 };
 
                 (
                     &transition_schema.metadata,
                     &transition_schema.globals,
                     &transition_schema.inputs,
-                    &empty_valency_schema,
                     &transition_schema.assignments,
-                    &transition_schema.valencies,
                     transition_schema.validator,
                     Some(transition_type.into_inner()),
                 )
             }
-            OrdOpRef::Extension(Extension { extension_type, .. }, ..) => {
-                // Right now we do not have actions to implement; but later
-                // we may have embedded procedures which must be verified
-                // here
-                /*
-                if let Some(procedure) = extension_type.abi.get(&ExtensionAction::NoOp) {
-
-                }
-                 */
-
-                let extension_schema = match self.extensions.get(extension_type) {
-                    None => {
-                        return validation::Status::with_failure(
-                            validation::Failure::SchemaUnknownExtensionType(opid, *extension_type),
-                        );
-                    }
-                    Some(extension_schema) => extension_schema,
-                };
-
-                (
-                    &extension_schema.metadata,
-                    &extension_schema.globals,
-                    &empty_assign_schema,
-                    &extension_schema.redeems,
-                    &extension_schema.assignments,
-                    &extension_schema.redeems,
-                    extension_schema.validator,
-                    Some(extension_type.into_inner()),
-                )
-            }
         };
 
-        // Validate type system
-        status += self.validate_type_system();
         status += self.validate_metadata(opid, op.metadata(), metadata_schema, consignment.types());
         status +=
             self.validate_global_state(opid, op.globals(), global_schema, consignment.types());
@@ -162,13 +127,6 @@ impl Schema {
         } else {
             Assignments::default()
         };
-        let mut redeemed = Valencies::default();
-        if let OrdOpRef::Extension(extension, ..) = op {
-            for valency in extension.redeemed.keys() {
-                redeemed.push(*valency).expect("same size");
-            }
-            status += self.validate_redeemed(opid, &redeemed, redeem_schema);
-        }
         status += match op.assignments() {
             AssignmentsRef::Genesis(assignments) => {
                 self.validate_owned_state(opid, assignments, assign_schema, consignment.types())
@@ -178,10 +136,8 @@ impl Schema {
             }
         };
 
-        status += self.validate_valencies(opid, op.valencies(), valency_schema);
-
         let genesis = consignment.genesis();
-        let op_info = OpInfo::with(opid, &op, &prev_state, &redeemed);
+        let op_info = OpInfo::with(opid, &op, &prev_state);
         let context = VmContext {
             contract_id: genesis.contract_id(),
             op_info,
@@ -217,18 +173,6 @@ impl Schema {
         status
     }
 
-    fn validate_type_system(&self) -> validation::Status {
-        validation::Status::new()
-        // TODO: Validate type system
-        // Currently, validation is performed at the level of state values, i.e.
-        // if the system is inconsistent (references semantic ids not
-        // present in it) this will be detected during state validation.
-        // We should not prohibit schema with inconsistent type system, instead
-        // we need just to issue warnings here if some of semantic ids are
-        // missed - and add information messages if some excessive semantic ids
-        // are present.
-    }
-
     fn validate_metadata(
         &self,
         opid: OpId,
@@ -253,16 +197,20 @@ impl Schema {
                 continue;
             };
 
-            let sem_id = self.meta_types.get(type_id).expect(
-                "if this metadata type were absent, the schema would not be able to pass the \
-                 internal validation and we would not reach this point",
-            );
+            let sem_id = self
+                .meta_types
+                .get(type_id)
+                .expect(
+                    "if this metadata type were absent, the schema would not be able to pass the \
+                     internal validation and we would not reach this point",
+                )
+                .sem_id;
 
             if types
-                .strict_deserialize_type(*sem_id, value.as_ref())
+                .strict_deserialize_type(sem_id, value.as_ref())
                 .is_err()
             {
-                status.add_failure(validation::Failure::SchemaInvalidMetadata(opid, *sem_id));
+                status.add_failure(validation::Failure::SchemaInvalidMetadata(opid, sem_id));
             };
         }
 
@@ -296,14 +244,14 @@ impl Schema {
                 .map(Confined::release)
                 .unwrap_or_default();
 
-            let GlobalStateSchema {
-                sem_id,
-                max_items,
-                reserved: _,
-            } = self.global_types.get(type_id).expect(
-                "if the field were absent, the schema would not be able to pass the internal \
-                 validation and we would not reach this point",
-            );
+            let GlobalStateSchema { sem_id, max_items } = self
+                .global_types
+                .get(type_id)
+                .expect(
+                    "if the field were absent, the schema would not be able to pass the internal \
+                     validation and we would not reach this point",
+                )
+                .global_state_schema;
 
             // Checking number of field occurrences
             let count = set.len() as u16;
@@ -314,18 +262,18 @@ impl Schema {
             }
             if count as u32 > max_items.to_u32() {
                 status.add_failure(validation::Failure::SchemaGlobalStateLimit(
-                    opid, *type_id, count, *max_items,
+                    opid, *type_id, count, max_items,
                 ));
             }
 
             // Validating data types
             for data in set {
                 if types
-                    .strict_deserialize_type(*sem_id, data.as_ref())
+                    .strict_deserialize_type(sem_id, data.as_ref())
                     .is_err()
                 {
                     status.add_failure(validation::Failure::SchemaInvalidGlobalValue(
-                        opid, *type_id, *sem_id,
+                        opid, *type_id, sem_id,
                     ));
                 };
             }
@@ -372,26 +320,6 @@ impl Schema {
         status
     }
 
-    fn validate_redeemed(
-        &self,
-        id: OpId,
-        valencies: &Valencies,
-        valency_schema: &ValencySchema,
-    ) -> validation::Status {
-        let mut status = validation::Status::new();
-
-        valencies
-            .difference(valency_schema)
-            .for_each(|public_type_id| {
-                status.add_failure(validation::Failure::SchemaUnknownValencyType(
-                    id,
-                    *public_type_id,
-                ));
-            });
-
-        status
-    }
-
     fn validate_owned_state<Seal: ExposedSeal>(
         &self,
         id: OpId,
@@ -425,10 +353,14 @@ impl Schema {
                 ));
             }
 
-            let assignment = &self.owned_types.get(state_id).expect(
-                "If the assignment were absent, the schema would not be able to pass the internal \
-                 validation and we would not reach this point",
-            );
+            let assignment = &self
+                .owned_types
+                .get(state_id)
+                .expect(
+                    "If the assignment were absent, the schema would not be able to pass the \
+                     internal validation and we would not reach this point",
+                )
+                .owned_state_schema;
 
             match owned_state.get(state_id) {
                 None => {}
@@ -441,31 +373,8 @@ impl Schema {
                 Some(TypedAssigns::Structured(set)) => set
                     .iter()
                     .for_each(|data| status += assignment.validate(id, *state_id, data, types)),
-                Some(TypedAssigns::Attachment(set)) => set
-                    .iter()
-                    .for_each(|data| status += assignment.validate(id, *state_id, data, types)),
             };
         }
-
-        status
-    }
-
-    fn validate_valencies(
-        &self,
-        id: OpId,
-        valencies: &Valencies,
-        valency_schema: &ValencySchema,
-    ) -> validation::Status {
-        let mut status = validation::Status::new();
-
-        valencies
-            .difference(valency_schema)
-            .for_each(|public_type_id| {
-                status.add_failure(validation::Failure::SchemaUnknownValencyType(
-                    id,
-                    *public_type_id,
-                ));
-            });
 
         status
     }
@@ -477,9 +386,9 @@ fn extract_prev_state<C: ConsignmentApi>(
     inputs: &Inputs,
     status: &mut validation::Status,
 ) -> Assignments<GraphSeal> {
-    let mut assignments = bmap! {};
+    let mut assignments: BTreeMap<AssignmentType, TypedAssigns<_>> = bmap! {};
     for input in inputs {
-        let Opout { op, ty, no } = input.prev_out;
+        let Opout { op, ty, no } = input;
 
         let prev_op = match consignment.operation(op) {
             None => {
@@ -493,54 +402,56 @@ fn extract_prev_state<C: ConsignmentApi>(
         match prev_op.assignments_by_type(ty) {
             Some(TypedAssigns::Declarative(prev_assignments)) => {
                 if let Some(prev_assign) = prev_assignments.get(no) {
-                    if let Some(typed_assigns) = assignments
-                        .entry(ty)
-                        .or_insert_with(|| TypedAssigns::Declarative(Default::default()))
-                        .as_declarative_mut()
-                    {
-                        typed_assigns.push(prev_assign.clone()).expect("same size");
+                    match assignments.entry(ty) {
+                        Entry::Occupied(mut entry) => {
+                            if let Some(typed_assigns) = entry.get_mut().as_declarative_mut() {
+                                typed_assigns.push(prev_assign.clone()).expect("same size");
+                            }
+                        }
+                        Entry::Vacant(entry) => {
+                            entry.insert(TypedAssigns::Declarative(AssignVec::with(
+                                NonEmptyVec::with(prev_assign.clone()),
+                            )));
+                        }
                     }
                 } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
+                    status.add_failure(validation::Failure::NoPrevOut(opid, input));
                 }
             }
             Some(TypedAssigns::Fungible(prev_assignments)) => {
                 if let Some(prev_assign) = prev_assignments.get(no) {
-                    if let Some(typed_assigns) = assignments
-                        .entry(ty)
-                        .or_insert_with(|| TypedAssigns::Fungible(Default::default()))
-                        .as_fungible_mut()
-                    {
-                        typed_assigns.push(prev_assign.clone()).expect("same size");
+                    match assignments.entry(ty) {
+                        Entry::Occupied(mut entry) => {
+                            if let Some(typed_assigns) = entry.get_mut().as_fungible_mut() {
+                                typed_assigns.push(prev_assign.clone()).expect("same size");
+                            }
+                        }
+                        Entry::Vacant(entry) => {
+                            entry.insert(TypedAssigns::Fungible(AssignVec::with(
+                                NonEmptyVec::with(prev_assign.clone()),
+                            )));
+                        }
                     }
                 } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
+                    status.add_failure(validation::Failure::NoPrevOut(opid, input));
                 }
             }
             Some(TypedAssigns::Structured(prev_assignments)) => {
                 if let Some(prev_assign) = prev_assignments.get(no) {
-                    if let Some(typed_assigns) = assignments
-                        .entry(ty)
-                        .or_insert_with(|| TypedAssigns::Structured(Default::default()))
-                        .as_structured_mut()
-                    {
-                        typed_assigns.push(prev_assign.clone()).expect("same size");
+                    match assignments.entry(ty) {
+                        Entry::Occupied(mut entry) => {
+                            if let Some(typed_assigns) = entry.get_mut().as_structured_mut() {
+                                typed_assigns.push(prev_assign.clone()).expect("same size");
+                            }
+                        }
+                        Entry::Vacant(entry) => {
+                            entry.insert(TypedAssigns::Structured(AssignVec::with(
+                                NonEmptyVec::with(prev_assign.clone()),
+                            )));
+                        }
                     }
                 } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
-                }
-            }
-            Some(TypedAssigns::Attachment(prev_assignments)) => {
-                if let Some(prev_assign) = prev_assignments.get(no) {
-                    if let Some(typed_assigns) = assignments
-                        .entry(ty)
-                        .or_insert_with(|| TypedAssigns::Attachment(Default::default()))
-                        .as_attachment_mut()
-                    {
-                        typed_assigns.push(prev_assign.clone()).expect("same size");
-                    }
-                } else {
-                    status.add_failure(validation::Failure::NoPrevOut(opid, input.prev_out));
+                    status.add_failure(validation::Failure::NoPrevOut(opid, input));
                 }
             }
             None => {
@@ -568,31 +479,20 @@ impl OwnedStateSchema {
             Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
                 match (self, state.state_data()) {
                     (OwnedStateSchema::Declarative, RevealedState::Void) => {}
-                    (
-                        OwnedStateSchema::Attachment(media_type),
-                        RevealedState::Attachment(attach),
-                    ) if !attach.file.media_type.conforms(media_type) => {
-                        status.add_failure(validation::Failure::MediaTypeMismatch {
-                            opid,
-                            state_type,
-                            expected: *media_type,
-                            found: attach.file.media_type,
-                        });
-                    }
                     (OwnedStateSchema::Fungible(schema), RevealedState::Fungible(v))
-                        if v.value.fungible_type() != *schema =>
+                        if v.as_inner().fungible_type() != *schema =>
                     {
                         status.add_failure(validation::Failure::FungibleTypeMismatch {
                             opid,
                             state_type,
                             expected: *schema,
-                            found: v.value.fungible_type(),
+                            found: v.as_inner().fungible_type(),
                         });
                     }
                     (OwnedStateSchema::Fungible(_), RevealedState::Fungible(_)) => {}
                     (OwnedStateSchema::Structured(sem_id), RevealedState::Structured(data)) => {
                         if type_system
-                            .strict_deserialize_type(*sem_id, data.value.as_ref())
+                            .strict_deserialize_type(*sem_id, data.as_ref())
                             .is_err()
                         {
                             status.add_failure(validation::Failure::SchemaInvalidOwnedValue(

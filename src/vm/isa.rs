@@ -29,15 +29,13 @@ use aluvm::library::{CodeEofError, IsaSeg, LibSite, Read, Write};
 use aluvm::reg::{CoreRegs, Reg};
 
 use super::opcodes::{INSTR_RGBISA_FROM, INSTR_RGBISA_TO};
-use super::{ContractOp, ContractStateAccess, TimechainOp, VmContext};
+use super::{ContractOp, ContractStateAccess, VmContext};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(inner)]
 #[non_exhaustive]
 pub enum RgbIsa<S: ContractStateAccess> {
     Contract(ContractOp<S>),
-
-    Timechain(TimechainOp),
 
     /// All other future unsupported operations, which must set `st0` to
     /// `false`.
@@ -52,7 +50,6 @@ impl<S: ContractStateAccess> InstructionSet for RgbIsa<S> {
     fn src_regs(&self) -> BTreeSet<Reg> {
         match self {
             RgbIsa::Contract(op) => op.src_regs(),
-            RgbIsa::Timechain(op) => op.src_regs(),
             RgbIsa::Fail(_) => bset![],
         }
     }
@@ -60,7 +57,6 @@ impl<S: ContractStateAccess> InstructionSet for RgbIsa<S> {
     fn dst_regs(&self) -> BTreeSet<Reg> {
         match self {
             RgbIsa::Contract(op) => op.dst_regs(),
-            RgbIsa::Timechain(op) => op.dst_regs(),
             RgbIsa::Fail(_) => bset![],
         }
     }
@@ -68,7 +64,6 @@ impl<S: ContractStateAccess> InstructionSet for RgbIsa<S> {
     fn complexity(&self) -> u64 {
         match self {
             RgbIsa::Contract(op) => op.complexity(),
-            RgbIsa::Timechain(op) => op.complexity(),
             RgbIsa::Fail(_) => u64::MAX,
         }
     }
@@ -76,7 +71,6 @@ impl<S: ContractStateAccess> InstructionSet for RgbIsa<S> {
     fn exec(&self, regs: &mut CoreRegs, site: LibSite, context: &Self::Context<'_>) -> ExecStep {
         match self {
             RgbIsa::Contract(op) => op.exec(regs, site, context),
-            RgbIsa::Timechain(op) => op.exec(regs, site, &()),
             RgbIsa::Fail(_) => {
                 isa::ControlFlowOp::Fail.exec(regs, site, &());
                 ExecStep::Stop
@@ -91,7 +85,6 @@ impl<S: ContractStateAccess> Bytecode for RgbIsa<S> {
     fn instr_byte(&self) -> u8 {
         match self {
             RgbIsa::Contract(op) => op.instr_byte(),
-            RgbIsa::Timechain(op) => op.instr_byte(),
             RgbIsa::Fail(code) => *code,
         }
     }
@@ -100,7 +93,6 @@ impl<S: ContractStateAccess> Bytecode for RgbIsa<S> {
     where W: Write {
         match self {
             RgbIsa::Contract(op) => op.encode_args(writer),
-            RgbIsa::Timechain(op) => op.encode_args(writer),
             RgbIsa::Fail(_) => Ok(()),
         }
     }
@@ -114,9 +106,6 @@ impl<S: ContractStateAccess> Bytecode for RgbIsa<S> {
         Ok(match instr {
             instr if ContractOp::<S>::instr_range().contains(&instr) => {
                 RgbIsa::Contract(ContractOp::decode(reader)?)
-            }
-            instr if TimechainOp::instr_range().contains(&instr) => {
-                RgbIsa::Timechain(TimechainOp::decode(reader)?)
             }
             x => RgbIsa::Fail(x),
         })

@@ -25,16 +25,44 @@ use core::fmt::Debug;
 use std::collections::{btree_map, BTreeSet};
 use std::hash::Hash;
 
-use amplify::confinement::{Confined, SmallVec, TinyOrdMap};
-use commit_verify::{Conceal, ReservedBytes};
-use strict_encoding::{StrictDumb, StrictEncode};
+use amplify::confinement::{Confined, NonEmptyVec, SmallOrdMap, U16};
+use commit_verify::Conceal;
+use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use super::ExposedState;
 use crate::operation::seal::GenesisSeal;
 use crate::{
-    AssignmentType, ExposedSeal, GraphSeal, RevealedAttach, RevealedData, RevealedValue,
-    SecretSeal, StateType, VoidState, LIB_NAME_RGB_COMMIT,
+    AssignmentType, ExposedSeal, GraphSeal, RevealedData, RevealedValue, SecretSeal, StateType,
+    VoidState, LIB_NAME_RGB_COMMIT,
 };
+
+#[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, From)]
+#[wrapper(Deref)]
+#[wrapper_mut(DerefMut)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, dumb = Self(NonEmptyVec::with(A::strict_dumb())))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(
+        crate = "serde_crate",
+        transparent,
+        bound = "A: serde::Serialize + serde::de::DeserializeOwned"
+    )
+)]
+pub struct AssignVec<A>(NonEmptyVec<A, U16>)
+where A: StrictDumb + StrictEncode + StrictDecode;
+
+impl<A: StrictDumb + StrictEncode + StrictDecode> AssignVec<A> {
+    pub fn with(vec: NonEmptyVec<A, U16>) -> Self { Self(vec) }
+}
+
+impl<A: StrictDumb + StrictEncode + StrictDecode> IntoIterator for AssignVec<A> {
+    type Item = A;
+    type IntoIter = std::vec::IntoIter<A>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
@@ -44,7 +72,6 @@ pub struct UnknownDataError;
 pub type AssignRights<Seal> = Assign<VoidState, Seal>;
 pub type AssignFungible<Seal> = Assign<RevealedValue, Seal>;
 pub type AssignData<Seal> = Assign<RevealedData, Seal>;
-pub type AssignAttach<Seal> = Assign<RevealedAttach, Seal>;
 
 /// State data are assigned to a seal definition, which means that they are
 /// owned by a person controlling spending of the seal UTXO, unless the seal
@@ -54,7 +81,7 @@ pub type AssignAttach<Seal> = Assign<RevealedAttach, Seal>;
 #[strict_type(
     lib = LIB_NAME_RGB_COMMIT,
     tags = custom,
-    dumb = { Self::Revealed { seal: strict_dumb!(), state: strict_dumb!(), lock: default!() } }
+    dumb = { Self::Revealed { seal: strict_dumb!(), state: strict_dumb!() } }
 )]
 #[cfg_attr(
     feature = "serde",
@@ -63,17 +90,9 @@ pub type AssignAttach<Seal> = Assign<RevealedAttach, Seal>;
 )]
 pub enum Assign<State: ExposedState, Seal: ExposedSeal> {
     #[strict_type(tag = 0x00)]
-    Revealed {
-        seal: Seal,
-        state: State,
-        lock: ReservedBytes<2, 0>,
-    },
+    Revealed { seal: Seal, state: State },
     #[strict_type(tag = 0x01)]
-    ConfidentialSeal {
-        seal: SecretSeal,
-        state: State,
-        lock: ReservedBytes<2, 0>,
-    },
+    ConfidentialSeal { seal: SecretSeal, state: State },
 }
 
 // Consensus-critical!
@@ -101,30 +120,16 @@ impl<State: ExposedState, Seal: ExposedSeal> PartialEq for Assign<State, Seal> {
 impl<State: ExposedState, Seal: ExposedSeal> Eq for Assign<State, Seal> {}
 
 impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
-    pub fn revealed(seal: Seal, state: State) -> Self {
-        Assign::Revealed {
-            seal,
-            state,
-            lock: default!(),
-        }
-    }
+    pub fn revealed(seal: Seal, state: State) -> Self { Assign::Revealed { seal, state } }
 
     pub fn with_seal_replaced(assignment: &Self, seal: Seal) -> Self {
         match assignment {
-            Assign::ConfidentialSeal {
-                seal: _,
-                state,
-                lock,
+            Assign::ConfidentialSeal { seal: _, state } | Assign::Revealed { seal: _, state } => {
+                Assign::Revealed {
+                    seal,
+                    state: state.clone(),
+                }
             }
-            | Assign::Revealed {
-                seal: _,
-                state,
-                lock,
-            } => Assign::Revealed {
-                seal,
-                state: state.clone(),
-                lock: *lock,
-            },
         }
     }
 
@@ -189,10 +194,9 @@ where Self: Clone
 
     fn conceal(&self) -> Self::Concealed {
         match self {
-            Assign::Revealed { seal, state, lock } => Self::ConfidentialSeal {
+            Assign::Revealed { seal, state } => Self::ConfidentialSeal {
                 seal: seal.conceal(),
                 state: state.clone(),
-                lock: *lock,
             },
             Assign::ConfidentialSeal { .. } => self.clone(),
         }
@@ -202,15 +206,13 @@ where Self: Clone
 impl<State: ExposedState> Assign<State, GenesisSeal> {
     pub fn transmutate_seals(&self) -> Assign<State, GraphSeal> {
         match self {
-            Assign::ConfidentialSeal { seal, state, lock } => Assign::ConfidentialSeal {
+            Assign::ConfidentialSeal { seal, state } => Assign::ConfidentialSeal {
                 seal: *seal,
                 state: state.clone(),
-                lock: *lock,
             },
-            Assign::Revealed { seal, state, lock } => Assign::Revealed {
+            Assign::Revealed { seal, state } => Assign::Revealed {
                 seal: seal.transmutate(),
                 state: state.clone(),
-                lock: *lock,
             },
         }
     }
@@ -231,15 +233,12 @@ impl<State: ExposedState> Assign<State, GenesisSeal> {
     )
 )]
 pub enum TypedAssigns<Seal: ExposedSeal> {
-    // TODO: Consider using non-empty variants
     #[strict_type(tag = 0x00)]
-    Declarative(SmallVec<AssignRights<Seal>>),
+    Declarative(AssignVec<AssignRights<Seal>>),
     #[strict_type(tag = 0x01)]
-    Fungible(SmallVec<AssignFungible<Seal>>),
+    Fungible(AssignVec<AssignFungible<Seal>>),
     #[strict_type(tag = 0x02)]
-    Structured(SmallVec<AssignData<Seal>>),
-    #[strict_type(tag = 0xFF)]
-    Attachment(SmallVec<AssignAttach<Seal>>),
+    Structured(AssignVec<AssignData<Seal>>),
 }
 
 impl<Seal: ExposedSeal> Conceal for TypedAssigns<Seal> {
@@ -248,23 +247,18 @@ impl<Seal: ExposedSeal> Conceal for TypedAssigns<Seal> {
         match self {
             TypedAssigns::Declarative(s) => {
                 let concealed_iter = s.iter().map(AssignRights::<Seal>::conceal);
-                let inner = SmallVec::try_from_iter(concealed_iter).expect("same size");
-                TypedAssigns::Declarative(inner)
+                let inner = NonEmptyVec::try_from_iter(concealed_iter).expect("same size");
+                TypedAssigns::Declarative(AssignVec::with(inner))
             }
             TypedAssigns::Fungible(s) => {
                 let concealed_iter = s.iter().map(AssignFungible::<Seal>::conceal);
-                let inner = SmallVec::try_from_iter(concealed_iter).expect("same size");
-                TypedAssigns::Fungible(inner)
+                let inner = NonEmptyVec::try_from_iter(concealed_iter).expect("same size");
+                TypedAssigns::Fungible(AssignVec::with(inner))
             }
             TypedAssigns::Structured(s) => {
                 let concealed_iter = s.iter().map(AssignData::<Seal>::conceal);
-                let inner = SmallVec::try_from_iter(concealed_iter).expect("same size");
-                TypedAssigns::Structured(inner)
-            }
-            TypedAssigns::Attachment(s) => {
-                let concealed_iter = s.iter().map(AssignAttach::<Seal>::conceal);
-                let inner = SmallVec::try_from_iter(concealed_iter).expect("same size");
-                TypedAssigns::Attachment(inner)
+                let inner = NonEmptyVec::try_from_iter(concealed_iter).expect("same size");
+                TypedAssigns::Structured(AssignVec::with(inner))
             }
         }
     }
@@ -276,7 +270,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
             TypedAssigns::Declarative(set) => set.is_empty(),
             TypedAssigns::Fungible(set) => set.is_empty(),
             TypedAssigns::Structured(set) => set.is_empty(),
-            TypedAssigns::Attachment(set) => set.is_empty(),
         }
     }
 
@@ -285,7 +278,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
             TypedAssigns::Declarative(set) => set.len_u16(),
             TypedAssigns::Fungible(set) => set.len_u16(),
             TypedAssigns::Structured(set) => set.len_u16(),
-            TypedAssigns::Attachment(set) => set.len_u16(),
         }
     }
 
@@ -295,7 +287,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
             TypedAssigns::Declarative(_) => StateType::Void,
             TypedAssigns::Fungible(_) => StateType::Fungible,
             TypedAssigns::Structured(_) => StateType::Structured,
-            TypedAssigns::Attachment(_) => StateType::Attachment,
         }
     }
 
@@ -307,9 +298,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
 
     #[inline]
     pub fn is_structured(&self) -> bool { matches!(self, TypedAssigns::Structured(_)) }
-
-    #[inline]
-    pub fn is_attachment(&self) -> bool { matches!(self, TypedAssigns::Attachment(_)) }
 
     #[inline]
     pub fn as_declarative(&self) -> &[AssignRights<Seal>] {
@@ -336,15 +324,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     }
 
     #[inline]
-    pub fn as_attachment(&self) -> &[AssignAttach<Seal>] {
-        match self {
-            TypedAssigns::Attachment(set) => set,
-            _ => Default::default(),
-        }
-    }
-
-    #[inline]
-    pub fn as_declarative_mut(&mut self) -> Option<&mut SmallVec<AssignRights<Seal>>> {
+    pub fn as_declarative_mut(&mut self) -> Option<&mut NonEmptyVec<AssignRights<Seal>, U16>> {
         match self {
             TypedAssigns::Declarative(set) => Some(set),
             _ => None,
@@ -352,7 +332,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     }
 
     #[inline]
-    pub fn as_fungible_mut(&mut self) -> Option<&mut SmallVec<AssignFungible<Seal>>> {
+    pub fn as_fungible_mut(&mut self) -> Option<&mut NonEmptyVec<AssignFungible<Seal>, U16>> {
         match self {
             TypedAssigns::Fungible(set) => Some(set),
             _ => None,
@@ -360,17 +340,9 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
     }
 
     #[inline]
-    pub fn as_structured_mut(&mut self) -> Option<&mut SmallVec<AssignData<Seal>>> {
+    pub fn as_structured_mut(&mut self) -> Option<&mut NonEmptyVec<AssignData<Seal>, U16>> {
         match self {
             TypedAssigns::Structured(set) => Some(set),
-            _ => None,
-        }
-    }
-
-    #[inline]
-    pub fn as_attachment_mut(&mut self) -> Option<&mut SmallVec<AssignAttach<Seal>>> {
-        match self {
-            TypedAssigns::Attachment(set) => Some(set),
             _ => None,
         }
     }
@@ -392,11 +364,32 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
                 .get(index as usize)
                 .ok_or(UnknownDataError)?
                 .revealed_seal(),
-            TypedAssigns::Attachment(vec) => vec
-                .get(index as usize)
-                .ok_or(UnknownDataError)?
-                .revealed_seal(),
         })
+    }
+
+    pub fn reveal_seal(&mut self, seal: Seal) {
+        fn reveal<State: ExposedState, Seal: ExposedSeal>(
+            vec: &mut NonEmptyVec<Assign<State, Seal>, U16>,
+            revealed: Seal,
+        ) {
+            for assign in vec.iter_mut() {
+                match assign {
+                    Assign::ConfidentialSeal { seal, state } if *seal == revealed.conceal() => {
+                        *assign = Assign::Revealed {
+                            seal: revealed,
+                            state: state.clone(),
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        match self {
+            TypedAssigns::Declarative(v) => reveal(v, seal),
+            TypedAssigns::Fungible(v) => reveal(v, seal),
+            TypedAssigns::Structured(v) => reveal(v, seal),
+        }
     }
 
     pub fn to_confidential_seals(&self) -> Vec<SecretSeal> {
@@ -412,10 +405,6 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
             TypedAssigns::Structured(s) => s
                 .iter()
                 .map(AssignData::<Seal>::to_confidential_seal)
-                .collect(),
-            TypedAssigns::Attachment(s) => s
-                .iter()
-                .map(AssignAttach::<Seal>::to_confidential_seal)
                 .collect(),
         }
     }
@@ -446,7 +435,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
                 if index as usize >= vec.len() {
                     return Err(UnknownDataError);
                 }
-                Ok(vec.release().remove(index as usize).into_revealed_state())
+                Ok(vec.0.release().remove(index as usize).into_revealed_state())
             }
             _ => Err(UnknownDataError),
         }
@@ -458,7 +447,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
                 if index as usize >= vec.len() {
                     return Err(UnknownDataError);
                 }
-                Ok(vec.release().remove(index as usize).into_revealed_state())
+                Ok(vec.0.release().remove(index as usize).into_revealed_state())
             }
             _ => Err(UnknownDataError),
         }
@@ -468,22 +457,18 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
 impl TypedAssigns<GenesisSeal> {
     pub fn transmutate_seals(&self) -> TypedAssigns<GraphSeal> {
         match self {
-            TypedAssigns::Declarative(a) => TypedAssigns::Declarative(
+            TypedAssigns::Declarative(a) => TypedAssigns::Declarative(AssignVec::with(
                 Confined::try_from_iter(a.iter().map(|a| a.transmutate_seals()))
                     .expect("same size"),
-            ),
-            TypedAssigns::Fungible(a) => TypedAssigns::Fungible(
+            )),
+            TypedAssigns::Fungible(a) => TypedAssigns::Fungible(AssignVec::with(
                 Confined::try_from_iter(a.iter().map(|a| a.transmutate_seals()))
                     .expect("same size"),
-            ),
-            TypedAssigns::Structured(a) => TypedAssigns::Structured(
+            )),
+            TypedAssigns::Structured(a) => TypedAssigns::Structured(AssignVec::with(
                 Confined::try_from_iter(a.iter().map(|a| a.transmutate_seals()))
                     .expect("same size"),
-            ),
-            TypedAssigns::Attachment(a) => TypedAssigns::Attachment(
-                Confined::try_from_iter(a.iter().map(|a| a.transmutate_seals()))
-                    .expect("same size"),
-            ),
+            )),
         }
     }
 }
@@ -502,7 +487,7 @@ impl TypedAssigns<GenesisSeal> {
         bound = "Seal: serde::Serialize + serde::de::DeserializeOwned"
     )
 )]
-pub struct Assignments<Seal>(TinyOrdMap<AssignmentType, TypedAssigns<Seal>>)
+pub struct Assignments<Seal>(SmallOrdMap<AssignmentType, TypedAssigns<Seal>>)
 where Seal: ExposedSeal;
 
 impl<Seal: ExposedSeal> Default for Assignments<Seal> {

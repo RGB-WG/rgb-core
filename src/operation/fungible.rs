@@ -62,10 +62,6 @@ impl Default for FungibleState {
     fn default() -> Self { FungibleState::Bits64(0) }
 }
 
-impl From<RevealedValue> for FungibleState {
-    fn from(revealed: RevealedValue) -> Self { revealed.value }
-}
-
 impl FromStr for FungibleState {
     type Err = ParseIntError;
     fn from_str(s: &str) -> Result<Self, Self::Err> { s.parse().map(FungibleState::Bits64) }
@@ -92,25 +88,24 @@ impl FungibleState {
 /// State item for a homomorphically-encryptable state.
 ///
 /// Consists of the 64-bit value and
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
+#[derive(Wrapper, Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord, From, Display)]
+#[display(inner)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, rename = "RevealedFungible")]
+#[wrapper(Deref)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(crate = "serde_crate"))]
-pub struct RevealedValue {
-    /// Original value in smallest indivisible units
-    pub value: FungibleState,
-}
+pub struct RevealedValue(FungibleState);
 
 impl RevealedValue {
     /// Convenience constructor.
-    pub fn new(value: impl Into<FungibleState>) -> Self {
-        Self {
-            value: value.into(),
-        }
-    }
+    pub fn new(value: impl Into<FungibleState>) -> Self { Self(value.into()) }
 }
 
 impl ExposedState for RevealedValue {
     fn state_type(&self) -> StateType { StateType::Fungible }
     fn state_data(&self) -> RevealedState { RevealedState::Fungible(*self) }
+}
+
+impl From<u64> for RevealedValue {
+    fn from(value: u64) -> Self { Self(FungibleState::Bits64(value)) }
 }

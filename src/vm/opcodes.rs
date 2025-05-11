@@ -46,15 +46,8 @@ pub const INSTR_LDM: u8 = 0b11_001_010;
 pub const INSTR_SVS: u8 = 0b11_010_000;
 pub const INSTR_SAS: u8 = 0b11_010_001;
 pub const INSTR_SPS: u8 = 0b11_010_010;
-// Reserved 0b11_010_011
+pub const INSTR_VTS: u8 = 0b11_010_011;
+// Reserved 0b11_010_100
+
 pub const INSTR_CONTRACT_FROM: u8 = 0b11_000_000;
-pub const INSTR_CONTRACT_TO: u8 = 0b11_010_011;
-
-// TIMECHAIN:
-pub const INSTR_TIMECHAIN_FROM: u8 = 0b11_011_100;
-pub const INSTR_TIMECHAIN_TO: u8 = 0b11_011_111;
-
-// Reserved 0b11_011_100
-// Reserved 0b11_011_101
-// Reserved 0b11_011_110
-// Reserved 0b11_011_111
+pub const INSTR_CONTRACT_TO: u8 = 0b11_010_100;

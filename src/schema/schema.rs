@@ -25,23 +25,17 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use aluvm::library::LibId;
-use amplify::confinement::{TinyOrdMap, TinyOrdSet};
+use amplify::confinement::TinyOrdMap;
 use amplify::{ByteArray, Bytes32};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
-use commit_verify::{
-    CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, ReservedBytes, Sha256,
-};
+use commit_verify::{CommitEncode, CommitEngine, CommitId, CommitmentId, DigestExt, Sha256};
 use strict_encoding::{
     StrictDecode, StrictDeserialize, StrictEncode, StrictSerialize, StrictType, TypeName,
 };
-use strict_types::SemId;
+use strict_types::{FieldName, SemId};
 
-use super::{
-    AssignmentType, ExtensionSchema, GenesisSchema, OwnedStateSchema, TransitionSchema, ValencyType,
-};
-use crate::{
-    impl_serde_baid64, Ffv, GlobalStateSchema, Identity, Occurrences, LIB_NAME_RGB_COMMIT,
-};
+use super::{AssignmentType, GenesisSchema, OwnedStateSchema, TransitionSchema};
+use crate::{impl_serde_baid64, Ffv, GlobalStateSchema, StateType, LIB_NAME_RGB_COMMIT};
 
 #[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -83,30 +77,67 @@ impl GlobalStateType {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub struct ExtensionType(u16);
-impl ExtensionType {
-    pub const fn with(ty: u16) -> Self { Self(ty) }
-}
-
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From, Display)]
-#[wrapper(FromStr, LowerHex, UpperHex)]
-#[display("0x{0:04X}")]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
 pub struct TransitionType(u16);
 impl TransitionType {
     pub const fn with(ty: u16) -> Self { Self(ty) }
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = order)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct AssignmentDetails {
+    pub owned_state_schema: OwnedStateSchema,
+    pub name: FieldName,
+    pub default_transition: TransitionType,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = order)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct GlobalDetails {
+    pub global_state_schema: GlobalStateSchema,
+    pub name: FieldName,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = order)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct MetaDetails {
+    pub sem_id: SemId,
+    pub name: FieldName,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = order)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub struct TransitionDetails {
+    pub transition_schema: TransitionSchema,
+    pub name: FieldName,
+}
+
 impl TransitionType {
-    pub const BLANK: Self = TransitionType(u16::MAX);
-    /// Easily check if the TransitionType is blank with convention method
-    pub fn is_blank(self) -> bool { self == Self::BLANK }
+    pub const REPLACE: Self = TransitionType(8011);
+    pub fn is_replace(self) -> bool { self == Self::REPLACE }
 }
 
 /// Schema identifier.
@@ -121,6 +152,10 @@ pub struct SchemaId(
     #[from([u8; 32])]
     Bytes32,
 );
+
+impl SchemaId {
+    pub const fn from_array(id: [u8; 32]) -> Self { SchemaId(Bytes32::from_array(id)) }
+}
 
 impl From<Sha256> for SchemaId {
     fn from(hasher: Sha256) -> Self { hasher.finish().into() }
@@ -159,21 +194,16 @@ impl_serde_baid64!(SchemaId);
 )]
 pub struct Schema {
     pub ffv: Ffv,
-    pub flags: ReservedBytes<1, 0>,
 
     pub name: TypeName,
-    pub timestamp: i64,
-    pub developer: Identity,
 
-    pub meta_types: TinyOrdMap<MetaType, SemId>,
-    pub global_types: TinyOrdMap<GlobalStateType, GlobalStateSchema>,
-    pub owned_types: TinyOrdMap<AssignmentType, OwnedStateSchema>,
-    pub valency_types: TinyOrdSet<ValencyType>,
+    pub meta_types: TinyOrdMap<MetaType, MetaDetails>,
+    pub global_types: TinyOrdMap<GlobalStateType, GlobalDetails>,
+    pub owned_types: TinyOrdMap<AssignmentType, AssignmentDetails>,
     pub genesis: GenesisSchema,
-    pub extensions: TinyOrdMap<ExtensionType, ExtensionSchema>,
-    pub transitions: TinyOrdMap<TransitionType, TransitionSchema>,
+    pub transitions: TinyOrdMap<TransitionType, TransitionDetails>,
 
-    pub reserved: ReservedBytes<8, 0>,
+    pub default_assignment: Option<AssignmentType>,
 }
 
 impl CommitEncode for Schema {
@@ -181,21 +211,16 @@ impl CommitEncode for Schema {
 
     fn commit_encode(&self, e: &mut CommitEngine) {
         e.commit_to_serialized(&self.ffv);
-        e.commit_to_serialized(&self.flags);
 
         e.commit_to_serialized(&self.name);
-        e.commit_to_serialized(&self.timestamp);
-        e.commit_to_serialized(&self.developer);
 
         e.commit_to_map(&self.meta_types);
         e.commit_to_map(&self.global_types);
         e.commit_to_map(&self.owned_types);
-        e.commit_to_set(&self.valency_types);
         e.commit_to_serialized(&self.genesis);
-        e.commit_to_map(&self.extensions);
         e.commit_to_map(&self.transitions);
 
-        e.commit_to_serialized(&self.reserved);
+        e.commit_to_option(&self.default_assignment);
     }
 }
 
@@ -218,24 +243,20 @@ impl Schema {
     #[inline]
     pub fn schema_id(&self) -> SchemaId { self.commit_id() }
 
-    pub fn blank_transition(&self) -> TransitionSchema {
-        let mut schema = TransitionSchema::default();
-        for id in self.owned_types.keys() {
-            schema.inputs.insert(*id, Occurrences::NoneOrMore).ok();
-            schema.assignments.insert(*id, Occurrences::NoneOrMore).ok();
-        }
-        schema
-    }
-
     pub fn types(&self) -> impl Iterator<Item = SemId> + '_ {
         self.meta_types
             .values()
-            .copied()
-            .chain(self.global_types.values().map(|i| i.sem_id))
+            .map(|i| &i.sem_id)
+            .cloned()
+            .chain(
+                self.global_types
+                    .values()
+                    .map(|i| i.global_state_schema.sem_id),
+            )
             .chain(
                 self.owned_types
                     .values()
-                    .filter_map(OwnedStateSchema::sem_id),
+                    .filter_map(|ai| OwnedStateSchema::sem_id(&ai.owned_state_schema)),
             )
     }
 
@@ -244,9 +265,101 @@ impl Schema {
             .validator
             .iter()
             .copied()
-            .chain(self.transitions.values().filter_map(|i| i.validator))
-            .chain(self.extensions.values().filter_map(|i| i.validator))
+            .chain(
+                self.transitions
+                    .values()
+                    .filter_map(|i| i.transition_schema.validator),
+            )
             .map(|site| site.lib)
+    }
+
+    pub fn default_transition_for_assignment(
+        &self,
+        assignment_type: &AssignmentType,
+    ) -> TransitionType {
+        self.owned_types
+            .get(assignment_type)
+            .expect("invalid schema")
+            .default_transition
+    }
+
+    pub fn assignment(&self, name: impl Into<FieldName>) -> (&AssignmentType, &AssignmentDetails) {
+        let name = name.into();
+        self.owned_types
+            .iter()
+            .find(|(_, i)| i.name == name)
+            .expect("cannot find assignment with the given name")
+    }
+
+    pub fn assignment_type(&self, name: impl Into<FieldName>) -> AssignmentType {
+        *self.assignment(name).0
+    }
+
+    pub fn assignment_name(&self, type_id: AssignmentType) -> &FieldName {
+        &self
+            .owned_types
+            .iter()
+            .find(|(id, _)| *id == &type_id)
+            .expect("cannot find assignment with the given type ID")
+            .1
+            .name
+    }
+
+    pub fn assignment_types_for_state(&self, state_type: StateType) -> Vec<&AssignmentType> {
+        self.owned_types
+            .iter()
+            .filter_map(|(at, ai)| {
+                if ai.owned_state_schema.state_type() == state_type {
+                    Some(at)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    pub fn global(&self, name: impl Into<FieldName>) -> (&GlobalStateType, &GlobalDetails) {
+        let name = name.into();
+        self.global_types
+            .iter()
+            .find(|(_, i)| i.name == name)
+            .expect("cannot find global with the given name")
+    }
+
+    pub fn global_type(&self, name: impl Into<FieldName>) -> GlobalStateType {
+        *self.global(name).0
+    }
+
+    pub fn meta(&self, name: impl Into<FieldName>) -> (&MetaType, &MetaDetails) {
+        let name = name.into();
+        self.meta_types
+            .iter()
+            .find(|(_, i)| i.name == name)
+            .expect("cannot find meta with the given name")
+    }
+
+    pub fn meta_type(&self, name: impl Into<FieldName>) -> MetaType { *self.meta(name).0 }
+
+    pub fn meta_name(&self, type_id: MetaType) -> &FieldName {
+        &self
+            .meta_types
+            .iter()
+            .find(|(id, _)| *id == &type_id)
+            .expect("cannot find meta with the given type ID")
+            .1
+            .name
+    }
+
+    pub fn transition(&self, name: impl Into<FieldName>) -> (&TransitionType, &TransitionDetails) {
+        let name = name.into();
+        self.transitions
+            .iter()
+            .find(|(_, i)| i.name == name)
+            .expect("cannot find transition with the given name")
+    }
+
+    pub fn transition_type(&self, name: impl Into<FieldName>) -> TransitionType {
+        *self.transition(name).0
     }
 }
 
