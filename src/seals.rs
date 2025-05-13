@@ -23,6 +23,7 @@
 // the License.
 
 use core::fmt::{Debug, Display};
+use std::hash::Hash;
 
 use single_use_seals::{ClientSideWitness, PublishedWitness, SingleUseSeal};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
@@ -44,7 +45,7 @@ pub trait RgbSeal:
     type Definition: RgbSealDef<Src = Self>;
     type Published: PublishedWitness<Self, PubId = Self::WitnessId>;
     type Client: ClientSideWitness;
-    type WitnessId: Copy + Ord + Debug + Display;
+    type WitnessId: Copy + Ord + Hash + Debug + Display;
 }
 
 // Below are capabilities constants used in the standard library:
