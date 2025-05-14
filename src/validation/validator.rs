@@ -315,7 +315,7 @@ impl<
                 ops.insert(OrdOpRef::Transition(op, witness_id, witness_ord, bundle_id));
             }
         }
-        if self.safe_height.is_some() {
+        if self.safe_height.is_some() && !unsafe_history_map.is_empty() {
             self.status
                 .borrow_mut()
                 .add_warning(Warning::UnsafeHistory(unsafe_history_map));
