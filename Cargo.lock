@@ -678,8 +678,7 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 [[package]]
 name = "single_use_seals"
 version = "0.12.0-beta.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca4374d1c5066c146b150f2fcf91c79f608e0ab3c3e33aec0fbb28bf5df40265"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.12#9c2f3a1898379a5810b67a8c43d243c0cca74542"
 dependencies = [
  "serde",
  "strict_encoding",
@@ -786,8 +785,7 @@ checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
 [[package]]
 name = "ultrasonic"
 version = "0.12.0-beta.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63900cdcb1fc87f919dd807ac172a5e1b4b18835d34e6141d0b67196000d020d"
+source = "git+https://github.com/AluVM/ultrasonic?branch=revision#dd02156188986ca30842aa5ad1aa8a786fbf6276"
 dependencies = [
  "amplify",
  "baid64",

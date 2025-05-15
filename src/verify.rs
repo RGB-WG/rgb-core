@@ -153,7 +153,7 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
             // We need to check that all seal definitions strictly match operation-defined destructible cells
             let defined = block
                 .operation
-                .destructible
+                .destructible_out
                 .iter()
                 .map(|cell| cell.auth)
                 .collect::<BTreeSet<_>>();
@@ -175,7 +175,7 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
 
             // Collect single-use seal closings by the operation
             let mut closed_seals = Vec::<Seal>::new();
-            for input in &block.operation.destroying {
+            for input in &block.operation.destructible_in {
                 let seal = seals
                     .remove(&input.addr)
                     .ok_or(VerificationError::SealUnknown(input.addr))?;

@@ -27,8 +27,10 @@ bp-core = { version = "0.12.0-beta.6", optional = true }
 serde = { version = "1", optional = true }
 
 [features]
-default = ["bitcoin"]
-all = ["bitcoin", "liquid", "prime", "serde"]
+default = ["std", "bitcoin"]
+all = ["std", "bitcoin", "liquid", "prime", "serde"]
+
+std = []
 
 bitcoin = ["bp-core"]
 liquid = ["bp-core"]
@@ -52,3 +54,7 @@ wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = ["all"]
+
+[patch.crates-io]
+single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "v0.12" }
+ultrasonic = { git = "https://github.com/AluVM/ultrasonic", branch = "revision" }
