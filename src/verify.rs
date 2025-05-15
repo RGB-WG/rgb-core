@@ -38,42 +38,35 @@ use crate::{RgbSeal, RgbSealDef, LIB_NAME_RGB};
 ///
 /// An operation contains only [`AuthToken`]'s, which are commitments to seal definitions.
 /// Hence, we have to separately include a full seal definition next to the operation data.
-#[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(rename_all = "camelCase", bound = "SealDef: serde::Serialize + for<'d> serde::Deserialize<'d>")
+    serde(
+        rename_all = "camelCase",
+        bound = "Seal::Definition: serde::Serialize + for<'d> serde::Deserialize<'d>, Seal::PubWitness: \
+                 serde::Serialize + for<'d> serde::Deserialize<'d>, Seal::CliWitness: serde::Serialize + for<'d> \
+                 serde::Deserialize<'d>"
+    )
 )]
-pub struct OperationSeals<SealDef: RgbSealDef> {
+pub struct OperationSeals<Seal: RgbSeal> {
     /// The operation.
     pub operation: Operation,
     /// Seals defined by an operation.
-    pub defined_seals: SmallOrdMap<u16, SealDef>,
+    pub defined_seals: SmallOrdMap<u16, Seal::Definition>,
+    /// An optional witness for the closing of the operation input seals.
+    pub witness: Option<SealWitness<Seal>>,
 }
 
 /// Provider which reads an operation and its seals from a consignment stream.
 pub trait ReadOperation: Sized {
     /// Seal definition type used by operations.
-    type SealDef: RgbSealDef;
-    /// Reader for witnesses which can be instantiated from this reader.
-    type WitnessReader: ReadWitness<SealDef = Self::SealDef, OperationReader = Self>;
+    type Seal: RgbSeal;
+
     /// Reads an operation and its seals from a consignment stream and initialize the witness
     /// reader.
-    fn read_operation(self) -> Option<(OperationSeals<Self::SealDef>, Self::WitnessReader)>;
-}
-
-/// Provider which reads a witness from a consignment stream.
-pub trait ReadWitness: Sized {
-    /// Seal definition type used by operations.
-    type SealDef: RgbSealDef;
-    /// Reader for operations which can be instantiated from this reader.
-    type OperationReader: ReadOperation<SealDef = Self::SealDef, WitnessReader = Self>;
-
-    /// Read a witness from a consignment stream and convert into operation reader.
-    #[allow(clippy::type_complexity)]
-    fn read_witness(self) -> (Option<SealWitness<<Self::SealDef as RgbSealDef>::Src>>, Self::OperationReader);
+    fn read_operation(&mut self) -> Option<OperationSeals<Self::Seal>>;
 }
 
 /// API exposed by the contract required for evaluating and verifying the contract state (see
@@ -139,35 +132,32 @@ pub trait ContractApi<Seal: RgbSeal> {
 pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
     /// Evaluate contract state by verifying and applying contract operations coming from a
     /// consignment `reader`.
-    fn evaluate<R: ReadOperation<SealDef = Seal::Definition>>(
-        &mut self,
-        mut reader: R,
-    ) -> Result<(), VerificationError<Seal>> {
+    fn evaluate<R: ReadOperation<Seal = Seal>>(&mut self, mut reader: R) -> Result<(), VerificationError<Seal>> {
         let contract_id = self.contract_id();
         let codex_id = self.codex().codex_id();
 
         let mut is_genesis = true;
         let mut seals = BTreeMap::<CellAddr, Seal>::new();
 
-        while let Some((mut header, witness_reader)) = reader.read_operation() {
+        while let Some(mut block) = reader.read_operation() {
             // Genesis can't commit to the contract id since the contract doesn't exist yet; thus, we have to
             // apply this little trick
             if is_genesis {
-                if header.operation.contract_id.to_byte_array() != codex_id.to_byte_array() {
+                if block.operation.contract_id.to_byte_array() != codex_id.to_byte_array() {
                     return Err(VerificationError::NoCodexCommitment);
                 }
-                header.operation.contract_id = contract_id;
+                block.operation.contract_id = contract_id;
             }
-            let opid = header.operation.opid();
+            let opid = block.operation.opid();
 
             // We need to check that all seal definitions strictly match operation-defined destructible cells
-            let defined = header
+            let defined = block
                 .operation
                 .destructible
                 .iter()
                 .map(|cell| cell.auth)
                 .collect::<BTreeSet<_>>();
-            let reported = header
+            let reported = block
                 .defined_seals
                 .values()
                 .map(|seal| seal.auth_token())
@@ -175,7 +165,7 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
             // It is a subset and not equal set since some seals might be unknown to us:
             // we know their commitment auth token, but do not know the definition.
             if !reported.is_subset(&defined) {
-                let sources = header
+                let sources = block
                     .defined_seals
                     .iter()
                     .map(|(pos, seal)| (*pos, seal.to_string()))
@@ -185,7 +175,7 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
 
             // Collect single-use seal closings by the operation
             let mut closed_seals = Vec::<Seal>::new();
-            for input in &header.operation.destroying {
+            for input in &block.operation.destroying {
                 let seal = seals
                     .remove(&input.addr)
                     .ok_or(VerificationError::SealUnknown(input.addr))?;
@@ -200,22 +190,20 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
                 // Verify the operation
                 let verified = self
                     .codex()
-                    .verify(contract_id, header.operation, self.memory(), self.repo())?;
+                    .verify(contract_id, block.operation, self.memory(), self.repo())?;
                 Some(verified)
             };
 
             // This convoluted logic happens since we use a state machine which ensures the client can't lie to
             // the verifier
             // Now we can add operation-defined seals to the set of known seals
-            let mut seal_sources: BTreeSet<_> = header
+            let mut seal_sources: BTreeSet<_> = block
                 .defined_seals
                 .iter()
                 .filter_map(|(pos, seal)| seal.to_src().map(|seal| (CellAddr::new(opid, *pos), seal)))
                 .collect();
 
-            let (witness, r) = witness_reader.read_witness();
-            reader = r;
-            if let Some(witness) = witness {
+            if let Some(witness) = block.witness {
                 let msg = opid.to_byte_array();
                 witness
                     .verify_seals_closing(&closed_seals, msg.into())
@@ -223,7 +211,7 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
 
                 //  Each witness actually produces its own set of witness-output-based seal sources.
                 let pub_id = witness.published.pub_id();
-                let iter = header
+                let iter = block
                     .defined_seals
                     .iter()
                     .filter(|(_, seal)| seal.to_src().is_none())
@@ -242,8 +230,8 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
                 self.apply_operation(operation);
             }
 
-            if !header.defined_seals.is_empty() {
-                self.apply_seals(opid, header.defined_seals);
+            if !block.defined_seals.is_empty() {
+                self.apply_seals(opid, block.defined_seals);
             }
         }
 
