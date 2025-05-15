@@ -34,9 +34,12 @@ use ultrasonic::{
 
 use crate::{RgbSeal, RgbSealDef, LIB_NAME_RGB};
 
+/// Combination of an operation with operation-defined seals.
+///
+/// An operation contains only [`AuthToken`]'s, which are commitments to seal definitions.
+/// Hence, we have to separately include a full seal definition next to the operation data.
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-// This type is used in the RGB Standard library
 #[strict_type(lib = LIB_NAME_RGB)]
 #[cfg_attr(
     feature = "serde",
@@ -44,21 +47,31 @@ use crate::{RgbSeal, RgbSealDef, LIB_NAME_RGB};
     serde(rename_all = "camelCase", bound = "SealDef: serde::Serialize + for<'d> serde::Deserialize<'d>")
 )]
 pub struct OperationSeals<SealDef: RgbSealDef> {
+    /// The operation.
     pub operation: Operation,
-    /// Operation itself contains only AuthToken's, which are a commitment to the seals.
-    /// Hence, we have to separately include a full seal definition next to the operation data.
+    /// Seals defined by an operation.
     pub defined_seals: SmallOrdMap<u16, SealDef>,
 }
 
+/// Provider which reads an operation and its seals from a consignment stream.
 pub trait ReadOperation: Sized {
+    /// Seal definition type used by operations.
     type SealDef: RgbSealDef;
+    /// Reader for witnesses which can be instantiated from this reader.
     type WitnessReader: ReadWitness<SealDef = Self::SealDef, OperationReader = Self>;
+    /// Reads an operation and its seals from a consignment stream and initialize the witness
+    /// reader.
     fn read_operation(self) -> Option<(OperationSeals<Self::SealDef>, Self::WitnessReader)>;
 }
 
+/// Provider which reads a witness from a consignment stream.
 pub trait ReadWitness: Sized {
+    /// Seal definition type used by operations.
     type SealDef: RgbSealDef;
+    /// Reader for operations which can be instantiated from this reader.
     type OperationReader: ReadOperation<SealDef = Self::SealDef, WitnessReader = Self>;
+
+    /// Read a witness from a consignment stream and convert into operation reader.
     #[allow(clippy::type_complexity)]
     fn read_witness(self) -> (Option<SealWitness<<Self::SealDef as RgbSealDef>::Src>>, Self::OperationReader);
 }
@@ -68,9 +81,23 @@ pub trait ReadWitness: Sized {
 ///
 /// NB: `apply_operation` is called only after `apply_witness`.
 pub trait ContractApi<Seal: RgbSeal> {
+    /// Returns contract id for the processed contract.
+    ///
+    /// Called only once during the operation verification.
     fn contract_id(&self) -> ContractId;
+
+    /// Returns a codex agains which the contract must be verified.
+    ///
+    /// Called only once during the operation verification.
     fn codex(&self) -> &Codex;
+
+    /// Returns repository providing script libraries used during the verification.
+    ///
+    /// Called only once during the operation verification.
     fn repo(&self) -> &impl LibRepo;
+
+    /// Returns a memory implementation providing read access to all the contract state cells,
+    /// including immutable and destructible memory.
     fn memory(&self) -> &impl Memory;
 
     /// Detects whether an operation with a given id is already known as a _valid_ operation for the
@@ -101,10 +128,17 @@ pub trait ContractApi<Seal: RgbSeal> {
     fn apply_witness(&mut self, opid: Opid, witness: SealWitness<Seal>);
 }
 
-// We use dedicated trait here in order to prevent overriding of the implementation in client
-// libraries
+/// Main implementation of the contract verification procedure.
+///
+/// # Nota bene
+///
+/// This trait cannot be manually implemented; it is always accessible as a blanked implementation
+/// for all types implementing [`ContractApi`] trait.
+///
+/// The purpose of the trait is to prevent overriding of the implementation in client libraries.
 pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
-    // TODO: Support multi-thread mode for parallel processing of unrelated operations
+    /// Evaluate contract state by verifying and applying contract operations coming from a
+    /// consignment `reader`.
     fn evaluate<R: ReadOperation<SealDef = Seal::Definition>>(
         &mut self,
         mut reader: R,
@@ -219,6 +253,7 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
 
 impl<Seal: RgbSeal, C: ContractApi<Seal>> ContractVerify<Seal> for C {}
 
+/// Errors returned from the verification.
 // TODO: Find a way to do Debug and Clone implementation
 #[derive(Debug, Display, From)]
 #[display(doc_comments)]
@@ -245,6 +280,7 @@ pub enum VerificationError<Seal: RgbSeal> {
     /// Reported seals: {reported:#?}
     ///
     /// Sources for the reported seals: {sources:#?}
+    #[allow(missing_docs)]
     SealsDefinitionMismatch {
         opid: Opid,
         reported: BTreeSet<AuthToken>,
@@ -252,6 +288,7 @@ pub enum VerificationError<Seal: RgbSeal> {
         sources: BTreeMap<u16, String>,
     },
 
+    /// Eror returned by the virtual machine script.
     #[from]
     #[display(inner)]
     Vm(CallError),

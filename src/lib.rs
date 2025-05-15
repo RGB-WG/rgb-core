@@ -22,9 +22,17 @@
 // or implied. See the License for the specific language governing permissions and limitations under
 // the License.
 
+//! RGB is confidential and scalable client-validated smart contracts for Bitcoin & Lightning.
+//! To learn more about the RGB please check [RGB website][Site].
+//!
+//! RGB Core library provides consensus-critical and validation code for RGB. It is a standard
+//! implementation, jointly with [LNP/BP Standards][LNPBPs] defining RGB consensus and validation
+//! rules.
+
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 // TODO: Enable when strict encoding supports
 // #![no_std]
+#![deny(missing_docs)]
 
 extern crate alloc;
 #[macro_use]
@@ -42,4 +50,5 @@ pub use seals::{RgbSeal, RgbSealDef};
 pub use single_use_seals::*;
 pub use verify::{ContractApi, ContractVerify, OperationSeals, ReadOperation, ReadWitness, VerificationError};
 
+/// Strict type library name for all RGB-related types.
 pub const LIB_NAME_RGB: &str = "RGB";

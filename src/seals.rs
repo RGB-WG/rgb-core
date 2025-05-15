@@ -29,22 +29,51 @@ use single_use_seals::{ClientSideWitness, PublishedWitness, SingleUseSeal};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use ultrasonic::AuthToken;
 
+/// A type which serves as a definition of a single-use seal for RGB contracts.
+///
+/// The reason why this type is required additionally to the [`RgbSeal`] type: under some protocols
+/// (like bitcoin UTXO-based single-use seals) the seal definition may be defined relatively to a
+/// witness of previously closed seal, whose id is not known during seal definition construction.
+/// In such cases, a seal definition should be converted into a full single-use seal instance using
+/// [`Self::resolve`] method.
 pub trait RgbSealDef: Clone + Eq + Debug + Display + StrictDumb + StrictEncode + StrictDecode {
+    /// A type providing implementation of a single-use seal protocol, under which this seal
+    /// definition is applicable.
     type Src: RgbSeal;
+
+    /// Convert seal definition into an [`AuthToken`] for the SONIC computer.
     fn auth_token(&self) -> AuthToken;
+
+    /// Resolve seal definition into a complete single-use seal instance using the provided witness
+    /// id information.
+    ///
+    /// # Nota bene
+    ///
+    /// The `witness_id` here is related not to the witness of the closing of this seal, but to a
+    /// witness of the closing of some previous seal, relatively to which this seal is defined.
     fn resolve(
         &self,
         witness_id: <<Self::Src as SingleUseSeal>::PubWitness as PublishedWitness<Self::Src>>::PubId,
     ) -> Self::Src;
+
+    /// Try to convert this seal definition into a complete single-use seal instance.
+    ///
+    /// The operation may result in `None` if additional information about the seal witness is
+    /// required. In this case use [`Self::resolve`] method.
     fn to_src(&self) -> Option<Self::Src>;
 }
 
+/// A type which serves as a single-use seal protocol implementation for RGB contracts.
 pub trait RgbSeal:
     SingleUseSeal<Message: From<[u8; 32]>, PubWitness = Self::Published, CliWitness = Self::Client> + Ord
 {
+    /// A type providing corresponding single-use seal definitions.
     type Definition: RgbSealDef<Src = Self>;
+    /// A type for the published part of the single-use seal witness.
     type Published: PublishedWitness<Self, PubId = Self::WitnessId>;
+    /// A type for the client-side part of the single-use seal witness.
     type Client: ClientSideWitness;
+    /// A type for the id information about the single-use seal witness.
     type WitnessId: Copy + Ord + Hash + Debug + Display;
 }
 
