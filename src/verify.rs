@@ -59,6 +59,20 @@ pub struct OperationSeals<Seal: RgbSeal> {
     pub witness: Option<SealWitness<Seal>>,
 }
 
+impl<Seal: RgbSeal> Clone for OperationSeals<Seal>
+where
+    Seal::PubWitness: Clone,
+    Seal::CliWitness: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            operation: self.operation.clone(),
+            defined_seals: self.defined_seals.clone(),
+            witness: self.witness.clone(),
+        }
+    }
+}
+
 /// Provider which reads an operation and its seals from a consignment stream.
 pub trait ReadOperation: Sized {
     /// Seal definition type used by operations.
@@ -280,4 +294,112 @@ pub enum VerificationError<Seal: RgbSeal> {
     #[from]
     #[display(inner)]
     Vm(CallError),
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashMap;
+    use std::vec;
+
+    use bp::seals::{TxoSeal, WTxoSeal};
+    use strict_encoding::StrictDumb;
+    use ultrasonic::aluvm::alu::{aluasm, CoreConfig, Lib, LibId, LibSite};
+    use ultrasonic::aluvm::FIELD_ORDER_SECP;
+    use ultrasonic::{Identity, StateCell, StateValue};
+
+    use super::*;
+
+    #[derive(Clone)]
+    struct TestReader(vec::IntoIter<OperationSeals<TxoSeal>>);
+    impl ReadOperation for TestReader {
+        type Seal = TxoSeal;
+        fn read_operation(&mut self) -> Option<OperationSeals<Self::Seal>> { self.0.next() }
+    }
+    impl TestReader {
+        pub fn new(vec: Vec<OperationSeals<TxoSeal>>) -> Self { Self(vec.into_iter()) }
+    }
+
+    struct TestContract {
+        pub codex: Codex,
+        pub contract_id: ContractId,
+        pub libs: HashMap<LibId, Lib>,
+        pub global: HashMap<CellAddr, StateValue>,
+        pub owned: HashMap<CellAddr, StateCell>,
+        pub known_ops: HashMap<Opid, Operation>,
+        pub seal_definitions: HashMap<Opid, HashMap<u16, WTxoSeal>>,
+        pub witnesses: HashMap<Opid, Vec<SealWitness<TxoSeal>>>,
+    }
+    impl Memory for TestContract {
+        fn destructible(&self, addr: CellAddr) -> Option<StateCell> { self.owned.get(&addr).cloned() }
+        fn immutable(&self, addr: CellAddr) -> Option<StateValue> { self.global.get(&addr).cloned() }
+    }
+    impl LibRepo for TestContract {
+        fn get_lib(&self, lib_id: LibId) -> Option<&Lib> { self.libs.get(&lib_id) }
+    }
+    impl ContractApi<TxoSeal> for TestContract {
+        fn contract_id(&self) -> ContractId { self.contract_id }
+        fn codex(&self) -> &Codex { &self.codex }
+        fn repo(&self) -> &impl LibRepo { self }
+        fn memory(&self) -> &impl Memory { self }
+        fn is_known(&self, opid: Opid) -> bool { self.known_ops.contains_key(&opid) }
+        fn apply_operation(&mut self, op: VerifiedOperation) { self.known_ops.insert(op.opid(), op.into_operation()); }
+        fn apply_seals(&mut self, opid: Opid, seals: SmallOrdMap<u16, WTxoSeal>) {
+            self.seal_definitions.entry(opid).or_default().extend(seals);
+        }
+        fn apply_witness(&mut self, opid: Opid, witness: SealWitness<TxoSeal>) {
+            self.witnesses.entry(opid).or_default().push(witness);
+        }
+    }
+
+    fn run(reader: TestReader) -> Result<(), VerificationError<TxoSeal>> {
+        let code = aluasm! {
+            stop;
+        };
+        let lib = Lib::assemble(&code).unwrap();
+        let lib_id = lib.lib_id();
+        let codex = Codex {
+            name: tiny_s!("TestCodex"),
+            developer: Identity::default(),
+            version: default!(),
+            timestamp: 1732529307,
+            field_order: FIELD_ORDER_SECP,
+            input_config: CoreConfig::default(),
+            verification_config: CoreConfig::default(),
+            verifiers: tiny_bmap! {
+                0 => LibSite::new(lib_id, 0),
+            },
+        };
+        let mut contract = TestContract {
+            codex,
+            contract_id: ContractId::strict_dumb(),
+            libs: map! { lib_id => lib },
+            global: none!(),
+            owned: none!(),
+            known_ops: none!(),
+            seal_definitions: none!(),
+            witnesses: none!(),
+        };
+        contract.evaluate(reader.clone())?;
+
+        // Check contract values
+        let mut ops = map! {};
+        let mut seals = map! {};
+        let mut witnesses = map! {};
+        for entry in reader.0 {
+            let opid = entry.operation.opid();
+            ops.insert(opid, entry.operation);
+            seals.insert(opid, entry.defined_seals.into_iter().collect());
+            witnesses.insert(opid, entry.witness.into_iter().collect());
+        }
+        assert_eq!(ops, contract.known_ops);
+        assert_eq!(seals, contract.seal_definitions);
+        assert_eq!(witnesses, contract.witnesses);
+        Ok(())
+    }
+
+    #[test]
+    fn empty() {
+        let reader = TestReader::new(vec![]);
+        run(reader).unwrap();
+    }
 }
