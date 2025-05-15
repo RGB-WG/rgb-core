@@ -76,7 +76,7 @@ pub type AssignData<Seal> = Assign<RevealedData, Seal>;
 /// State data are assigned to a seal definition, which means that they are
 /// owned by a person controlling spending of the seal UTXO, unless the seal
 /// is closed, indicating that a transfer of ownership had taken place
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(
     lib = LIB_NAME_RGB_COMMIT,
@@ -109,15 +109,6 @@ impl<State: ExposedState, Seal: ExposedSeal> Ord for Assign<State, Seal> {
             .cmp(&other.to_confidential_seal())
     }
 }
-
-impl<State: ExposedState, Seal: ExposedSeal> PartialEq for Assign<State, Seal> {
-    fn eq(&self, other: &Self) -> bool {
-        self.to_confidential_seal() == other.to_confidential_seal()
-            && self.as_revealed_state() == other.as_revealed_state()
-    }
-}
-
-impl<State: ExposedState, Seal: ExposedSeal> Eq for Assign<State, Seal> {}
 
 impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
     pub fn revealed(seal: Seal, state: State) -> Self { Assign::Revealed { seal, state } }
