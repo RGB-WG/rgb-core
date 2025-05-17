@@ -5,13 +5,13 @@ version = 3
 [[package]]
 name = "aluvm"
 version = "0.12.0-beta.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee07e0c19969cc98e341f94f0b413642341605febee7fe7823a2ec7ea71f494c"
+source = "git+https://github.com/AluVM/aluvm?branch=revision#2996dfeb8e38fd3d396b1d04e4c894c90db02bdf"
 dependencies = [
  "amplify",
  "baid64",
  "commit_verify",
  "getrandom 0.2.16",
+ "getrandom 0.3.3",
  "paste",
  "serde",
  "strict_encoding",
@@ -147,9 +147,9 @@ dependencies = [
 
 [[package]]
 name = "bitflags"
-version = "2.9.0"
+version = "2.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c8214115b7bf84099f1309324e63141d4c5d7cc26862f97a0a857dbefe165bd"
+checksum = "1b8e56985ec62d17e9c1001dc89c88ecd7dc08e47eba5ec7c29c7b5eeecde967"
 
 [[package]]
 name = "block-buffer"
@@ -228,9 +228,9 @@ checksum = "1628fb46dfa0b37568d12e5edd512553eccf6a22a78e8bde00bb4aed84d5bdbf"
 
 [[package]]
 name = "cc"
-version = "1.2.20"
+version = "1.2.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04da6a0d40b948dfc4fa8f5bbf402b0fc1a64a28dbf7d12ffd683550f2c1b63a"
+checksum = "5f4ac86a9e5bc1e2b3449ab9d7d3a6a405e3d1bb28d7b9be8614f55846ae3766"
 dependencies = [
  "shlex",
 ]
@@ -258,8 +258,7 @@ dependencies = [
 [[package]]
 name = "commit_encoding_derive"
 version = "0.12.0-beta.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d5b4c3e66c67a5030379eaaa7b251966983190cce868945ef0fc3a6064c3b54"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=revision#fdac8792343a6f0b01a2d649bd127ace3a011ba1"
 dependencies = [
  "amplify",
  "amplify_syn",
@@ -271,11 +270,12 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.12.0-beta.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25ae3d50bf14d8660eee7ebb306880eb023e7b82bcbbc3c3c94e6479cfec4632"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=revision#fdac8792343a6f0b01a2d649bd127ace3a011ba1"
 dependencies = [
  "amplify",
  "commit_encoding_derive",
+ "getrandom 0.2.16",
+ "getrandom 0.3.3",
  "rand 0.9.1",
  "ripemd",
  "serde",
@@ -283,6 +283,7 @@ dependencies = [
  "strict_encoding",
  "strict_types",
  "vesper-lang",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -351,14 +352,16 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73fea8450eea4bac3940448fb7ae50d91f034f941199fcd9d909a5a07aa455f0"
+checksum = "26145e563e54f2cadc477553f1ec5ee650b00862f0a58bcd12cbdc5f0ea2d2f4"
 dependencies = [
  "cfg-if",
+ "js-sys",
  "libc",
  "r-efi",
  "wasi 0.14.2+wasi-0.2.4",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -564,7 +567,7 @@ version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
 dependencies = [
- "getrandom 0.3.2",
+ "getrandom 0.3.3",
 ]
 
 [[package]]
@@ -678,7 +681,7 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 [[package]]
 name = "single_use_seals"
 version = "0.12.0-beta.6"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=v0.12#9c2f3a1898379a5810b67a8c43d243c0cca74542"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=revision#fdac8792343a6f0b01a2d649bd127ace3a011ba1"
 dependencies = [
  "serde",
  "strict_encoding",
@@ -785,12 +788,13 @@ checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
 [[package]]
 name = "ultrasonic"
 version = "0.12.0-beta.6"
-source = "git+https://github.com/AluVM/ultrasonic?branch=revision#dd02156188986ca30842aa5ad1aa8a786fbf6276"
+source = "git+https://github.com/AluVM/ultrasonic?branch=revision#c5ce687108cb67ca5fe7cbb32541b070a21d3cf5"
 dependencies = [
  "amplify",
  "baid64",
  "commit_verify",
  "getrandom 0.2.16",
+ "getrandom 0.3.3",
  "serde",
  "strict_encoding",
  "wasm-bindgen",
@@ -960,9 +964,9 @@ dependencies = [
 
 [[package]]
 name = "windows-core"
-version = "0.61.0"
+version = "0.61.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4763c1de310c86d75a878046489e2e5ba02c649d185f21c67d4cf8a56d098980"
+checksum = "46ec44dc15085cea82cf9c78f85a9114c463a369786585ad2882d1ff0b0acf40"
 dependencies = [
  "windows-implement",
  "windows-interface",
@@ -1001,18 +1005,18 @@ checksum = "76840935b766e1b0a05c0066835fb9ec80071d4c09a16f6bd5f7e655e3c14c38"
 
 [[package]]
 name = "windows-result"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c64fd11a4fd95df68efcfee5f44a294fe71b8bc6a91993e2791938abcc712252"
+checksum = "4b895b5356fc36103d0f64dd1e94dfa7ac5633f1c9dd6e80fe9ec4adef69e09d"
 dependencies = [
  "windows-link",
 ]
 
 [[package]]
 name = "windows-strings"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a2ba9642430ee452d5a7aa78d72907ebe8cfda358e8cb7918a2050581322f97"
+checksum = "2a7ab927b2637c19b3dbe0965e75d8f2d30bdd697a1516191cad2ec4df8fb28a"
 dependencies = [
  "windows-link",
 ]
@@ -1122,12 +1126,12 @@ dependencies = [
 [[package]]
 name = "zk-aluvm"
 version = "0.12.0-beta.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25be6c6abb3a05546ef51e5256cf5f23dc739bb67dae9d9a2db6e4755de1c863"
+source = "git+https://github.com/AluVM/zk-aluvm?branch=revision#9049388abd6ca32ac980caf864a6f50b8f86ddcf"
 dependencies = [
  "aluvm",
  "amplify",
  "getrandom 0.2.16",
+ "getrandom 0.3.3",
  "serde",
  "strict_encoding",
  "wasm-bindgen",
