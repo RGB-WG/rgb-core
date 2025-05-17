@@ -154,8 +154,8 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
         let mut seals = BTreeMap::<CellAddr, Seal>::new();
 
         while let Some(mut block) = reader.read_operation() {
-            // Genesis can't commit to the contract id since the contract doesn't exist yet; thus, we have to
-            // apply this little trick
+            // Genesis cannot commit to the contract id since the contract does not exist yet;
+            // thus, we have to apply this little trick
             if is_genesis {
                 if block.operation.contract_id.to_byte_array() != codex_id.to_byte_array() {
                     return Err(VerificationError::NoCodexCommitment);
@@ -176,8 +176,8 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
                 .values()
                 .map(|seal| seal.auth_token())
                 .collect::<BTreeSet<_>>();
-            // It is a subset and not equal set since some seals might be unknown to us:
-            // we know their commitment auth token, but do not know the definition.
+            // It is a subset and not an equal set since some seals might be unknown to us:
+            // we know their commitment auth token but do not know the definition.
             if !reported.is_subset(&defined) {
                 let sources = block
                     .defined_seals
@@ -303,11 +303,12 @@ mod test {
     use std::collections::HashMap;
     use std::vec;
 
-    use bp::seals::{TxoSeal, WTxoSeal};
+    use bp::seals::{TxoSeal, TxoSealExt, WOutpoint, WTxoSeal};
+    use bp::{Outpoint, Sats, ScriptPubkey, SeqNo, Tx, TxIn, TxOut, Vout};
     use strict_encoding::StrictDumb;
     use ultrasonic::aluvm::alu::{aluasm, CoreConfig, Lib, LibId, LibSite};
     use ultrasonic::aluvm::FIELD_ORDER_SECP;
-    use ultrasonic::{Genesis, Identity, StateCell, StateData, StateValue};
+    use ultrasonic::{fe256, CodexId, Genesis, Identity, Input, StateCell, StateData, StateValue};
 
     use super::*;
 
@@ -327,9 +328,9 @@ mod test {
         pub libs: HashMap<LibId, Lib>,
         pub global: HashMap<CellAddr, StateValue>,
         pub owned: HashMap<CellAddr, StateCell>,
-        pub known_ops: HashMap<Opid, Operation>,
-        pub seal_definitions: HashMap<Opid, HashMap<u16, WTxoSeal>>,
-        pub witnesses: HashMap<Opid, Vec<SealWitness<TxoSeal>>>,
+        pub known_ops: BTreeMap<Opid, Operation>,
+        pub seal_definitions: BTreeMap<Opid, HashMap<u16, WTxoSeal>>,
+        pub witnesses: BTreeMap<Opid, Vec<SealWitness<TxoSeal>>>,
     }
     impl Memory for TestContract {
         fn destructible(&self, addr: CellAddr) -> Option<StateCell> { self.owned.get(&addr).cloned() }
@@ -344,7 +345,18 @@ mod test {
         fn repo(&self) -> &impl LibRepo { self }
         fn memory(&self) -> &impl Memory { self }
         fn is_known(&self, opid: Opid) -> bool { self.known_ops.contains_key(&opid) }
-        fn apply_operation(&mut self, op: VerifiedOperation) { self.known_ops.insert(op.opid(), op.into_operation()); }
+        fn apply_operation(&mut self, op: VerifiedOperation) {
+            let opid = op.opid();
+            let op = op.into_operation();
+            for (no, inp) in op.immutable_out.iter().enumerate() {
+                self.global
+                    .insert(CellAddr::new(opid, no as u16), inp.value);
+            }
+            for (no, inp) in op.destructible_out.iter().enumerate() {
+                self.owned.insert(CellAddr::new(opid, no as u16), *inp);
+            }
+            self.known_ops.insert(opid, op);
+        }
         fn apply_seals(&mut self, opid: Opid, seals: SmallOrdMap<u16, WTxoSeal>) {
             self.seal_definitions.entry(opid).or_default().extend(seals);
         }
@@ -376,13 +388,23 @@ mod test {
         }
     }
 
+    const SEAL_WOUT: WTxoSeal = WTxoSeal {
+        primary: WOutpoint::Wout(Vout::from_u32(0)),
+        secondary: TxoSealExt::Fallback(Outpoint::coinbase()),
+    };
+
+    const SEAL_1: WTxoSeal = WTxoSeal {
+        primary: WOutpoint::Extern(Outpoint::coinbase()),
+        secondary: TxoSealExt::Fallback(Outpoint::coinbase()),
+    };
+
     fn genesis() -> Genesis {
         let mut genesis = Genesis::strict_dumb();
         genesis.codex_id = codex().codex_id();
         genesis.immutable_out = small_vec![StateData::new(0u64, 1000u64)];
         genesis.destructible_out = small_vec![StateCell {
             data: StateValue::None,
-            auth: AuthToken::strict_dumb(),
+            auth: SEAL_1.auth_token(),
             lock: None
         }];
         genesis
@@ -392,17 +414,37 @@ mod test {
         let lib = lib();
         let lib_id = lib.lib_id();
         let genesis = genesis();
-        let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
+        let genesis_op = genesis.to_operation(ContractId::strict_dumb());
         let genesis_opid = genesis_op.opid();
         TestContract {
             codex: codex(),
             contract_id: ContractId::strict_dumb(),
             libs: map! { lib_id => lib },
             global: none!(),
-            owned: none!(),
-            known_ops: map! { genesis_opid => genesis_op },
-            seal_definitions: map! { genesis_opid => none!() },
-            witnesses: map! { genesis_opid => none!() },
+            owned: map! { CellAddr::new(genesis_opid, 0) => genesis_op.destructible_out[0] },
+            known_ops: bmap! { genesis_opid => genesis_op },
+            seal_definitions: bmap! { genesis_opid => none!() },
+            witnesses: bmap! { genesis_opid => none!() },
+        }
+    }
+
+    fn operation() -> Operation {
+        let genesis = genesis();
+        let contract = contract();
+        let genesis_op = genesis.to_operation(contract.contract_id);
+        let genesis_opid = genesis_op.opid();
+        Operation {
+            version: default!(),
+            contract_id: contract.contract_id,
+            call_id: 0,
+            nonce: fe256::ZERO,
+            destructible_in: small_vec![Input {
+                addr: CellAddr::new(genesis_opid, 0),
+                witness: StateValue::None
+            }],
+            immutable_in: Default::default(),
+            destructible_out: Default::default(),
+            immutable_out: Default::default(),
         }
     }
 
@@ -412,15 +454,26 @@ mod test {
         contract.evaluate(reader.clone())?;
 
         // Check contract values
-        let mut ops = map! {};
-        let mut seals = map! {};
-        let mut witnesses = map! {};
+        let mut ops = bmap! {};
+        let mut seals = bmap! {};
+        let mut witnesses = bmap! {};
         for entry in reader.0 {
             let opid = entry.operation.opid();
             ops.insert(opid, entry.operation);
             seals.insert(opid, entry.defined_seals.into_iter().collect());
             witnesses.insert(opid, entry.witness.into_iter().collect());
         }
+
+        ops.pop_first();
+        let (genesis_opid, genesis_op) = contract.known_ops.first_key_value().unwrap();
+        ops.insert(*genesis_opid, genesis_op.clone());
+        seals.pop_first();
+        let (genesis_opid, definitions) = contract.seal_definitions.first_key_value().unwrap();
+        seals.insert(*genesis_opid, definitions.clone());
+        witnesses.pop_first();
+        let (genesis_opid, definitions) = contract.witnesses.first_key_value().unwrap();
+        witnesses.insert(*genesis_opid, definitions.clone());
+
         assert_eq!(ops, contract.known_ops);
         assert_eq!(seals, contract.seal_definitions);
         assert_eq!(witnesses, contract.witnesses);
@@ -428,7 +481,6 @@ mod test {
     }
 
     #[test]
-    #[should_panic] // We must have the genesis operation
     fn empty() {
         let reader = TestReader::new(vec![]);
         run(reader).unwrap();
@@ -441,6 +493,210 @@ mod test {
 
         let reader =
             TestReader::new(vec![OperationSeals { operation: genesis_op, defined_seals: none!(), witness: None }]);
+        run(reader).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "NoCodexCommitment")]
+    fn invalid_genesis() {
+        let mut genesis = genesis();
+        genesis.codex_id = CodexId::from_byte_array([0xAD; 32]);
+        let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
+
+        let reader =
+            TestReader::new(vec![OperationSeals { operation: genesis_op, defined_seals: none!(), witness: None }]);
+        run(reader).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "SealsDefinitionMismatch { opid: \
+                    Opid(Array<32>(7860fe1d58cc8f4dea742bfb53efe4e2a5c61ca99c5958449ceb0cf20063db83)), reported: \
+                    {AuthToken(fe256(0x000046c31ad97975e90e4ab2ee247f0e2f39ec8461823023e977cc14bcda14f5))}, defined: \
+                    {AuthToken(fe256(0x0000141b74832b85ca7bc7e2899cc3e5617a29ac4340f09b105524a6f62bd597))}, sources: \
+                    {0: \"~:0/00000000000000000000000000000000000000000000000000000000000000000000000000000000\"} }")]
+    fn invalid_seals() {
+        let genesis = genesis();
+        let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
+
+        let reader = TestReader::new(vec![OperationSeals {
+            operation: genesis_op,
+            defined_seals: small_bmap! { 0 => WTxoSeal::strict_dumb() },
+            witness: None,
+        }]);
+        run(reader).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "SealUnknown(CellAddr { opid: \
+                               Opid(Array<32>(7860fe1d58cc8f4dea742bfb53efe4e2a5c61ca99c5958449ceb0cf20063db83)), \
+                               pos: 0 })")]
+    fn seal_unknown() {
+        let genesis = genesis();
+        let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
+        let operation = operation();
+
+        let reader = TestReader::new(vec![
+            OperationSeals { operation: genesis_op, defined_seals: none!(), witness: None },
+            OperationSeals { operation, defined_seals: none!(), witness: None },
+        ]);
+        run(reader).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "SealUnknown(CellAddr { opid: \
+                               Opid(Array<32>(7860fe1d58cc8f4dea742bfb53efe4e2a5c61ca99c5958449ceb0cf20063db83)), \
+                               pos: 0 })")]
+    fn genesis_with_wout() {
+        let mut genesis = genesis();
+        genesis.destructible_out[0].auth = SEAL_WOUT.auth_token();
+        let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
+        let operation = operation();
+
+        let reader = TestReader::new(vec![
+            OperationSeals {
+                operation: genesis_op,
+                defined_seals: small_bmap! { 0 => SEAL_WOUT},
+                witness: None,
+            },
+            OperationSeals { operation, defined_seals: none!(), witness: None },
+        ]);
+        run(reader).unwrap();
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "NoWitness(Opid(Array<32>(ebea18d3fc4b12f2508141cc53a3ce1235e6d08dcf79a5166226351362077e6d)))"
+    )]
+    fn no_witness() {
+        let genesis = genesis();
+        let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
+        let operation = operation();
+
+        let reader = TestReader::new(vec![
+            OperationSeals {
+                operation: genesis_op,
+                defined_seals: small_bmap! { 0 => SEAL_1 },
+                witness: None,
+            },
+            OperationSeals { operation, defined_seals: none!(), witness: None },
+        ]);
+        run(reader).unwrap();
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "SealsNotClosed(Array<32>(4ebd325a4b394cff8c57e8317ccf5a8d0e2bdf1b8526f8aad6c8e43d8240621a), \
+                    Opid(Array<32>(ebea18d3fc4b12f2508141cc53a3ce1235e6d08dcf79a5166226351362077e6d)), \
+                    SealError::NotIncluded(TxoSeal { primary: Outpoint { txid: \
+                    Array<32>(0000000000000000000000000000000000000000000000000000000000000000), vout: Vout(0) }, \
+                    secondary: Fallback(Outpoint { txid: \
+                    Array<32>(0000000000000000000000000000000000000000000000000000000000000000), vout: Vout(0) }) }, \
+                    Array<32>(4ebd325a4b394cff8c57e8317ccf5a8d0e2bdf1b8526f8aad6c8e43d8240621a)))"
+    )]
+    fn seals_unclosed() {
+        let genesis = genesis();
+        let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
+        let operation = operation();
+
+        let reader = TestReader::new(vec![
+            OperationSeals {
+                operation: genesis_op,
+                defined_seals: small_bmap! { 0 => SEAL_1 },
+                witness: None,
+            },
+            OperationSeals {
+                operation,
+                defined_seals: none!(),
+                witness: Some(SealWitness::new(strict_dumb!(), strict_dumb!())),
+            },
+        ]);
+        run(reader).unwrap();
+    }
+
+    #[test]
+    #[should_panic(
+        expected = " SealsNotClosed(Array<32>(1692606e775129a6733b6dc48ec7f5771f8e30d8c5304c0949d36efad2411812), \
+                    Opid(Array<32>(ebea18d3fc4b12f2508141cc53a3ce1235e6d08dcf79a5166226351362077e6d)), \
+                    SealError::NotIncluded(TxoSeal { primary: Outpoint { txid: \
+                    Array<32>(0000000000000000000000000000000000000000000000000000000000000000), vout: Vout(0) }, \
+                    secondary: Fallback(Outpoint { txid: \
+                    Array<32>(0000000000000000000000000000000000000000000000000000000000000000), vout: Vout(0) }) }, \
+                    Array<32>(1692606e775129a6733b6dc48ec7f5771f8e30d8c5304c0949d36efad2411812)))"
+    )]
+    fn not_spending_utxo() {
+        let genesis = genesis();
+        let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
+        let operation = operation();
+
+        let mut witness = Tx::strict_dumb();
+        witness
+            .outputs
+            .push(TxOut {
+                value: Sats::ZERO,
+                script_pubkey: ScriptPubkey::op_return(&[]),
+            })
+            .unwrap();
+
+        let reader = TestReader::new(vec![
+            OperationSeals {
+                operation: genesis_op,
+                defined_seals: small_bmap! { 0 => SEAL_1 },
+                witness: None,
+            },
+            OperationSeals {
+                operation,
+                defined_seals: none!(),
+                witness: Some(SealWitness::new(witness, strict_dumb!())),
+            },
+        ]);
+        run(reader).unwrap();
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "SealsNotClosed(Array<32>(0520b790b442e9c023e2ea0e0e284fbe60086d64f01037082f19464b44f9642e), \
+                    Opid(Array<32>(ebea18d3fc4b12f2508141cc53a3ce1235e6d08dcf79a5166226351362077e6d)), \
+                    SealError::NotIncluded(TxoSeal { primary: Outpoint { txid: \
+                    Array<32>(0000000000000000000000000000000000000000000000000000000000000000), vout: Vout(0) }, \
+                    secondary: Fallback(Outpoint { txid: \
+                    Array<32>(0000000000000000000000000000000000000000000000000000000000000000), vout: Vout(0) }) }, \
+                    Array<32>(0520b790b442e9c023e2ea0e0e284fbe60086d64f01037082f19464b44f9642e)))"
+    )]
+    fn missing_commitment() {
+        let genesis = genesis();
+        let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
+        let operation = operation();
+
+        let mut witness = Tx::strict_dumb();
+        witness
+            .inputs
+            .push(TxIn {
+                prev_output: Outpoint::coinbase(),
+                sig_script: none!(),
+                sequence: SeqNo::from_consensus_u32(0),
+                witness: none!(),
+            })
+            .unwrap();
+        witness
+            .outputs
+            .push(TxOut {
+                value: Sats::ZERO,
+                script_pubkey: ScriptPubkey::op_return(&[]),
+            })
+            .unwrap();
+
+        let reader = TestReader::new(vec![
+            OperationSeals {
+                operation: genesis_op,
+                defined_seals: small_bmap! { 0 => SEAL_1 },
+                witness: None,
+            },
+            OperationSeals {
+                operation,
+                defined_seals: none!(),
+                witness: Some(SealWitness::new(witness, strict_dumb!())),
+            },
+        ]);
         run(reader).unwrap();
     }
 }

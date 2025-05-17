@@ -132,8 +132,9 @@ pub mod bitcoin {
 mod tests {
     #![cfg_attr(coverage_nightly, coverage(off))]
 
+    use amplify::ByteArray;
     use bp::seals::{TxoSealExt, WOutpoint, WTxoSeal};
-    use bp::Outpoint;
+    use bp::{Outpoint, Txid};
 
     use super::*;
 
@@ -144,5 +145,34 @@ mod tests {
             secondary: TxoSealExt::Fallback(Outpoint::coinbase()),
         };
         assert_eq!(seal.auth_token().to_string(), "at:lIIfSD7P-RQi0r3kA-7gZdmE7Q-S66QSwzG-NCxNnh7V-225u4Q");
+    }
+
+    #[test]
+    fn resolve() {
+        let seal = WTxoSeal {
+            primary: WOutpoint::Wout(0u32.into()),
+            secondary: TxoSealExt::Fallback(Outpoint::coinbase()),
+        };
+        let txid = Txid::from_byte_array([0xAD; 32]);
+        let resolved_seal = seal.resolve(txid);
+        assert_eq!(resolved_seal.primary, Outpoint::new(txid, 0u32));
+        assert_eq!(resolved_seal.secondary, TxoSealExt::Fallback(Outpoint::coinbase()));
+    }
+
+    #[test]
+    fn to_src() {
+        let seal = WTxoSeal {
+            primary: WOutpoint::Wout(0u32.into()),
+            secondary: TxoSealExt::Fallback(Outpoint::coinbase()),
+        };
+        assert!(seal.to_src().is_none());
+
+        let seal = WTxoSeal {
+            primary: WOutpoint::Extern(Outpoint::coinbase()),
+            secondary: TxoSealExt::Fallback(Outpoint::coinbase()),
+        };
+        let txid = Txid::from_byte_array([0xAD; 32]);
+        let resolved_seal = seal.resolve(txid);
+        assert_eq!(seal.to_src(), Some(resolved_seal));
     }
 }
