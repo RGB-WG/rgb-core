@@ -130,6 +130,8 @@ pub mod bitcoin {
 
 #[cfg(test)]
 mod tests {
+    #![cfg_attr(coverage_nightly, coverage(off))]
+
     use bp::seals::{TxoSealExt, WOutpoint, WTxoSeal};
     use bp::Outpoint;
 

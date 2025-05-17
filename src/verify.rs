@@ -298,6 +298,8 @@ pub enum VerificationError<Seal: RgbSeal> {
 
 #[cfg(test)]
 mod test {
+    #![cfg_attr(coverage_nightly, coverage(off))]
+
     use std::collections::HashMap;
     use std::vec;
 
@@ -404,6 +406,7 @@ mod test {
         }
     }
 
+    #[allow(clippy::result_large_err)]
     fn run(reader: TestReader) -> Result<(), VerificationError<TxoSeal>> {
         let mut contract = contract();
         contract.evaluate(reader.clone())?;
