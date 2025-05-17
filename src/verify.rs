@@ -305,7 +305,7 @@ mod test {
     use strict_encoding::StrictDumb;
     use ultrasonic::aluvm::alu::{aluasm, CoreConfig, Lib, LibId, LibSite};
     use ultrasonic::aluvm::FIELD_ORDER_SECP;
-    use ultrasonic::{Identity, StateCell, StateValue};
+    use ultrasonic::{Genesis, Identity, StateCell, StateData, StateValue};
 
     use super::*;
 
@@ -351,13 +351,16 @@ mod test {
         }
     }
 
-    fn run(reader: TestReader) -> Result<(), VerificationError<TxoSeal>> {
+    fn lib() -> Lib {
         let code = aluasm! {
             stop;
         };
-        let lib = Lib::assemble(&code).unwrap();
-        let lib_id = lib.lib_id();
-        let codex = Codex {
+        Lib::assemble(&code).unwrap()
+    }
+
+    fn codex() -> Codex {
+        let lib_id = lib().lib_id();
+        Codex {
             name: tiny_s!("TestCodex"),
             developer: Identity::default(),
             version: default!(),
@@ -368,17 +371,41 @@ mod test {
             verifiers: tiny_bmap! {
                 0 => LibSite::new(lib_id, 0),
             },
-        };
-        let mut contract = TestContract {
-            codex,
+        }
+    }
+
+    fn genesis() -> Genesis {
+        let mut genesis = Genesis::strict_dumb();
+        genesis.codex_id = codex().codex_id();
+        genesis.immutable_out = small_vec![StateData::new(0u64, 1000u64)];
+        genesis.destructible_out = small_vec![StateCell {
+            data: StateValue::None,
+            auth: AuthToken::strict_dumb(),
+            lock: None
+        }];
+        genesis
+    }
+
+    fn contract() -> TestContract {
+        let lib = lib();
+        let lib_id = lib.lib_id();
+        let genesis = genesis();
+        let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
+        let genesis_opid = genesis_op.opid();
+        TestContract {
+            codex: codex(),
             contract_id: ContractId::strict_dumb(),
             libs: map! { lib_id => lib },
             global: none!(),
             owned: none!(),
-            known_ops: none!(),
-            seal_definitions: none!(),
-            witnesses: none!(),
-        };
+            known_ops: map! { genesis_opid => genesis_op },
+            seal_definitions: map! { genesis_opid => none!() },
+            witnesses: map! { genesis_opid => none!() },
+        }
+    }
+
+    fn run(reader: TestReader) -> Result<(), VerificationError<TxoSeal>> {
+        let mut contract = contract();
         contract.evaluate(reader.clone())?;
 
         // Check contract values
@@ -398,8 +425,19 @@ mod test {
     }
 
     #[test]
+    #[should_panic] // We must have the genesis operation
     fn empty() {
         let reader = TestReader::new(vec![]);
+        run(reader).unwrap();
+    }
+
+    #[test]
+    fn genesis_only() {
+        let genesis = genesis();
+        let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
+
+        let reader =
+            TestReader::new(vec![OperationSeals { operation: genesis_op, defined_seals: none!(), witness: None }]);
         run(reader).unwrap();
     }
 }
