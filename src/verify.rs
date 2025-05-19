@@ -24,6 +24,7 @@
 
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::vec::Vec;
+use core::error::Error;
 use core::fmt::{Debug, Formatter};
 
 use amplify::confinement::SmallOrdMap;
@@ -81,7 +82,7 @@ pub trait ReadOperation: Sized {
 
     /// Reads an operation and its seals from a consignment stream and initialize the witness
     /// reader.
-    fn read_operation(&mut self) -> Option<OperationSeals<Self::Seal>>;
+    fn read_operation(&mut self) -> Result<Option<OperationSeals<Self::Seal>>, impl Error + 'static>;
 }
 
 /// API exposed by the contract required for evaluating and verifying the contract state (see
@@ -94,7 +95,7 @@ pub trait ContractApi<Seal: RgbSeal> {
     /// Called only once during the operation verification.
     fn contract_id(&self) -> ContractId;
 
-    /// Returns a codex agains which the contract must be verified.
+    /// Returns a codex against which the contract must be verified.
     ///
     /// Called only once during the operation verification.
     fn codex(&self) -> &Codex;
@@ -154,7 +155,10 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
         let mut is_genesis = true;
         let mut seals = BTreeMap::<CellAddr, Seal>::new();
 
-        while let Some(mut block) = reader.read_operation() {
+        while let Some(mut block) = reader
+            .read_operation()
+            .map_err(|e| VerificationError::Stream(Box::new(e)))?
+        {
             // Genesis cannot commit to the contract id since the contract does not exist yet;
             // thus, we have to apply this little trick
             if is_genesis {
@@ -260,6 +264,11 @@ impl<Seal: RgbSeal, C: ContractApi<Seal>> ContractVerify<Seal> for C {}
 #[derive(Display, Error, From)]
 #[display(doc_comments)]
 pub enum VerificationError<Seal: RgbSeal> {
+    /// error reading the consignment stream.
+    ///
+    /// Details: {0}
+    Stream(Box<dyn Error>),
+
     /// genesis does not commit to the codex id; a wrong contract genesis is used.
     NoCodexCommitment,
 
@@ -306,6 +315,7 @@ mod test {
     #![cfg_attr(coverage_nightly, coverage(off))]
 
     use std::collections::HashMap;
+    use std::convert::Infallible;
     use std::vec;
 
     use bp::seals::{TxoSeal, TxoSealExt, WOutpoint, WTxoSeal};
@@ -321,7 +331,9 @@ mod test {
     struct TestReader(vec::IntoIter<OperationSeals<TxoSeal>>);
     impl ReadOperation for TestReader {
         type Seal = TxoSeal;
-        fn read_operation(&mut self) -> Option<OperationSeals<Self::Seal>> { self.0.next() }
+        fn read_operation(&mut self) -> Result<Option<OperationSeals<Self::Seal>>, impl Error + 'static> {
+            Result::<_, Infallible>::Ok(self.0.next())
+        }
     }
     impl TestReader {
         pub fn new(vec: Vec<OperationSeals<TxoSeal>>) -> Self { Self(vec.into_iter()) }
