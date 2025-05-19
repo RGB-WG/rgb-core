@@ -53,6 +53,7 @@ extern crate strict_encoding;
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde;
+extern crate core;
 
 mod verify;
 mod seals;

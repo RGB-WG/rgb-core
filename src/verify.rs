@@ -24,6 +24,7 @@
 
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::vec::Vec;
+use core::fmt::{Debug, Formatter};
 
 use amplify::confinement::SmallOrdMap;
 use amplify::ByteArray;
@@ -256,8 +257,7 @@ pub trait ContractVerify<Seal: RgbSeal>: ContractApi<Seal> {
 impl<Seal: RgbSeal, C: ContractApi<Seal>> ContractVerify<Seal> for C {}
 
 /// Errors returned from the verification.
-// TODO: Find a way to do Debug and Clone implementation
-#[derive(Debug, Display, From)]
+#[derive(Display, Error, From)]
 #[display(doc_comments)]
 pub enum VerificationError<Seal: RgbSeal> {
     /// genesis does not commit to the codex id; a wrong contract genesis is used.
@@ -294,6 +294,11 @@ pub enum VerificationError<Seal: RgbSeal> {
     #[from]
     #[display(inner)]
     Vm(CallError),
+}
+
+// We need manual implementation since otherwise we get an unneeded `Seal::PubWitness: Debug` bound
+impl<Seal: RgbSeal> Debug for VerificationError<Seal> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result { write!(f, "{}", self) }
 }
 
 #[cfg(test)]
@@ -497,7 +502,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "NoCodexCommitment")]
+    #[should_panic(expected = "genesis does not commit to the codex id; a wrong contract genesis is used.")]
     fn invalid_genesis() {
         let mut genesis = genesis();
         genesis.codex_id = CodexId::from_byte_array([0xAD; 32]);
@@ -509,11 +514,26 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "SealsDefinitionMismatch { opid: \
-                    Opid(Array<32>(7860fe1d58cc8f4dea742bfb53efe4e2a5c61ca99c5958449ceb0cf20063db83)), reported: \
-                    {AuthToken(fe256(0x000046c31ad97975e90e4ab2ee247f0e2f39ec8461823023e977cc14bcda14f5))}, defined: \
-                    {AuthToken(fe256(0x0000141b74832b85ca7bc7e2899cc3e5617a29ac4340f09b105524a6f62bd597))}, sources: \
-                    {0: \"~:0/00000000000000000000000000000000000000000000000000000000000000000000000000000000\"} }")]
+    #[should_panic(expected = "seals, reported to be defined by the operation \
+                               eGD_HVjMj03qdCv7U_~k4qXGHKmcWVhEnOsM8gBj24M, do match the assignments in the \
+                               operation.
+Actual operation seals from the assignments: {
+    AuthToken(
+        fe256(
+            0x0000141b74832b85ca7bc7e2899cc3e5617a29ac4340f09b105524a6f62bd597,
+        ),
+    ),
+}
+Reported seals: {
+    AuthToken(
+        fe256(
+            0x000046c31ad97975e90e4ab2ee247f0e2f39ec8461823023e977cc14bcda14f5,
+        ),
+    ),
+}
+Sources for the reported seals: {
+    0: \"~:0/00000000000000000000000000000000000000000000000000000000000000000000000000000000\",
+}")]
     fn invalid_seals() {
         let genesis = genesis();
         let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
@@ -527,9 +547,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "SealUnknown(CellAddr { opid: \
-                               Opid(Array<32>(7860fe1d58cc8f4dea742bfb53efe4e2a5c61ca99c5958449ceb0cf20063db83)), \
-                               pos: 0 })")]
+    #[should_panic(expected = "unknown seal definition for cell address eGD_HVjMj03qdCv7U_~k4qXGHKmcWVhEnOsM8gBj24M:0.")]
     fn seal_unknown() {
         let genesis = genesis();
         let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
@@ -543,9 +561,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "SealUnknown(CellAddr { opid: \
-                               Opid(Array<32>(7860fe1d58cc8f4dea742bfb53efe4e2a5c61ca99c5958449ceb0cf20063db83)), \
-                               pos: 0 })")]
+    #[should_panic(expected = "unknown seal definition for cell address eGD_HVjMj03qdCv7U_~k4qXGHKmcWVhEnOsM8gBj24M:0.")]
     fn genesis_with_wout() {
         let mut genesis = genesis();
         genesis.destructible_out[0].auth = SEAL_WOUT.auth_token();
@@ -564,9 +580,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(
-        expected = "NoWitness(Opid(Array<32>(ebea18d3fc4b12f2508141cc53a3ce1235e6d08dcf79a5166226351362077e6d)))"
-    )]
+    #[should_panic(expected = "no witness known for the operation 6_oY0~xLEvJQgUHMU6POEjXm0I3PeaUWYiY1E2IHfm0.")]
     fn no_witness() {
         let genesis = genesis();
         let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
@@ -584,15 +598,13 @@ mod test {
     }
 
     #[test]
-    #[should_panic(
-        expected = "SealsNotClosed(Array<32>(4ebd325a4b394cff8c57e8317ccf5a8d0e2bdf1b8526f8aad6c8e43d8240621a), \
-                    Opid(Array<32>(ebea18d3fc4b12f2508141cc53a3ce1235e6d08dcf79a5166226351362077e6d)), \
-                    SealError::NotIncluded(TxoSeal { primary: Outpoint { txid: \
-                    Array<32>(0000000000000000000000000000000000000000000000000000000000000000), vout: Vout(0) }, \
-                    secondary: Fallback(Outpoint { txid: \
-                    Array<32>(0000000000000000000000000000000000000000000000000000000000000000), vout: Vout(0) }) }, \
-                    Array<32>(4ebd325a4b394cff8c57e8317ccf5a8d0e2bdf1b8526f8aad6c8e43d8240621a)))"
-    )]
+    #[should_panic(expected = "single-use seals are not closed properly with witness \
+                               4ebd325a4b394cff8c57e8317ccf5a8d0e2bdf1b8526f8aad6c8e43d8240621a for operation \
+                               6_oY0~xLEvJQgUHMU6POEjXm0I3PeaUWYiY1E2IHfm0.
+Details: seal \
+                               0000000000000000000000000000000000000000000000000000000000000000:0/\
+                               0000000000000000000000000000000000000000000000000000000000000000:0 is not included in \
+                               the public witness 4ebd325a4b394cff8c57e8317ccf5a8d0e2bdf1b8526f8aad6c8e43d8240621a")]
     fn seals_unclosed() {
         let genesis = genesis();
         let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
@@ -614,15 +626,13 @@ mod test {
     }
 
     #[test]
-    #[should_panic(
-        expected = " SealsNotClosed(Array<32>(1692606e775129a6733b6dc48ec7f5771f8e30d8c5304c0949d36efad2411812), \
-                    Opid(Array<32>(ebea18d3fc4b12f2508141cc53a3ce1235e6d08dcf79a5166226351362077e6d)), \
-                    SealError::NotIncluded(TxoSeal { primary: Outpoint { txid: \
-                    Array<32>(0000000000000000000000000000000000000000000000000000000000000000), vout: Vout(0) }, \
-                    secondary: Fallback(Outpoint { txid: \
-                    Array<32>(0000000000000000000000000000000000000000000000000000000000000000), vout: Vout(0) }) }, \
-                    Array<32>(1692606e775129a6733b6dc48ec7f5771f8e30d8c5304c0949d36efad2411812)))"
-    )]
+    #[should_panic(expected = "ingle-use seals are not closed properly with witness \
+                               1692606e775129a6733b6dc48ec7f5771f8e30d8c5304c0949d36efad2411812 for operation \
+                               6_oY0~xLEvJQgUHMU6POEjXm0I3PeaUWYiY1E2IHfm0.
+Details: seal \
+                               0000000000000000000000000000000000000000000000000000000000000000:0/\
+                               0000000000000000000000000000000000000000000000000000000000000000:0 is not included in \
+                               the public witness 1692606e775129a6733b6dc48ec7f5771f8e30d8c5304c0949d36efad2411812")]
     fn not_spending_utxo() {
         let genesis = genesis();
         let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
@@ -653,15 +663,13 @@ mod test {
     }
 
     #[test]
-    #[should_panic(
-        expected = "SealsNotClosed(Array<32>(0520b790b442e9c023e2ea0e0e284fbe60086d64f01037082f19464b44f9642e), \
-                    Opid(Array<32>(ebea18d3fc4b12f2508141cc53a3ce1235e6d08dcf79a5166226351362077e6d)), \
-                    SealError::NotIncluded(TxoSeal { primary: Outpoint { txid: \
-                    Array<32>(0000000000000000000000000000000000000000000000000000000000000000), vout: Vout(0) }, \
-                    secondary: Fallback(Outpoint { txid: \
-                    Array<32>(0000000000000000000000000000000000000000000000000000000000000000), vout: Vout(0) }) }, \
-                    Array<32>(0520b790b442e9c023e2ea0e0e284fbe60086d64f01037082f19464b44f9642e)))"
-    )]
+    #[should_panic(expected = "single-use seals are not closed properly with witness \
+                               0520b790b442e9c023e2ea0e0e284fbe60086d64f01037082f19464b44f9642e for operation \
+                               6_oY0~xLEvJQgUHMU6POEjXm0I3PeaUWYiY1E2IHfm0.
+Details: seal \
+                               0000000000000000000000000000000000000000000000000000000000000000:0/\
+                               0000000000000000000000000000000000000000000000000000000000000000:0 is not included in \
+                               the public witness 0520b790b442e9c023e2ea0e0e284fbe60086d64f01037082f19464b44f9642e")]
     fn missing_commitment() {
         let genesis = genesis();
         let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
