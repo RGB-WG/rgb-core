@@ -23,7 +23,7 @@
 // the License.
 
 // TODO: Activate no_std once StrictEncoding will support it
-// #![no_std]
+// #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(
     unsafe_code,
     dead_code,

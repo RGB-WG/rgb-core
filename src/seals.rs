@@ -23,7 +23,7 @@
 // the License.
 
 use core::fmt::{Debug, Display};
-use std::hash::Hash;
+use core::hash::Hash;
 
 use single_use_seals::{ClientSideWitness, PublishedWitness, SingleUseSeal};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
@@ -35,7 +35,7 @@ use ultrasonic::AuthToken;
 /// (like bitcoin UTXO-based single-use seals) the seal definition may be defined relatively to a
 /// witness of previously closed seal, whose id is not known during seal definition construction.
 /// In such cases, a seal definition should be converted into a full single-use seal instance using
-/// [`Self::resolve`] method.
+/// the [`Self::resolve`] method.
 pub trait RgbSealDef: Clone + Eq + Debug + Display + StrictDumb + StrictEncode + StrictDecode {
     /// A type providing implementation of a single-use seal protocol, under which this seal
     /// definition is applicable.
