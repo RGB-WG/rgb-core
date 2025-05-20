@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.12.0-beta.6"
+version = "0.12.0-rc.1"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -18,12 +18,12 @@ name = "rgbcore"
 crate-type = ["cdylib", "rlib", "staticlib"] # We need this for WASM
 
 [dependencies]
-amplify = { version = "~4.8.1", default-features = false, features = ["alloc"] }
-ultrasonic = "0.12.0-beta.6"
-strict_encoding = "2.8.2"
-commit_verify = "~0.12.0-beta.6"
-single_use_seals = { version = "~0.12.0-beta.6", features = ["strict_encoding"] }
-bp-core = { version = "0.12.0-beta.6", optional = true }
+amplify = { version = "~4.9.0", default-features = false, features = ["alloc"] }
+strict_encoding = "2.9.1"
+commit_verify = "~0.12.0-rc.1"
+single_use_seals = { version = "~0.12.0-rc.1", features = ["strict_encoding"] }
+ultrasonic = "0.12.0-rc.1"
+bp-core = { version = "0.12.0-rc.1", optional = true }
 serde = { version = "1", optional = true }
 
 [features]
@@ -58,10 +58,3 @@ features = ["all"]
 
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ['cfg(coverage_nightly)'] }
-
-[patch.crates-io]
-single_use_seals = { git = "https://github.com/LNP-BP/client_side_validation", branch = "revision" }
-commit_verify = { git = "https://github.com/LNP-BP/client_side_validation", branch = "revision" }
-aluvm = { git = "https://github.com/AluVM/aluvm", branch = "revision" }
-zk-aluvm = { git = "https://github.com/AluVM/zk-aluvm", branch = "revision" }
-ultrasonic = { git = "https://github.com/AluVM/ultrasonic", branch = "revision" }
