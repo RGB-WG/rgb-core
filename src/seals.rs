@@ -23,7 +23,7 @@
 // the License.
 
 use core::fmt::{Debug, Display};
-use std::hash::Hash;
+use core::hash::Hash;
 
 use single_use_seals::{ClientSideWitness, PublishedWitness, SingleUseSeal};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
@@ -35,7 +35,7 @@ use ultrasonic::AuthToken;
 /// (like bitcoin UTXO-based single-use seals) the seal definition may be defined relatively to a
 /// witness of previously closed seal, whose id is not known during seal definition construction.
 /// In such cases, a seal definition should be converted into a full single-use seal instance using
-/// [`Self::resolve`] method.
+/// the [`Self::resolve`] method.
 pub trait RgbSealDef: Clone + Eq + Debug + Display + StrictDumb + StrictEncode + StrictDecode {
     /// A type providing implementation of a single-use seal protocol, under which this seal
     /// definition is applicable.
@@ -130,8 +130,11 @@ pub mod bitcoin {
 
 #[cfg(test)]
 mod tests {
+    #![cfg_attr(coverage_nightly, coverage(off))]
+
+    use amplify::ByteArray;
     use bp::seals::{TxoSealExt, WOutpoint, WTxoSeal};
-    use bp::Outpoint;
+    use bp::{Outpoint, Txid};
 
     use super::*;
 
@@ -142,5 +145,34 @@ mod tests {
             secondary: TxoSealExt::Fallback(Outpoint::coinbase()),
         };
         assert_eq!(seal.auth_token().to_string(), "at:lIIfSD7P-RQi0r3kA-7gZdmE7Q-S66QSwzG-NCxNnh7V-225u4Q");
+    }
+
+    #[test]
+    fn resolve() {
+        let seal = WTxoSeal {
+            primary: WOutpoint::Wout(0u32.into()),
+            secondary: TxoSealExt::Fallback(Outpoint::coinbase()),
+        };
+        let txid = Txid::from_byte_array([0xAD; 32]);
+        let resolved_seal = seal.resolve(txid);
+        assert_eq!(resolved_seal.primary, Outpoint::new(txid, 0u32));
+        assert_eq!(resolved_seal.secondary, TxoSealExt::Fallback(Outpoint::coinbase()));
+    }
+
+    #[test]
+    fn to_src() {
+        let seal = WTxoSeal {
+            primary: WOutpoint::Wout(0u32.into()),
+            secondary: TxoSealExt::Fallback(Outpoint::coinbase()),
+        };
+        assert!(seal.to_src().is_none());
+
+        let seal = WTxoSeal {
+            primary: WOutpoint::Extern(Outpoint::coinbase()),
+            secondary: TxoSealExt::Fallback(Outpoint::coinbase()),
+        };
+        let txid = Txid::from_byte_array([0xAD; 32]);
+        let resolved_seal = seal.resolve(txid);
+        assert_eq!(seal.to_src(), Some(resolved_seal));
     }
 }
