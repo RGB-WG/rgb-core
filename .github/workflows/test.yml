@@ -5,12 +5,12 @@ on:
     branches:
       - master
     tags:
-      - 'v[0-9]+\.*'
+      - 'v[0-9]+.*'
   pull_request:
     branches:
       - master
       - develop
-      - 'v[0-9]+.[0-9]+'
+      - 'v[0-9]+.?*'
 
 env:
   CARGO_TERM_COLOR: always
@@ -36,4 +36,4 @@ jobs:
       - name: Add wasm32 target
         run: rustup target add wasm32-unknown-unknown
       - name: Test in headless Chrome
-        run: wasm-pack test --headless --chrome
+        run: RUSTFLAGS='--cfg getrandom_backend="wasm_js"' wasm-pack test --headless --chrome --all-features

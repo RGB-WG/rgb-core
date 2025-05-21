@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.11.0-beta.8"
+version = "0.12.0-rc.1"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -10,53 +10,51 @@ categories = ["cryptography::cryptocurrencies"]
 readme = "README.md"
 license = "Apache-2.0"
 edition = "2021"
-rust-version = "1.76.0"
+rust-version = "1.81.0" # Due to need for `Error` trait in `core`
 exclude = [".github"]
 
 [lib]
 name = "rgbcore"
-crate-type = ["cdylib", "rlib"] # We need this for WASM
-
-[[bin]]
-name = "rgbcore-stl"
-required-features = ["stl"]
+crate-type = ["cdylib", "rlib", "staticlib"] # We need this for WASM
 
 [dependencies]
-amplify = { version = "~4.7.0", features = ["rand"] }
-baid64 = "~0.2.2"
-strict_encoding = "~2.7.0"
-strict_types = { version = "~2.7.0", features = ["armor"] }
-aluvm = { version = "~0.11.0-beta.8", features = ["std", "ascii-armor"] }
-commit_verify = { version = "~0.11.0-beta.8", features = ["rand", "derive"] }
-single_use_seals = "~0.11.0-beta.8"
-bp-core = { version = "~0.11.0-beta.8" }
-secp256k1-zkp = { version = "0.11.0", features = ["rand", "rand-std", "global-context"] } # TODO: Update version before the release
-mime = "~0.3.17"
-serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
-chrono = "0.4.38"
+amplify = { version = "~4.9.0", default-features = false, features = ["alloc"] }
+strict_encoding = "2.9.1"
+commit_verify = "~0.12.0-rc.1"
+single_use_seals = { version = "~0.12.0-rc.1", features = ["strict_encoding"] }
+ultrasonic = "0.12.0-rc.1"
+bp-core = { version = "0.12.0-rc.1", optional = true }
+serde = { version = "1", optional = true }
 
 [features]
-default = []
-all = ["stl", "serde"]
-stl = ["commit_verify/stl", "bp-core/stl", "aluvm/stl"]
+default = ["std", "bitcoin"]
+all = ["std", "bitcoin", "liquid", "prime", "serde"]
+
+std = []
+
+bitcoin = ["bp-core"]
+liquid = ["bp-core"]
+prime = []
+
 serde = [
-    "serde_crate",
+    "dep:serde",
     "amplify/serde",
-    "strict_encoding/serde",
-    "strict_types/serde",
+    "ultrasonic/serde",
     "commit_verify/serde",
-    "bp-core/serde",
-    "aluvm/serde",
-    "secp256k1-zkp/serde"
+    "single_use_seals/serde"
 ]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
-rand = { version = "0.8.4", optional = true }
-getrandom = { version = "0.2", features = ["js"] }
+rand = { version = "0.9.1", optional = true }
+getrandom = { version = "0.3", features = ["wasm_js"] }
+getrandom2 = { package = "getrandom", version = "0.2", features = ["js"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 features = ["all"]
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(coverage_nightly)'] }
