@@ -43,8 +43,8 @@ pub const LIB_ID_RGB_COMMIT: &str =
 pub const LIB_ID_RGB_LOGIC: &str =
     "stl:qolQpjNB-4ZkpJIo-U1tktjI-mwAYyEg-kOGQttY-ZoK3Loo#colombo-famous-erosion";
 
-fn _rgb_commit_stl() -> Result<TypeLib, CompileError> {
-    LibBuilder::with(libname!(LIB_NAME_RGB_COMMIT), [
+fn _rgb_commit_stl() -> Result<TypeLib, Box<CompileError>> {
+    Ok(LibBuilder::with(libname!(LIB_NAME_RGB_COMMIT), [
         std_stl().to_dependency_types(),
         strict_types_stl().to_dependency_types(),
         commit_verify_stl().to_dependency_types(),
@@ -59,11 +59,11 @@ fn _rgb_commit_stl() -> Result<TypeLib, CompileError> {
     .transpile::<TransitionBundle>()
     .transpile::<BundleId>()
     .transpile::<OpCommitment>()
-    .compile()
+    .compile()?)
 }
 
-fn _rgb_logic_stl() -> Result<TypeLib, CompileError> {
-    LibBuilder::with(libname!(LIB_NAME_RGB_LOGIC), [
+fn _rgb_logic_stl() -> Result<TypeLib, Box<CompileError>> {
+    Ok(LibBuilder::with(libname!(LIB_NAME_RGB_LOGIC), [
         std_stl().to_dependency_types(),
         strict_types_stl().to_dependency_types(),
         commit_verify_stl().to_dependency_types(),
@@ -74,7 +74,7 @@ fn _rgb_logic_stl() -> Result<TypeLib, CompileError> {
     ])
     .transpile::<GlobalOrd>()
     .transpile::<DbcProof>()
-    .compile()
+    .compile()?)
 }
 
 /// Generates strict type library providing data types for RGB consensus.
