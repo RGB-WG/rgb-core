@@ -89,7 +89,7 @@ impl<'a> IntoIterator for &'a InputOpids {
 
 #[derive(Clone, Eq, PartialEq, Debug, Display, Error)]
 #[display("state transition {0} is not a part of the bundle.")]
-pub struct UnrelatedTransition(OpId, Transition);
+pub struct UnrelatedTransition(OpId);
 
 #[derive(Clone, PartialEq, Eq, Debug, From)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
@@ -140,7 +140,7 @@ impl TransitionBundle {
     ) -> Result<bool, UnrelatedTransition> {
         let opid = transition.id();
         if self.input_map.values().all(|ids| !ids.contains(&opid)) {
-            return Err(UnrelatedTransition(opid, transition));
+            return Err(UnrelatedTransition(opid));
         }
         if self.known_transitions.contains_key(&opid) {
             return Ok(false);
