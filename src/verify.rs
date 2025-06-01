@@ -395,6 +395,7 @@ mod test {
             name: tiny_s!("TestCodex"),
             developer: Identity::default(),
             version: default!(),
+            features: default!(),
             timestamp: 1732529307,
             field_order: FIELD_ORDER_SECP,
             input_config: CoreConfig::default(),
@@ -455,6 +456,7 @@ mod test {
             contract_id: contract.contract_id,
             call_id: 0,
             nonce: fe256::ZERO,
+            witness: StateValue::None,
             destructible_in: small_vec![Input {
                 addr: CellAddr::new(genesis_opid, 0),
                 witness: StateValue::None
@@ -527,7 +529,7 @@ mod test {
 
     #[test]
     #[should_panic(expected = "seals, reported to be defined by the operation \
-                               eGD_HVjMj03qdCv7U_~k4qXGHKmcWVhEnOsM8gBj24M, do match the assignments in the \
+                               k7fHvPyBlnM8m1n0QUaqNhB0I8kTwWXmi7nB_ZjTGVc, do match the assignments in the \
                                operation.
 Actual operation seals from the assignments: {
     AuthToken(
@@ -559,7 +561,7 @@ Sources for the reported seals: {
     }
 
     #[test]
-    #[should_panic(expected = "unknown seal definition for cell address eGD_HVjMj03qdCv7U_~k4qXGHKmcWVhEnOsM8gBj24M:0.")]
+    #[should_panic(expected = "unknown seal definition for cell address k7fHvPyBlnM8m1n0QUaqNhB0I8kTwWXmi7nB_ZjTGVc:0.")]
     fn seal_unknown() {
         let genesis = genesis();
         let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
@@ -573,7 +575,7 @@ Sources for the reported seals: {
     }
 
     #[test]
-    #[should_panic(expected = "unknown seal definition for cell address eGD_HVjMj03qdCv7U_~k4qXGHKmcWVhEnOsM8gBj24M:0.")]
+    #[should_panic(expected = "unknown seal definition for cell address k7fHvPyBlnM8m1n0QUaqNhB0I8kTwWXmi7nB_ZjTGVc:0.")]
     fn genesis_with_wout() {
         let mut genesis = genesis();
         genesis.destructible_out[0].auth = SEAL_WOUT.auth_token();
@@ -592,7 +594,7 @@ Sources for the reported seals: {
     }
 
     #[test]
-    #[should_panic(expected = "no witness known for the operation 6_oY0~xLEvJQgUHMU6POEjXm0I3PeaUWYiY1E2IHfm0.")]
+    #[should_panic(expected = "no witness known for the operation KAPb7ikgqk_ofCp1fZWm_T6XfKjuCwNf9BlZfPpoR0E.")]
     fn no_witness() {
         let genesis = genesis();
         let genesis_op = genesis.to_operation(genesis.codex_id.to_byte_array().into());
@@ -612,7 +614,7 @@ Sources for the reported seals: {
     #[test]
     #[should_panic(expected = "single-use seals are not closed properly with witness \
                                4ebd325a4b394cff8c57e8317ccf5a8d0e2bdf1b8526f8aad6c8e43d8240621a for operation \
-                               6_oY0~xLEvJQgUHMU6POEjXm0I3PeaUWYiY1E2IHfm0.
+                               KAPb7ikgqk_ofCp1fZWm_T6XfKjuCwNf9BlZfPpoR0E.
 Details: seal \
                                0000000000000000000000000000000000000000000000000000000000000000:0/\
                                0000000000000000000000000000000000000000000000000000000000000000:0 is not included in \
@@ -640,7 +642,7 @@ Details: seal \
     #[test]
     #[should_panic(expected = "ingle-use seals are not closed properly with witness \
                                1692606e775129a6733b6dc48ec7f5771f8e30d8c5304c0949d36efad2411812 for operation \
-                               6_oY0~xLEvJQgUHMU6POEjXm0I3PeaUWYiY1E2IHfm0.
+                               KAPb7ikgqk_ofCp1fZWm_T6XfKjuCwNf9BlZfPpoR0E.
 Details: seal \
                                0000000000000000000000000000000000000000000000000000000000000000:0/\
                                0000000000000000000000000000000000000000000000000000000000000000:0 is not included in \
@@ -677,7 +679,7 @@ Details: seal \
     #[test]
     #[should_panic(expected = "single-use seals are not closed properly with witness \
                                0520b790b442e9c023e2ea0e0e284fbe60086d64f01037082f19464b44f9642e for operation \
-                               6_oY0~xLEvJQgUHMU6POEjXm0I3PeaUWYiY1E2IHfm0.
+                               KAPb7ikgqk_ofCp1fZWm_T6XfKjuCwNf9BlZfPpoR0E.
 Details: seal \
                                0000000000000000000000000000000000000000000000000000000000000000:0/\
                                0000000000000000000000000000000000000000000000000000000000000000:0 is not included in \
