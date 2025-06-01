@@ -1,6 +1,6 @@
 [package]
 name = "rgb-core"
-version = "0.12.0-rc.1"
+version = "0.12.0-rc.2"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "RGB Core Library: confidential & scalable smart contracts on Bitcoin & Lightning (consensus layer)"
 repository = "https://github.com/RGB-WG/rgb-core"
@@ -22,8 +22,8 @@ amplify = { version = "~4.9.0", default-features = false, features = ["alloc"] }
 strict_encoding = "2.9.1"
 commit_verify = "~0.12.0-rc.1"
 single_use_seals = { version = "~0.12.0-rc.1", features = ["strict_encoding"] }
-ultrasonic = "0.12.0-rc.1"
-bp-core = { version = "0.12.0-rc.1", optional = true }
+ultrasonic = "0.12.0-rc.2"
+bp-core = { version = "0.12.0-rc.2", optional = true }
 serde = { version = "1", optional = true }
 
 [features]
