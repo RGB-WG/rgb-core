@@ -45,7 +45,7 @@ rec Schema
     rec value, AssignmentDetails
       union ownedStateSchema, OwnedStateSchema
         is declarative, Unit, tag 0
-        enum fungible, FungibleType, wrapped, unsigned64Bit 8, tag 1
+        is fungible, Unit, tag 1
         bytes structured, len 32, wrapped, aka SemId, tag 2
       ascii name, aka FieldName, first AlphaSmallLodash, rest AlphaNumLodash, len 1..100
       is defaultTransition, U16, aka TransitionType

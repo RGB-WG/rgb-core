@@ -31,14 +31,14 @@ use strict_types::{CompileError, TypeLib};
 
 use crate::validation::DbcProof;
 use crate::vm::GlobalOrd;
-use crate::{Genesis, OpCommitment, Schema, LIB_NAME_RGB_COMMIT, LIB_NAME_RGB_LOGIC};
+use crate::{Genesis, OpCommitment, Schema, Transition, LIB_NAME_RGB_COMMIT, LIB_NAME_RGB_LOGIC};
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_COMMIT: &str =
-    "stl:XbiECcs9-xlyofco-wkXoupT-gJ61JJf-XWL0DWf-INKzIp0#support-iris-depend";
+    "stl:4j4rCC1R-6vHqghw-KSKgmbD-Ec9DPDA-IRqa6~L-aZ_1GRM#susan-olympic-minute";
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_LOGIC: &str =
-    "stl:qolQpjNB-4ZkpJIo-U1tktjI-mwAYyEg-kOGQttY-ZoK3Loo#colombo-famous-erosion";
+    "stl:iCs0AShc-KXU0vsu-te5lPow-NY7LYgX-i~LFvvl-1hVcbRw#jump-heaven-binary";
 
 fn _rgb_commit_stl() -> Result<TypeLib, Box<CompileError>> {
     Ok(LibBuilder::with(libname!(LIB_NAME_RGB_COMMIT), [
@@ -50,8 +50,8 @@ fn _rgb_commit_stl() -> Result<TypeLib, Box<CompileError>> {
         aluvm_stl().to_dependency_types(),
     ])
     .transpile::<Schema>()
-    .transpile::<Schema>()
     .transpile::<Genesis>()
+    .transpile::<Transition>()
     .transpile::<Txid>()
     .transpile::<OpCommitment>()
     .compile()?)

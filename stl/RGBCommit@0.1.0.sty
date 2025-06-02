@@ -1,5 +1,5 @@
 {-
-  Id: stl:XbiECcs9-xlyofco-wkXoupT-gJ61JJf-XWL0DWf-INKzIp0#support-iris-depend
+  Id: stl:4j4rCC1R-6vHqghw-KSKgmbD-Ec9DPDA-IRqa6~L-aZ_1GRM#susan-olympic-minute
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -41,33 +41,33 @@ import Bitcoin#signal-color-cipher
   use Txid#shallow-light-reverse
 
 
-@mnemonic(control-basic-labor)
-data AssignRevealedDataBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, state RevealedData)
-                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedData)
+@mnemonic(alert-segment-canoe)
+data AssignFungibleStateBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, state FungibleState)
+                       | secretSeal (seal BPCore.SecretSeal, state FungibleState)
 
-@mnemonic(passage-circus-compact)
-data AssignRevealedDataBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state RevealedData)
-                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedData)
+@mnemonic(sushi-herman-gamma)
+data AssignFungibleStateBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state FungibleState)
+                       | secretSeal (seal BPCore.SecretSeal, state FungibleState)
 
-@mnemonic(beatles-service-husband)
-data AssignRevealedValueBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, state RevealedValue)
-                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedValue)
+@mnemonic(aloha-urban-factor)
+data AssignStructureddDataBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, state StructureddData)
+                       | secretSeal (seal BPCore.SecretSeal, state StructureddData)
 
-@mnemonic(address-natural-neptune)
-data AssignRevealedValueBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state RevealedValue)
-                       | confidentialSeal (seal BPCore.SecretSeal, state RevealedValue)
+@mnemonic(diploma-declare-domain)
+data AssignStructureddDataBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state StructureddData)
+                       | secretSeal (seal BPCore.SecretSeal, state StructureddData)
 
-@mnemonic(critic-alcohol-actor)
-data AssignVecAssignRevealedDataBlindSealTxPtr : [AssignRevealedDataBlindSealTxPtr ^ 1..]
+@mnemonic(gong-bronze-critic)
+data AssignVecAssignFungibleStateBlindSealTxPtr : [AssignFungibleStateBlindSealTxPtr ^ 1..]
 
-@mnemonic(sonata-food-tina)
-data AssignVecAssignRevealedDataBlindSealTxid : [AssignRevealedDataBlindSealTxid ^ 1..]
+@mnemonic(detect-orchid-finish)
+data AssignVecAssignFungibleStateBlindSealTxid : [AssignFungibleStateBlindSealTxid ^ 1..]
 
-@mnemonic(magic-pupil-model)
-data AssignVecAssignRevealedValueBlindSealTxPtr : [AssignRevealedValueBlindSealTxPtr ^ 1..]
+@mnemonic(citizen-telecom-albert)
+data AssignVecAssignStructureddDataBlindSealTxPtr : [AssignStructureddDataBlindSealTxPtr ^ 1..]
 
-@mnemonic(equator-sector-regard)
-data AssignVecAssignRevealedValueBlindSealTxid : [AssignRevealedValueBlindSealTxid ^ 1..]
+@mnemonic(avatar-boris-felix)
+data AssignVecAssignStructureddDataBlindSealTxid : [AssignStructureddDataBlindSealTxid ^ 1..]
 
 @mnemonic(begin-process-outside)
 data AssignVecAssignVoidStateBlindSealTxPtr : [AssignVoidStateBlindSealTxPtr ^ 1..]
@@ -75,13 +75,13 @@ data AssignVecAssignVoidStateBlindSealTxPtr : [AssignVoidStateBlindSealTxPtr ^ 1
 @mnemonic(arena-neuron-cantina)
 data AssignVecAssignVoidStateBlindSealTxid : [AssignVoidStateBlindSealTxid ^ 1..]
 
-@mnemonic(magnum-tango-bronze)
+@mnemonic(amazon-loyal-jazz)
 data AssignVoidStateBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, state VoidState)
-                       | confidentialSeal (seal BPCore.SecretSeal, state VoidState)
+                       | secretSeal (seal BPCore.SecretSeal, state VoidState)
 
-@mnemonic(shelf-korea-begin)
+@mnemonic(labor-package-normal)
 data AssignVoidStateBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state VoidState)
-                       | confidentialSeal (seal BPCore.SecretSeal, state VoidState)
+                       | secretSeal (seal BPCore.SecretSeal, state VoidState)
 
 @mnemonic(sabine-magic-deal)
 data AssignmentDetails : ownedStateSchema OwnedStateSchema
@@ -104,9 +104,6 @@ data BaseCommitment    : schemaId SchemaId
                        , chainNet ChainNet
                        , sealClosingStrategy SealClosingStrategy
 
-@mnemonic(carmen-farmer-diesel)
-data BundleId          : [Byte ^ 32]
-
 @mnemonic(ringo-fashion-enrico)
 data ChainNet          : bitcoinMainnet | bitcoinTestnet3 | bitcoinTestnet4 | bitcoinSignet
                        | bitcoinRegtest | liquidMainnet | liquidTestnet
@@ -118,12 +115,8 @@ data ContractId        : [Byte ^ 32]
 @mnemonic(pigment-career-hippie)
 data Ffv               : U16
 
-@mnemonic(guide-poker-coconut)
-data FungibleState     : bits64#8 U64 | (|)
-
-@mnemonic(matrix-optimal-sinatra)
-data FungibleType      : unsigned64Bit#8 | (|)
-
+@mnemonic(citrus-miami-geneva)
+data FungibleState     : U64
 
 @mnemonic(salami-water-climax)
 data Genesis           : ffv Ffv
@@ -154,14 +147,11 @@ data GlobalStateSchema : semId StrictTypes.SemId, maxItems U24
 @mnemonic(yoga-quick-jasmine)
 data GlobalStateType   : U16
 
-@mnemonic(henry-kevin-carrot)
-data GlobalValues      : [RevealedData ^ 1..]
+@mnemonic(single-rodent-appear)
+data GlobalValues      : [StructureddData ^ 1..]
 
 @mnemonic(smart-pioneer-nominal)
 data Identity          : Std.AsciiPrintable, [Std.AsciiPrintable ^ ..0xfff]
-
-@mnemonic(legal-milk-gold)
-data InputOpids        : {OpId ^ 1..}
 
 @mnemonic(judo-invest-thermos)
 data Inputs            : {Opout ^ 1..}
@@ -198,16 +188,10 @@ data Opout             : op OpId
                        , ty AssignmentType
                        , no U16
 
-@mnemonic(sincere-teacher-stella)
+@mnemonic(river-neon-user)
 data OwnedStateSchema  : declarative ()
-                       | fungible FungibleType
+                       | fungible ()
                        | structured StrictTypes.SemId
-
-@mnemonic(salon-clarion-factor)
-data RevealedData      : [Byte]
-
-@mnemonic(chance-stage-kermit)
-data RevealedValue     : FungibleState
 
 @mnemonic(burma-bambino-nobody)
 data Schema            : ffv Ffv
@@ -229,6 +213,9 @@ data SealClosingStrategy : firstOpretOrTapret | (|)
 @mnemonic(ferrari-zebra-tempo)
 data Signature         : [Byte ^ 64]
 
+@mnemonic(jerome-format-saga)
+data StructureddData   : [Byte]
+
 @mnemonic(remark-gravity-vitamin)
 data Transition        : ffv Ffv
                        , contractId ContractId
@@ -239,9 +226,6 @@ data Transition        : ffv Ffv
                        , inputs Inputs
                        , assignments AssignmentsBlindSealTxPtr
                        , signature Signature?
-
-@mnemonic(isabel-duet-cover)
-data TransitionBundle  : inputMap {Bitcoin.Vout -> ^ 1.. InputOpids}, knownTransitions {OpId -> ^ 1.. Transition}
 
 @mnemonic(orbit-pattern-goblin)
 data TransitionDetails : transitionSchema TransitionSchema, name StrictTypes.FieldName
@@ -260,15 +244,15 @@ data TransitionType    : U16
 data TypeCommitment    : genesis BaseCommitment
                        | transition (ContractId, TransitionType)
 
-@mnemonic(ship-trilogy-clara)
+@mnemonic(civil-flex-palma)
 data TypedAssignsBlindSealTxPtr : declarative AssignVecAssignVoidStateBlindSealTxPtr
-                       | fungible AssignVecAssignRevealedValueBlindSealTxPtr
-                       | structured AssignVecAssignRevealedDataBlindSealTxPtr
+                       | fungible AssignVecAssignFungibleStateBlindSealTxPtr
+                       | structured AssignVecAssignStructureddDataBlindSealTxPtr
 
-@mnemonic(felix-compare-history)
+@mnemonic(switch-orchid-kevin)
 data TypedAssignsBlindSealTxid : declarative AssignVecAssignVoidStateBlindSealTxid
-                       | fungible AssignVecAssignRevealedValueBlindSealTxid
-                       | structured AssignVecAssignRevealedDataBlindSealTxid
+                       | fungible AssignVecAssignFungibleStateBlindSealTxid
+                       | structured AssignVecAssignStructureddDataBlindSealTxid
 
 @mnemonic(email-snow-safari)
 data VoidState         : ()
