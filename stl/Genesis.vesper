@@ -8,7 +8,7 @@
 Bundles vesper lexicon=types+commitments
 
 commitment OpId, hasher SHA256, tagged urn:lnp-bp:rgb:operation#2024-02-03
-  serialized OpCommitment
+  serialized Genesis
 
 rec Genesis
   is ffv, U16, aka Ffv
@@ -23,7 +23,7 @@ rec Genesis
   map globals, len 0..MAX8, aka GlobalState
     is key, U16, aka GlobalStateType
     list value, len 1..MAX16, aka GlobalValues
-      bytes element, len 0..MAX16, aka StructureddData
+      bytes element, len 0..MAX16, aka StructuredData
   map assignments, len 0..MAX16, aka AssignmentsBlindSealTxid
     is key, U16, aka AssignmentType
     union value, TypedAssignsBlindSealTxid
@@ -49,15 +49,15 @@ rec Genesis
           rec secretSeal, tag 1
             bytes seal, len 32, aka SecretSeal
             is state, U64, aka FungibleState
-      list structured, len 1..MAX16, wrapped, aka AssignVecAssignStructureddDataBlindSealTxid, tag 2
-        union AssignStructureddDataBlindSealTxid
+      list structured, len 1..MAX16, wrapped, aka AssignVecAssignStructuredDataBlindSealTxid, tag 2
+        union AssignStructuredDataBlindSealTxid
           rec revealed, tag 0
             rec seal, BlindSealTxid
               bytes txid, len 32, aka Txid
               is vout, U32, aka Vout
               is blinding, U64
-            bytes state, len 0..MAX16, aka StructureddData
+            bytes state, len 0..MAX16, aka StructuredData
           rec secretSeal, tag 1
             bytes seal, len 32, aka SecretSeal
-            bytes state, len 0..MAX16, aka StructureddData
+            bytes state, len 0..MAX16, aka StructuredData
 

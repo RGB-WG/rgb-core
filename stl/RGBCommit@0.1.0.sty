@@ -1,5 +1,5 @@
 {-
-  Id: stl:2cchW1ud-aDIF0xy-igHwZpu-9QOBMjc-aiO_rs7-ph0Dua0#ralph-chris-hotel
+  Id: stl:eBR7hVUY-AAhMZQS-BxMGUdt-D5VCa4l-gvFPe4s-hXYkthg#enrico-ohio-maxwell
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -11,21 +11,17 @@
 @context
 typelib RGBCommit
 
-import BPCore#juliet-super-dominic
-  use BlindSealTxid#halt-crash-valid
-  use SecretSeal#dollar-iris-wizard
-  use BlindSealTxPtr#content-paradox-dominic
-  use TxPtr#italian-july-eddie
-
-import CommitVerify#violet-panther-herbert
-  use MerkleHash#horse-popcorn-bundle
-  use StrictHash#pizza-sherman-sound
-
 import Std#delete-roman-hair
   use AsciiPrintable#ultra-sunset-format
   use AlphaNumLodash#percent-bingo-caesar
   use AlphaCapsLodash#duet-hammer-labor
   use AlphaSmallLodash#pioneer-eagle-spell
+
+import BPSeals#balloon-oscar-george
+  use BlindSealTxid#halt-crash-valid
+  use SecretSeal#dollar-iris-wizard
+  use BlindSealTxPtr#content-paradox-dominic
+  use TxPtr#italian-july-eddie
 
 import StrictTypes#henry-heart-survive
   use FieldName#present-flute-herman
@@ -38,20 +34,20 @@ import Bitcoin#signal-color-cipher
 
 
 @mnemonic(alert-segment-canoe)
-data AssignFungibleStateBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, state FungibleState)
-                       | secretSeal (seal BPCore.SecretSeal, state FungibleState)
+data AssignFungibleStateBlindSealTxPtr : revealed (seal BPSeals.BlindSealTxPtr, state FungibleState)
+                       | secretSeal (seal BPSeals.SecretSeal, state FungibleState)
 
 @mnemonic(sushi-herman-gamma)
-data AssignFungibleStateBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state FungibleState)
-                       | secretSeal (seal BPCore.SecretSeal, state FungibleState)
+data AssignFungibleStateBlindSealTxid : revealed (seal BPSeals.BlindSealTxid, state FungibleState)
+                       | secretSeal (seal BPSeals.SecretSeal, state FungibleState)
 
-@mnemonic(aloha-urban-factor)
-data AssignStructureddDataBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, state StructureddData)
-                       | secretSeal (seal BPCore.SecretSeal, state StructureddData)
+@mnemonic(kimono-hazard-fashion)
+data AssignStructuredDataBlindSealTxPtr : revealed (seal BPSeals.BlindSealTxPtr, state StructuredData)
+                       | secretSeal (seal BPSeals.SecretSeal, state StructuredData)
 
-@mnemonic(diploma-declare-domain)
-data AssignStructureddDataBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state StructureddData)
-                       | secretSeal (seal BPCore.SecretSeal, state StructureddData)
+@mnemonic(macro-except-cadet)
+data AssignStructuredDataBlindSealTxid : revealed (seal BPSeals.BlindSealTxid, state StructuredData)
+                       | secretSeal (seal BPSeals.SecretSeal, state StructuredData)
 
 @mnemonic(gong-bronze-critic)
 data AssignVecAssignFungibleStateBlindSealTxPtr : [AssignFungibleStateBlindSealTxPtr ^ 1..]
@@ -59,11 +55,11 @@ data AssignVecAssignFungibleStateBlindSealTxPtr : [AssignFungibleStateBlindSealT
 @mnemonic(detect-orchid-finish)
 data AssignVecAssignFungibleStateBlindSealTxid : [AssignFungibleStateBlindSealTxid ^ 1..]
 
-@mnemonic(citizen-telecom-albert)
-data AssignVecAssignStructureddDataBlindSealTxPtr : [AssignStructureddDataBlindSealTxPtr ^ 1..]
+@mnemonic(roger-sleep-precise)
+data AssignVecAssignStructuredDataBlindSealTxPtr : [AssignStructuredDataBlindSealTxPtr ^ 1..]
 
-@mnemonic(avatar-boris-felix)
-data AssignVecAssignStructureddDataBlindSealTxid : [AssignStructureddDataBlindSealTxid ^ 1..]
+@mnemonic(balance-flag-caravan)
+data AssignVecAssignStructuredDataBlindSealTxid : [AssignStructuredDataBlindSealTxid ^ 1..]
 
 @mnemonic(begin-process-outside)
 data AssignVecAssignVoidStateBlindSealTxPtr : [AssignVoidStateBlindSealTxPtr ^ 1..]
@@ -72,12 +68,12 @@ data AssignVecAssignVoidStateBlindSealTxPtr : [AssignVoidStateBlindSealTxPtr ^ 1
 data AssignVecAssignVoidStateBlindSealTxid : [AssignVoidStateBlindSealTxid ^ 1..]
 
 @mnemonic(amazon-loyal-jazz)
-data AssignVoidStateBlindSealTxPtr : revealed (seal BPCore.BlindSealTxPtr, state VoidState)
-                       | secretSeal (seal BPCore.SecretSeal, state VoidState)
+data AssignVoidStateBlindSealTxPtr : revealed (seal BPSeals.BlindSealTxPtr, state VoidState)
+                       | secretSeal (seal BPSeals.SecretSeal, state VoidState)
 
 @mnemonic(labor-package-normal)
-data AssignVoidStateBlindSealTxid : revealed (seal BPCore.BlindSealTxid, state VoidState)
-                       | secretSeal (seal BPCore.SecretSeal, state VoidState)
+data AssignVoidStateBlindSealTxid : revealed (seal BPSeals.BlindSealTxid, state VoidState)
+                       | secretSeal (seal BPSeals.SecretSeal, state VoidState)
 
 @mnemonic(sabine-magic-deal)
 data AssignmentDetails : ownedStateSchema OwnedStateSchema
@@ -92,13 +88,6 @@ data AssignmentsBlindSealTxPtr : {AssignmentType -> TypedAssignsBlindSealTxPtr}
 
 @mnemonic(extra-signal-alaska)
 data AssignmentsBlindSealTxid : {AssignmentType -> TypedAssignsBlindSealTxid}
-
-@mnemonic(fiesta-gilbert-fiber)
-data BaseCommitment    : schemaId SchemaId
-                       , timestamp I64
-                       , issuer CommitVerify.StrictHash
-                       , chainNet ChainNet
-                       , sealClosingStrategy SealClosingStrategy
 
 @mnemonic(ringo-fashion-enrico)
 data ChainNet          : bitcoinMainnet | bitcoinTestnet3 | bitcoinTestnet4 | bitcoinSignet
@@ -142,8 +131,8 @@ data GlobalStateSchema : semId StrictTypes.SemId, maxItems U24
 @mnemonic(yoga-quick-jasmine)
 data GlobalStateType   : U16
 
-@mnemonic(single-rodent-appear)
-data GlobalValues      : [StructureddData ^ 1..]
+@mnemonic(john-ibiza-pony)
+data GlobalValues      : [StructuredData ^ 1..]
 
 @mnemonic(smart-pioneer-nominal)
 data Identity          : Std.AsciiPrintable, [Std.AsciiPrintable ^ ..0xfff]
@@ -165,15 +154,6 @@ data Metadata          : {MetaType -> ^ ..0xff MetaValue}
 
 @mnemonic(source-olga-mirage)
 data Occurrences       : min U16, max U16
-
-@mnemonic(oregano-dexter-exact)
-data OpCommitment      : ffv Ffv
-                       , nonce U64
-                       , opType TypeCommitment
-                       , metadata CommitVerify.StrictHash
-                       , globals CommitVerify.MerkleHash
-                       , inputs CommitVerify.MerkleHash
-                       , assignments CommitVerify.MerkleHash
 
 @mnemonic(picnic-single-gloria)
 data OpId              : [Byte ^ 32]
@@ -208,8 +188,8 @@ data SealClosingStrategy : firstOpretOrTapret | (|)
 @mnemonic(ferrari-zebra-tempo)
 data Signature         : [Byte ^ 64]
 
-@mnemonic(jerome-format-saga)
-data StructureddData   : [Byte]
+@mnemonic(nirvana-modern-bonjour)
+data StructuredData    : [Byte]
 
 @mnemonic(remark-gravity-vitamin)
 data Transition        : ffv Ffv
@@ -235,19 +215,15 @@ data TransitionSchema  : metadata {MetaType ^ ..0xff}
 @mnemonic(picture-reflex-brigade)
 data TransitionType    : U16
 
-@mnemonic(yellow-young-stone)
-data TypeCommitment    : genesis BaseCommitment
-                       | transition (ContractId, TransitionType)
-
-@mnemonic(civil-flex-palma)
+@mnemonic(brother-nancy-accent)
 data TypedAssignsBlindSealTxPtr : declarative AssignVecAssignVoidStateBlindSealTxPtr
                        | fungible AssignVecAssignFungibleStateBlindSealTxPtr
-                       | structured AssignVecAssignStructureddDataBlindSealTxPtr
+                       | structured AssignVecAssignStructuredDataBlindSealTxPtr
 
-@mnemonic(switch-orchid-kevin)
+@mnemonic(mailbox-royal-hydro)
 data TypedAssignsBlindSealTxid : declarative AssignVecAssignVoidStateBlindSealTxid
                        | fungible AssignVecAssignFungibleStateBlindSealTxid
-                       | structured AssignVecAssignStructureddDataBlindSealTxid
+                       | structured AssignVecAssignStructuredDataBlindSealTxid
 
 @mnemonic(escort-pretend-comedy)
 data Verifier          : none | (|)
