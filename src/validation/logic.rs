@@ -210,7 +210,7 @@ impl Schema {
                     .metadata()
                     .get(&meta_ty)
                     .into_iter()
-                    .map(|meta| ecdsa::Signature::from_compact(&meta).ok())
+                    .map(|meta| ecdsa::Signature::from_compact(meta).ok())
                     .next()
                     .flatten()
                 else {

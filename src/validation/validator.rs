@@ -278,7 +278,7 @@ impl<
                     WitnessStatus::Mined(witness_height) => {
                         if witness_height > safe_height {
                             unsafe_history_map
-                                .entry(witness_height.into())
+                                .entry(witness_height)
                                 .or_default()
                                 .insert(witness_id);
                         }
