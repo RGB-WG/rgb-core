@@ -22,16 +22,14 @@
 
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
-use std::num::NonZeroU32;
 use std::rc::Rc;
 
-use bp::seals::txout::{CloseMethod, Witness};
-use bp::{dbc, Tx, Txid};
+use bc::{Tx, Txid};
 use commit_verify::mpc;
-use single_use_seals::SealWitness;
+use seals::txout::Witness;
 
 use super::status::{Failure, Warning};
-use super::{CheckedConsignment, ConsignmentApi, EAnchor, Status, Validity};
+use super::{CheckedConsignment, ConsignmentApi, Status, Validity};
 use crate::operation::seal::ExposedSeal;
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd};
 use crate::{
@@ -136,7 +134,7 @@ pub struct Validator<
     input_assignments: RefCell<BTreeSet<Opout>>,
 
     resolver: CheckedWitnessResolver<&'resolver R>,
-    safe_height: Option<NonZeroU32>,
+    safe_height: Option<u32>,
 }
 
 impl<
@@ -151,7 +149,7 @@ impl<
         consignment: &'consignment C,
         resolver: &'resolver R,
         context: S::Context<'_>,
-        safe_height: Option<NonZeroU32>,
+        safe_height: Option<u32>,
     ) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
@@ -193,7 +191,7 @@ impl<
         resolver: &'resolver R,
         chain_net: ChainNet,
         context: S::Context<'_>,
-        safe_height: Option<NonZeroU32>,
+        safe_height: Option<u32>,
     ) -> Status {
         let mut validator = Self::init(consignment, resolver, context, safe_height);
         // If the chain-network pair doesn't match there is no point in validating the contract
@@ -270,10 +268,11 @@ impl<
         let mut unsafe_history_map: HashMap<u32, HashSet<Txid>> = HashMap::new();
         for transition in self.consignment.transitions() {
             let opid = transition.id();
-            let (witness_id, _) = self
+            let (_, witness_id) = self
                 .consignment
                 .anchor(opid)
                 .expect("invalid checked consignment");
+            // TODO: Remove all ordering!
             let witness_ord = match self.resolver.resolve_pub_witness_ord(witness_id) {
                 Ok(ord) => ord,
                 Err(err) => {
@@ -357,7 +356,7 @@ impl<
     fn validate_commitments(&mut self) {
         for transition in self.consignment.transitions() {
             let opid = transition.id();
-            let Some((witness_id, anchor)) = self.consignment.anchor(opid) else {
+            let Some((proof, witness_id)) = self.consignment.anchor(opid) else {
                 self.status
                     .borrow_mut()
                     .add_failure(Failure::AnchorAbsent(opid));
@@ -368,18 +367,17 @@ impl<
             let seals = self.validate_seal_definitions(transition);
 
             // [VALIDATION]: We validate that the seals were properly closed on BP-type layer
-            self.validate_seal_commitments(&seals, opid, witness_id, anchor);
+            self.validate_seal_commitments(seals, opid, proof, witness_id);
         }
     }
 
-    /// Bitcoin- and liquid-specific commitment validation using deterministic
-    /// bitcoin commitments with opret and tapret schema.
+    /// Bitcoin- and liquid-specific commitment validation using OP_RETURN commitments
     fn validate_seal_commitments(
         &self,
-        seals: impl AsRef<[OutputSeal]>,
+        seals: impl IntoIterator<Item = OutputSeal>,
         opid: OpId,
+        mpc_proof: &mpc::MerkleProof,
         witness_id: Txid,
-        anchor: &EAnchor,
     ) {
         // Check that the anchor is committed into a transaction spending all the
         // transition inputs.
@@ -401,9 +399,7 @@ impl<
                     .add_failure(Failure::SealNoPubWitness(opid, witness_id, err));
             }
             Ok(pub_witness) => {
-                let seals = seals.as_ref();
-                let witness = Witness::with(pub_witness.clone(), anchor.dbc_proof.clone());
-                self.validate_seal_closing(seals, opid, witness, anchor.mpc_proof.clone());
+                self.validate_seal_closing(seals, opid, &pub_witness, mpc_proof);
             }
         }
     }
@@ -494,34 +490,21 @@ impl<
     ///
     /// Additionally, checks that the provided message contains commitment to
     /// the bundle under the current contract.
-    fn validate_seal_closing<'seal, Seal: 'seal, Dbc: dbc::Proof>(
+    fn validate_seal_closing(
         &self,
-        seals: impl IntoIterator<Item = &'seal Seal>,
+        seals: impl IntoIterator<Item = OutputSeal>,
         opid: OpId,
-        witness: Witness<Dbc>,
-        mpc_proof: mpc::MerkleProof,
-    ) where
-        Witness<Dbc>: SealWitness<Seal, Message = mpc::Commitment>,
-    {
+        witness: &Tx,
+        mpc_proof: &mpc::MerkleProof,
+    ) {
         let message = mpc::Message::from(opid);
         let protocol = mpc::ProtocolId::from(self.contract_id);
-        let witness_id = witness.txid;
-
-        // TODO: Remove these two temporary checks once getting rid of bp-core and bp-dbc
-        assert_eq!(witness.proof.method(), CloseMethod::OpretFirst);
-        for out in witness.tx.outputs() {
-            if out.script_pubkey.is_p2tr() {
-                panic!("Not an Opret commitment!");
-            }
-            if out.script_pubkey.is_op_return() {
-                break;
-            }
-        }
+        let witness_id = witness.txid();
 
         // [VALIDATION]: Checking anchor MPC commitment
         match mpc_proof.convolve(protocol, message) {
             Err(err) => {
-                // The operation is not committed to bitcoin transaction graph!
+                // The operation is not committed to the bitcoin transaction graph!
                 // Ultimate failure. But continuing to detect the rest (after reporting it).
                 self.status
                     .borrow_mut()
@@ -530,7 +513,7 @@ impl<
             Ok(commitment) => {
                 // [VALIDATION]: CHECKING SINGLE-USE-SEALS
                 witness
-                    .verify_many_seals(seals, &commitment)
+                    .verify_seals(seals, commitment)
                     .map_err(|err| {
                         self.status.borrow_mut().add_failure(Failure::SealsInvalid(
                             opid,

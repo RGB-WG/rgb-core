@@ -32,7 +32,7 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use super::ExposedState;
 use crate::operation::seal::GenesisSeal;
 use crate::{
-    AssignmentType, ExposedSeal, FungibleState, GraphSeal, SecretSeal, StateType, StructureddData,
+    AssignmentType, ExposedSeal, FungibleState, GraphSeal, SecretSeal, StateType, StructuredData,
     VoidState, LIB_NAME_RGB_COMMIT,
 };
 
@@ -71,7 +71,7 @@ pub struct UnknownDataError;
 
 pub type AssignRights<Seal> = Assign<VoidState, Seal>;
 pub type AssignFungible<Seal> = Assign<FungibleState, Seal>;
-pub type AssignData<Seal> = Assign<StructureddData, Seal>;
+pub type AssignData<Seal> = Assign<StructuredData, Seal>;
 
 /// State data are assigned to a seal definition, which means that they are
 /// owned by a person controlling spending of the seal UTXO, unless the seal
@@ -400,7 +400,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         }
     }
 
-    pub fn as_structured_state_at(&self, index: u16) -> Result<&StructureddData, UnknownDataError> {
+    pub fn as_structured_state_at(&self, index: u16) -> Result<&StructuredData, UnknownDataError> {
         match self {
             TypedAssigns::Structured(vec) => {
                 Ok(vec.get(index as usize).ok_or(UnknownDataError)?.as_state())
@@ -418,7 +418,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         }
     }
 
-    pub fn into_structured_state_at(self, index: u16) -> Result<StructureddData, UnknownDataError> {
+    pub fn into_structured_state_at(self, index: u16) -> Result<StructuredData, UnknownDataError> {
         match self {
             TypedAssigns::Structured(vec) => {
                 if index as usize >= vec.len() {

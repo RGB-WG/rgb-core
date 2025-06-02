@@ -213,11 +213,11 @@ impl CommitEncode for Schema {
 
         e.commit_to_serialized(&self.name);
 
-        e.commit_to_map(&self.meta_types);
-        e.commit_to_map(&self.global_types);
-        e.commit_to_map(&self.owned_types);
+        e.commit_to_linear_map(&self.meta_types);
+        e.commit_to_linear_map(&self.global_types);
+        e.commit_to_linear_map(&self.owned_types);
         e.commit_to_serialized(&self.genesis);
-        e.commit_to_map(&self.transitions);
+        e.commit_to_linear_map(&self.transitions);
 
         e.commit_to_option(&self.default_assignment);
     }

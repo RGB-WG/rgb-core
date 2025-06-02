@@ -23,10 +23,10 @@
 //! Common API for accessing RGB contract operation graph, including individual
 //! state transitions, genesis, outputs, assignments & single-use-seal data.
 
-use bp::Txid;
+use bc::Txid;
+use commit_verify::mpc;
 use strict_types::TypeSystem;
 
-use super::EAnchor;
 use crate::{
     AssignmentType, AssignmentsRef, ContractId, Genesis, GlobalState, GraphSeal, Metadata,
     OpFullType, OpId, Operation, Schema, Transition, TypedAssigns,
@@ -119,7 +119,7 @@ impl<C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'_, C> {
 
     fn transitions(&self) -> impl Iterator<Item = &Transition> { self.0.transitions() }
 
-    fn anchor(&self, opid: OpId) -> Option<(Txid, &EAnchor)> { self.0.anchor(opid) }
+    fn anchor(&self, opid: OpId) -> Option<(&mpc::MerkleProof, Txid)> { self.0.anchor(opid) }
 
     fn op_witness_id(&self, opid: OpId) -> Option<Txid> { self.0.op_witness_id(opid) }
 }
@@ -148,8 +148,9 @@ pub trait ConsignmentApi {
     /// Returns iterator over all transition ids present in the consignment.
     fn transitions(&self) -> impl Iterator<Item = &Transition>;
 
-    /// Returns a grip given a bundle id.
-    fn anchor(&self, opid: OpId) -> Option<(Txid, &EAnchor)>;
+    /// Returns a an anchor - MPC Merkle proof that a given opid is committed in deterministic
+    /// bitcoin commitment.
+    fn anchor(&self, opid: OpId) -> Option<(&mpc::MerkleProof, Txid)>;
 
     /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<Txid>;

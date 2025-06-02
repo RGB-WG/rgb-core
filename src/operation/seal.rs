@@ -23,12 +23,11 @@
 use core::fmt::Debug;
 use std::hash::Hash;
 
-pub use bp::seals::txout::blind::{ChainBlindSeal, ParseError, SingleBlindSeal};
-use bp::seals::txout::ExplicitSeal;
-pub use bp::seals::txout::TxoSeal;
-pub use bp::seals::SecretSeal;
-use bp::Txid;
+use bc::Txid;
 use commit_verify::Conceal;
+pub use seals::txout::TxoSeal;
+use seals::txout::{ChainBlindSeal, ExplicitSeal, SingleBlindSeal};
+pub use seals::SecretSeal;
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 pub type GenesisSeal = SingleBlindSeal;
@@ -67,8 +66,8 @@ impl ExposedSeal for GenesisSeal {}
 #[cfg(test)]
 mod test {
     use amplify::hex::FromHex;
-    use bp::seals::txout::{BlindSeal, TxPtr};
-    use bp::Vout;
+    use bc::Vout;
+    use seals::txout::{BlindSeal, TxPtr};
 
     use super::*;
 

@@ -23,15 +23,14 @@
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::fmt::{self, Debug, Display, Formatter};
-use std::num::NonZeroU32;
 
 use amplify::num::u24;
-use bp::{BlockHeight, Outpoint, Txid};
+use bc::{Outpoint, Txid};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
     AssignmentType, AssignmentsRef, ContractId, FungibleState, Genesis, GlobalState,
-    GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType, OpId, Operation, StructureddData,
+    GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType, OpId, Operation, StructuredData,
     Transition, TransitionType, TypedAssigns, LIB_NAME_RGB_LOGIC,
 };
 
@@ -153,7 +152,7 @@ pub struct WitnessPos {
     layer1: Layer1,
 
     #[getter(as_copy)]
-    height: BlockHeight,
+    height: u32,
 
     // TODO: Remove
     #[getter(as_copy)]
@@ -164,7 +163,7 @@ impl StrictDumb for WitnessPos {
     fn strict_dumb() -> Self {
         Self {
             layer1: Layer1::Bitcoin,
-            height: NonZeroU32::MIN,
+            height: 1,
             timestamp: 1231006505,
         }
     }
@@ -177,15 +176,7 @@ const BITCOIN_GENESIS_TIMESTAMP: i64 = 1231006505;
 const LIQUID_GENESIS_TIMESTAMP: i64 = 1296692202;
 
 impl WitnessPos {
-    #[deprecated(
-        since = "0.11.0-beta.9",
-        note = "please use `WitnessPos::bitcoin` or `WitnessPos::liquid` instead"
-    )]
-    pub fn new(height: NonZeroU32, timestamp: i64) -> Option<Self> {
-        Self::bitcoin(height, timestamp)
-    }
-
-    pub fn bitcoin(height: NonZeroU32, timestamp: i64) -> Option<Self> {
+    pub fn bitcoin(height: u32, timestamp: i64) -> Option<Self> {
         if timestamp < BITCOIN_GENESIS_TIMESTAMP {
             return None;
         }
@@ -196,7 +187,7 @@ impl WitnessPos {
         })
     }
 
-    pub fn liquid(height: NonZeroU32, timestamp: i64) -> Option<Self> {
+    pub fn liquid(height: u32, timestamp: i64) -> Option<Self> {
         if timestamp < LIQUID_GENESIS_TIMESTAMP {
             return None;
         }
@@ -386,7 +377,7 @@ impl GlobalOrd {
 }
 
 pub trait GlobalStateIter {
-    type Data: Borrow<StructureddData>;
+    type Data: Borrow<StructuredData>;
     fn size(&mut self) -> u24;
     fn prev(&mut self) -> Option<(GlobalOrd, Self::Data)>;
     fn last(&mut self) -> Option<(GlobalOrd, Self::Data)>;
@@ -438,7 +429,7 @@ impl<I: GlobalStateIter> GlobalContractState<I> {
     /// Retrieves global state data located `depth` items back from the most
     /// recent global state value. Ensures that the global state ordering is
     /// consensus-based.
-    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<StructureddData> + '_> {
+    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<StructuredData> + '_> {
         if depth > self.iter.size() {
             return None;
         }
@@ -491,7 +482,7 @@ pub trait ContractStateAccess: Debug {
         &self,
         outpoint: Outpoint,
         ty: AssignmentType,
-    ) -> impl DoubleEndedIterator<Item = impl Borrow<StructureddData>>;
+    ) -> impl DoubleEndedIterator<Item = impl Borrow<StructuredData>>;
 }
 
 pub trait ContractStateEvolve {
@@ -507,23 +498,23 @@ mod test {
 
     #[test]
     fn witness_post_timestamp() {
-        assert_eq!(WitnessPos::bitcoin(NonZeroU32::MIN, BITCOIN_GENESIS_TIMESTAMP - 1), None);
-        assert_eq!(WitnessPos::liquid(NonZeroU32::MIN, LIQUID_GENESIS_TIMESTAMP - 1), None);
-        assert_eq!(WitnessPos::liquid(NonZeroU32::MIN, BITCOIN_GENESIS_TIMESTAMP), None);
-        assert!(WitnessPos::bitcoin(NonZeroU32::MIN, BITCOIN_GENESIS_TIMESTAMP).is_some());
-        assert!(WitnessPos::liquid(NonZeroU32::MIN, LIQUID_GENESIS_TIMESTAMP).is_some());
-        assert!(WitnessPos::bitcoin(NonZeroU32::MIN, LIQUID_GENESIS_TIMESTAMP).is_some());
+        assert_eq!(WitnessPos::bitcoin(1, BITCOIN_GENESIS_TIMESTAMP - 1), None);
+        assert_eq!(WitnessPos::liquid(1, LIQUID_GENESIS_TIMESTAMP - 1), None);
+        assert_eq!(WitnessPos::liquid(1, BITCOIN_GENESIS_TIMESTAMP), None);
+        assert!(WitnessPos::bitcoin(1, BITCOIN_GENESIS_TIMESTAMP).is_some());
+        assert!(WitnessPos::liquid(1, LIQUID_GENESIS_TIMESTAMP).is_some());
+        assert!(WitnessPos::bitcoin(1, LIQUID_GENESIS_TIMESTAMP).is_some());
     }
 
     #[test]
     fn witness_pos_getters() {
-        let pos = WitnessPos::bitcoin(NonZeroU32::MIN, BITCOIN_GENESIS_TIMESTAMP).unwrap();
-        assert_eq!(pos.height(), NonZeroU32::MIN);
+        let pos = WitnessPos::bitcoin(1, BITCOIN_GENESIS_TIMESTAMP).unwrap();
+        assert_eq!(pos.height(), 1);
         assert_eq!(pos.timestamp(), BITCOIN_GENESIS_TIMESTAMP);
         assert_eq!(pos.layer1(), Layer1::Bitcoin);
 
-        let pos = WitnessPos::liquid(NonZeroU32::MIN, LIQUID_GENESIS_TIMESTAMP).unwrap();
-        assert_eq!(pos.height(), NonZeroU32::MIN);
+        let pos = WitnessPos::liquid(1, LIQUID_GENESIS_TIMESTAMP).unwrap();
+        assert_eq!(pos.height(), 1);
         assert_eq!(pos.timestamp(), LIQUID_GENESIS_TIMESTAMP);
         assert_eq!(pos.layer1(), Layer1::Liquid);
     }

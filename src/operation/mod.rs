@@ -34,11 +34,8 @@ mod commit;
 pub use assignments::{
     Assign, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef, TypedAssigns,
 };
-pub use commit::{
-    AssignmentCommitment, AssignmentIndex, BaseCommitment, ContractId, DiscloseHash,
-    GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
-};
-pub use data::{StructureddData, VoidState};
+pub use commit::{ContractId, OpId};
+pub use data::{StructuredData, VoidState};
 pub use fungible::FungibleState;
 pub use global::{GlobalState, GlobalValues};
 pub use layer1::{ChainNet, Layer1};

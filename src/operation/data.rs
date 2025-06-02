@@ -45,14 +45,14 @@ impl ExposedState for VoidState {
 #[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-pub struct StructureddData(SmallBlob);
+pub struct StructuredData(SmallBlob);
 
-impl StructureddData {
+impl StructuredData {
     /// Convenience constructor.
     pub fn new(value: impl Into<SmallBlob>) -> Self { Self(value.into()) }
 }
 
-impl ExposedState for StructureddData {
+impl ExposedState for StructuredData {
     fn state_type(&self) -> StateType { StateType::Structured }
     fn state_data(&self) -> AnyState { AnyState::Structured(self.clone()) }
 }
@@ -65,14 +65,14 @@ mod _serde {
 
     use super::*;
 
-    impl Serialize for StructureddData {
+    impl Serialize for StructuredData {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer {
             serializer.serialize_str(&self.to_string())
         }
     }
 
-    impl<'de> Deserialize<'de> for StructureddData {
+    impl<'de> Deserialize<'de> for StructuredData {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de> {
             let s = String::deserialize(deserializer)?;

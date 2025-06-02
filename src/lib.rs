@@ -44,7 +44,7 @@ pub mod vm;
 pub mod stl;
 
 pub mod prelude {
-    pub use bp::Txid;
+    pub use bc::Txid;
     pub use operation::*;
     pub use schema::*;
 

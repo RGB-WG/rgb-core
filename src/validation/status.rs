@@ -25,7 +25,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::{self, Display, Formatter};
 
 use amplify::num::u24;
-use bp::Txid;
+use bc::Txid;
 use commit_verify::mpc::InvalidProof;
 use strict_types::SemId;
 

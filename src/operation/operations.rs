@@ -20,21 +20,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{btree_set, BTreeMap};
+use std::collections::btree_set;
 use std::iter;
 use std::num::ParseIntError;
 
-use amplify::confinement::{Confined, NonEmptyOrdSet, TinyOrdSet, U16};
+use amplify::confinement::{NonEmptyOrdSet, U16};
 use amplify::{hex, Bytes64, Wrapper};
-use commit_verify::{CommitEncode, CommitEngine, CommitId, MerkleHash, MerkleLeaves, StrictHash};
+use commit_verify::{CommitEncode, CommitId, MerkleHash, MerkleLeaves, StrictHash};
 use strict_encoding::stl::AsciiPrintable;
 use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize};
 
 use crate::schema::{OpFullType, SchemaId, TransitionType};
 use crate::{
-    Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ChainNet, ContractId,
-    DiscloseHash, ExposedState, Ffv, FungibleState, GenesisSeal, GlobalState, GraphSeal, Metadata,
-    OpDisclose, OpId, SecretSeal, StructureddData, TypedAssigns, VoidState, LIB_NAME_RGB_COMMIT,
+    AssignmentType, Assignments, AssignmentsRef, ChainNet, ContractId, Ffv, GenesisSeal,
+    GlobalState, GraphSeal, Metadata, OpId, TypedAssigns, LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -96,9 +95,8 @@ impl<'a> IntoIterator for &'a Inputs {
 
 impl MerkleLeaves for Inputs {
     type Leaf = Opout;
-    type LeafIter<'tmp> = <TinyOrdSet<Opout> as MerkleLeaves>::LeafIter<'tmp>;
 
-    fn merkle_leaves(&self) -> Self::LeafIter<'_> { self.0.merkle_leaves() }
+    fn merkle_leaves(&self) -> impl ExactSizeIterator<Item = &Self::Leaf> { self.0.merkle_leaves() }
 }
 
 /// RGB contract operation API, defined as trait
@@ -130,50 +128,6 @@ pub trait Operation {
     fn assignments(&self) -> AssignmentsRef;
 
     fn assignments_by_type(&self, t: AssignmentType) -> Option<TypedAssigns<GraphSeal>>;
-
-    /// Provides summary about parts of the operation which are revealed.
-    fn disclose(&self) -> OpDisclose {
-        fn proc_seals<State: ExposedState>(
-            ty: AssignmentType,
-            a: &[Assign<State, GraphSeal>],
-            seals: &mut BTreeMap<AssignmentIndex, SecretSeal>,
-            state: &mut BTreeMap<AssignmentIndex, State>,
-        ) {
-            for (index, assignment) in a.iter().enumerate() {
-                if let Some(seal) = assignment.revealed_seal() {
-                    seals.insert(AssignmentIndex::new(ty, index as u16), seal.to_secret_seal());
-                }
-                state.insert(AssignmentIndex::new(ty, index as u16), assignment.as_state().clone());
-            }
-        }
-
-        let mut seals: BTreeMap<AssignmentIndex, SecretSeal> = bmap!();
-        let mut void: BTreeMap<AssignmentIndex, VoidState> = bmap!();
-        let mut fungible: BTreeMap<AssignmentIndex, FungibleState> = bmap!();
-        let mut data: BTreeMap<AssignmentIndex, StructureddData> = bmap!();
-        for (ty, assigns) in self.assignments().flat() {
-            match assigns {
-                TypedAssigns::Declarative(a) => {
-                    proc_seals(ty, &a, &mut seals, &mut void);
-                }
-                TypedAssigns::Fungible(a) => {
-                    proc_seals(ty, &a, &mut seals, &mut fungible);
-                }
-                TypedAssigns::Structured(a) => {
-                    proc_seals(ty, &a, &mut seals, &mut data);
-                }
-            }
-        }
-
-        OpDisclose {
-            id: self.id(),
-            seals: Confined::from_checked(seals),
-            fungible: Confined::from_iter_checked(fungible),
-            data: Confined::from_checked(data),
-        }
-    }
-
-    fn disclose_hash(&self) -> DiscloseHash { self.disclose().commit_id() }
 }
 
 /// An ASCII printable string up to 4096 chars representing identity of the
@@ -226,6 +180,8 @@ pub enum SealClosingStrategy {
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[derive(CommitEncode)]
+#[commit_encode(id = OpId, strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -261,6 +217,8 @@ pub struct Signature(Bytes64);
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
+#[derive(CommitEncode)]
+#[commit_encode(id = OpId, strategy = strict)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -280,16 +238,6 @@ pub struct Transition {
 
 impl StrictSerialize for Transition {}
 impl StrictDeserialize for Transition {}
-
-impl CommitEncode for Genesis {
-    type CommitmentId = OpId;
-    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_serialized(&self.commit()) }
-}
-
-impl CommitEncode for Transition {
-    type CommitmentId = OpId;
-    fn commit_encode(&self, e: &mut CommitEngine) { e.commit_to_serialized(&self.commit()) }
-}
 
 impl Transition {
     /// Returns reference to information about the owned rights in form of

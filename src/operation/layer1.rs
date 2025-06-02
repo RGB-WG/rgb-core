@@ -22,7 +22,7 @@
 
 use std::str::FromStr;
 
-use bp::BlockHash;
+use bc::BlockHash;
 use strict_encoding::{StrictDecode, StrictEncode, StrictType};
 
 use crate::{LIB_NAME_RGB_COMMIT, LIB_NAME_RGB_LOGIC};
