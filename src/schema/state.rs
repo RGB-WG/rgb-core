@@ -21,7 +21,6 @@
 // limitations under the License.
 
 use amplify::num::u24;
-use strict_encoding::Primitive;
 use strict_types::SemId;
 
 use crate::{StateType, LIB_NAME_RGB_COMMIT};
@@ -37,7 +36,7 @@ use crate::{StateType, LIB_NAME_RGB_COMMIT};
 pub enum OwnedStateSchema {
     #[strict_type(dumb)]
     Declarative,
-    Fungible(FungibleType),
+    Fungible,
     Structured(SemId),
 }
 
@@ -45,7 +44,7 @@ impl OwnedStateSchema {
     pub fn state_type(&self) -> StateType {
         match self {
             OwnedStateSchema::Declarative => StateType::Void,
-            OwnedStateSchema::Fungible(_) => StateType::Fungible,
+            OwnedStateSchema::Fungible => StateType::Fungible,
             OwnedStateSchema::Structured(_) => StateType::Structured,
         }
     }
@@ -57,21 +56,6 @@ impl OwnedStateSchema {
             None
         }
     }
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Display)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[repr(u8)]
-pub enum FungibleType {
-    #[default]
-    #[display("64bit")]
-    Unsigned64Bit = Primitive::U64.into_code(),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]

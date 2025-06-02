@@ -38,8 +38,8 @@ use strict_encoding::StrictDumb;
 
 use crate::{
     impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ChainNet, ExposedSeal,
-    ExposedState, Ffv, Genesis, GlobalState, GlobalStateType, Operation, RevealedData,
-    RevealedState, RevealedValue, SchemaId, SealClosingStrategy, SecretSeal, Transition,
+    ExposedState, Ffv, FungibleState, Genesis, GlobalState, GlobalStateType, Operation,
+    RevealedData, RevealedState, SchemaId, SealClosingStrategy, SecretSeal, Transition,
     TransitionBundle, TransitionType, TypedAssigns, LIB_NAME_RGB_COMMIT,
 };
 
@@ -188,7 +188,7 @@ impl AssignmentIndex {
 pub struct OpDisclose {
     pub id: OpId,
     pub seals: MediumOrdMap<AssignmentIndex, SecretSeal>,
-    pub fungible: MediumOrdMap<AssignmentIndex, RevealedValue>,
+    pub fungible: MediumOrdMap<AssignmentIndex, FungibleState>,
     pub data: MediumOrdMap<AssignmentIndex, RevealedData>,
 }
 

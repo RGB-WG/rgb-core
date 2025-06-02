@@ -309,14 +309,6 @@ pub enum Failure {
         expected: StateType,
         found: StateType,
     },
-    /// state in {opid}/{state_type} is of {found} type, while schema requires
-    /// it to be {expected}.
-    FungibleTypeMismatch {
-        opid: OpId,
-        state_type: schema::AssignmentType,
-        expected: schema::FungibleType,
-        found: schema::FungibleType,
-    },
     /// evaluation of AluVM script for operation {0} has failed with the code
     /// {1:?} and message {2:?}.
     ScriptFailure(OpId, Option<u8>, Option<String>),

@@ -32,7 +32,7 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use super::ExposedState;
 use crate::operation::seal::GenesisSeal;
 use crate::{
-    AssignmentType, ExposedSeal, GraphSeal, RevealedData, RevealedValue, SecretSeal, StateType,
+    AssignmentType, ExposedSeal, FungibleState, GraphSeal, RevealedData, SecretSeal, StateType,
     VoidState, LIB_NAME_RGB_COMMIT,
 };
 
@@ -70,7 +70,7 @@ impl<A: StrictDumb + StrictEncode + StrictDecode> IntoIterator for AssignVec<A> 
 pub struct UnknownDataError;
 
 pub type AssignRights<Seal> = Assign<VoidState, Seal>;
-pub type AssignFungible<Seal> = Assign<RevealedValue, Seal>;
+pub type AssignFungible<Seal> = Assign<FungibleState, Seal>;
 pub type AssignData<Seal> = Assign<RevealedData, Seal>;
 
 /// State data are assigned to a seal definition, which means that they are
@@ -410,7 +410,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         }
     }
 
-    pub fn as_fungible_state_at(&self, index: u16) -> Result<&RevealedValue, UnknownDataError> {
+    pub fn as_fungible_state_at(&self, index: u16) -> Result<&FungibleState, UnknownDataError> {
         match self {
             TypedAssigns::Fungible(vec) => Ok(vec
                 .get(index as usize)
@@ -432,7 +432,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         }
     }
 
-    pub fn into_fungible_state_at(self, index: u16) -> Result<RevealedValue, UnknownDataError> {
+    pub fn into_fungible_state_at(self, index: u16) -> Result<FungibleState, UnknownDataError> {
         match self {
             TypedAssigns::Fungible(vec) => {
                 if index as usize >= vec.len() {

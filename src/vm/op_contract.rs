@@ -269,8 +269,8 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 match context.op_info.prev_state.get($state_type) {
                     Some(TypedAssigns::Fungible(state)) => {
                         let mut values = vec![];
-                        for assign in state.iter().map(Assign::as_revealed_state) {
-                            values.push(assign.as_inner().as_u64())
+                        for val in state.iter().map(Assign::as_revealed_state) {
+                            values.push(val.into_inner())
                         }
                         values
                     }
@@ -284,8 +284,8 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 match context.op_info.owned_state().get(*$state_type) {
                     Some(TypedAssigns::Fungible(state)) => {
                         let mut values = vec![];
-                        for assign in state.iter().map(Assign::as_revealed_state) {
-                            values.push(assign.as_inner().as_u64())
+                        for val in state.iter().map(Assign::as_revealed_state) {
+                            values.push(val.into_inner())
                         }
                         values
                     }
@@ -385,7 +385,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 else {
                     fail!()
                 };
-                regs.set_n(RegA::A64, *reg, state.as_inner().as_u64());
+                regs.set_n(RegA::A64, *reg, state.as_inner());
             }
             ContractOp::LdG(state_type, reg_8, reg_s) => {
                 let Some(reg_32) = *regs.get_n(RegA::A8, *reg_8) else {

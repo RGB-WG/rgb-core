@@ -25,7 +25,7 @@ use core::hash::Hash;
 
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
-use crate::{RevealedData, RevealedValue};
+use crate::{FungibleState, RevealedData};
 
 /// Marker trait for types of state holding explicit state data.
 pub trait ExposedState:
@@ -63,7 +63,7 @@ pub enum StateType {
 )]
 pub enum RevealedState {
     Void,
-    Fungible(RevealedValue),
+    Fungible(FungibleState),
     Structured(RevealedData),
 }
 

@@ -33,8 +33,8 @@ use strict_encoding::{RString, StrictDeserialize, StrictEncode, StrictSerialize}
 use crate::schema::{OpFullType, SchemaId, TransitionType};
 use crate::{
     Assign, AssignmentIndex, AssignmentType, Assignments, AssignmentsRef, ChainNet, ContractId,
-    DiscloseHash, ExposedState, Ffv, GenesisSeal, GlobalState, GraphSeal, Metadata, OpDisclose,
-    OpId, RevealedData, RevealedValue, SecretSeal, TypedAssigns, VoidState, LIB_NAME_RGB_COMMIT,
+    DiscloseHash, ExposedState, Ffv, FungibleState, GenesisSeal, GlobalState, GraphSeal, Metadata,
+    OpDisclose, OpId, RevealedData, SecretSeal, TypedAssigns, VoidState, LIB_NAME_RGB_COMMIT,
 };
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
@@ -152,7 +152,7 @@ pub trait Operation {
 
         let mut seals: BTreeMap<AssignmentIndex, SecretSeal> = bmap!();
         let mut void: BTreeMap<AssignmentIndex, VoidState> = bmap!();
-        let mut fungible: BTreeMap<AssignmentIndex, RevealedValue> = bmap!();
+        let mut fungible: BTreeMap<AssignmentIndex, FungibleState> = bmap!();
         let mut data: BTreeMap<AssignmentIndex, RevealedData> = bmap!();
         for (ty, assigns) in self.assignments().flat() {
             match assigns {

@@ -41,7 +41,7 @@ pub use commit::{
     DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
 };
 pub use data::{RevealedData, VoidState};
-pub use fungible::{FungibleState, RevealedValue};
+pub use fungible::FungibleState;
 pub use global::{GlobalState, GlobalValues};
 pub use layer1::{ChainNet, Layer1};
 pub use meta::{MetaValue, Metadata, MetadataError};
