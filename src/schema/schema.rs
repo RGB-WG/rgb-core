@@ -24,7 +24,6 @@ use std::cmp::Ordering;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use aluvm::library::LibId;
 use amplify::confinement::TinyOrdMap;
 use amplify::{ByteArray, Bytes32};
 use baid64::{Baid64ParseError, DisplayBaid64, FromBaid64Str};
@@ -258,19 +257,6 @@ impl Schema {
                     .values()
                     .filter_map(|ai| OwnedStateSchema::sem_id(&ai.owned_state_schema)),
             )
-    }
-
-    pub fn libs(&self) -> impl Iterator<Item = LibId> + '_ {
-        self.genesis
-            .validator
-            .iter()
-            .copied()
-            .chain(
-                self.transitions
-                    .values()
-                    .filter_map(|i| i.transition_schema.validator),
-            )
-            .map(|site| site.lib)
     }
 
     pub fn default_transition_for_assignment(

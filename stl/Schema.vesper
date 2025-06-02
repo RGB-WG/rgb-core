@@ -62,9 +62,6 @@ rec Schema
       rec value, Occurrences
         is min, U16
         is max, U16
-      rec some, LibSite, option, wrapped, tag 1
-        bytes lib, len 32, aka LibId
-        is pos, U16
   map transitions, len 0..MAX8
     is key, U16, aka TransitionType
     rec value, TransitionDetails
@@ -86,9 +83,7 @@ rec Schema
           rec value, Occurrences
             is min, U16
             is max, U16
-          rec some, LibSite, option, wrapped, tag 1
-            bytes lib, len 32, aka LibId
-            is pos, U16
+        enum verifier, Verifier, none 0
       ascii name, aka FieldName, first AlphaSmallLodash, rest AlphaNumLodash, len 1..100
     is some, U16, option, wrapped, aka AssignmentType, tag 1
 

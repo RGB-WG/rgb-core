@@ -25,10 +25,6 @@ use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
-use aluvm::data::Number;
-use aluvm::isa::Instr;
-use aluvm::reg::{Reg32, RegA};
-use aluvm::Vm;
 use amplify::confinement::{Confined, NonEmptyVec};
 use amplify::Wrapper;
 use strict_types::TypeSystem;
@@ -36,12 +32,12 @@ use strict_types::TypeSystem;
 use crate::assignments::AssignVec;
 use crate::schema::{AssignmentsSchema, GlobalSchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
-use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OrdOpRef, RgbIsa, VmContext};
+use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef};
 use crate::{
     validation, AnyState, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal,
     ExposedState, GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema,
     Metadata, OpId, Operation, Opout, OwnedStateSchema, Schema, SealClosingStrategy, Transition,
-    TypedAssigns,
+    TypedAssigns, Verifier,
 };
 
 impl Schema {
@@ -75,7 +71,7 @@ impl Schema {
                     &self.genesis.globals,
                     &empty_assign_schema,
                     &self.genesis.assignments,
-                    self.genesis.validator,
+                    Verifier::None,
                     None::<u16>,
                 )
             }
@@ -111,7 +107,7 @@ impl Schema {
                     &transition_schema.globals,
                     &transition_schema.inputs,
                     &transition_schema.assignments,
-                    transition_schema.validator,
+                    transition_schema.verifier,
                     Some(transition_type.into_inner()),
                 )
             }
@@ -136,40 +132,16 @@ impl Schema {
             }
         };
 
-        let genesis = consignment.genesis();
-        let op_info = OpInfo::with(opid, &op, &prev_state);
-        let context = VmContext {
-            contract_id: genesis.contract_id(),
-            op_info,
-            contract_state,
-        };
-
-        // We need to run scripts as the very last step, since before that
-        // we need to make sure that the operation data match the schema, so
-        // scripts are not required to validate the structure of the state
-        if let Some(validator) = validator {
-            let scripts = consignment.scripts();
-            let mut vm = Vm::<Instr<RgbIsa<S>>>::new();
-            if let Some(ty) = ty {
-                vm.registers.set_n(RegA::A16, Reg32::Reg0, ty);
-            }
-            if !vm.exec(validator, |id| scripts.get(&id), &context) {
-                let error_code: Option<Number> = vm.registers.get_n(RegA::A8, Reg32::Reg0).into();
-                status.add_failure(validation::Failure::ScriptFailure(
-                    opid,
-                    error_code.map(u8::from),
-                    None,
-                ));
-                // We return here since all other validations will have no valid state to access
-                return status;
-            }
-            let contract_state = context.contract_state;
-            if contract_state.borrow_mut().evolve_state(op).is_err() {
-                status.add_failure(validation::Failure::ContractStateFilled(opid));
-                // We return here since all other validations will have no valid state to access
-                return status;
-            }
+        // Run the validation logic
+        match validator {
+            Verifier::None => {}
         }
+        if contract_state.borrow_mut().evolve_state(op).is_err() {
+            status.add_failure(validation::Failure::ContractStateFilled(opid));
+            // We return here since all other validations will have no valid state to access
+            return status;
+        }
+
         status
     }
 

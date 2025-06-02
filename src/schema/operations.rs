@@ -20,7 +20,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use aluvm::library::LibSite;
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::Wrapper;
 
@@ -108,8 +107,6 @@ pub struct GenesisSchema {
     pub metadata: MetaSchema,
     pub globals: GlobalSchema,
     pub assignments: AssignmentsSchema,
-    // NB: it is possible to transform option into enum covering other virtual machines
-    pub validator: Option<LibSite>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
@@ -125,7 +122,7 @@ pub struct TransitionSchema {
     pub globals: GlobalSchema,
     pub inputs: InputsSchema,
     pub assignments: AssignmentsSchema,
-    pub validator: Option<LibSite>,
+    pub verifier: Verifier,
 }
 
 impl OpSchema for GenesisSchema {
@@ -148,4 +145,18 @@ impl OpSchema for TransitionSchema {
     fn inputs(&self) -> Option<&AssignmentsSchema> { Some(&self.inputs) }
     #[inline]
     fn assignments(&self) -> &AssignmentsSchema { &self.assignments }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, try_from_u8, into_u8)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+#[repr(u8)]
+pub enum Verifier {
+    #[default]
+    None = 0,
 }

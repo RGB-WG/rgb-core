@@ -26,7 +26,6 @@ amplify = { version = "~4.8.0", features = ["rand"] }
 baid64 = "~0.4.1"
 strict_encoding = "~2.8.2"
 strict_types = { version = "~2.8.3", features = ["armor"] }
-aluvm = { version = "~0.11.1-alpha.2", features = ["std", "ascii-armor"] }
 commit_verify = { version = "0.11.1-alpha.2", features = ["rand", "derive"] }
 single_use_seals = "~0.11.1-alpha.2"
 bp-core = { version = "~0.11.1-alpha.2" }
@@ -36,7 +35,7 @@ serde_crate = { package = "serde", version = "1", features = ["derive"], optiona
 [features]
 default = []
 all = ["stl", "serde"]
-stl = ["commit_verify/stl", "bp-core/stl", "aluvm/stl"]
+stl = ["commit_verify/stl", "bp-core/stl"]
 serde = [
     "serde_crate",
     "amplify/serde",
@@ -44,7 +43,6 @@ serde = [
     "strict_types/serde",
     "commit_verify/serde",
     "bp-core/serde",
-    "aluvm/serde",
     "secp256k1/serde"
 ]
 

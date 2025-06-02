@@ -296,9 +296,7 @@ pub enum Failure {
         expected: StateType,
         found: StateType,
     },
-    /// evaluation of AluVM script for operation {0} has failed with the code
-    /// {1:?} and message {2:?}.
-    ScriptFailure(OpId, Option<u8>, Option<String>),
+
     /// contract state can't fit more data (at operation id {0}).
     ContractStateFilled(OpId),
 

@@ -1,5 +1,5 @@
 {-
-  Id: stl:4j4rCC1R-6vHqghw-KSKgmbD-Ec9DPDA-IRqa6~L-aZ_1GRM#susan-olympic-minute
+  Id: stl:2cchW1ud-aDIF0xy-igHwZpu-9QOBMjc-aiO_rs7-ph0Dua0#ralph-chris-hotel
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -26,10 +26,6 @@ import Std#delete-roman-hair
   use AlphaNumLodash#percent-bingo-caesar
   use AlphaCapsLodash#duet-hammer-labor
   use AlphaSmallLodash#pioneer-eagle-spell
-
-import AluVM#jargon-gorilla-poetic
-  use LibSite#ultra-grace-message
-  use LibId#germany-culture-olivia
 
 import StrictTypes#henry-heart-survive
   use FieldName#present-flute-herman
@@ -129,11 +125,10 @@ data Genesis           : ffv Ffv
                        , globals GlobalState
                        , assignments AssignmentsBlindSealTxid
 
-@mnemonic(strong-mister-version)
+@mnemonic(organic-tahiti-career)
 data GenesisSchema     : metadata {MetaType ^ ..0xff}
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
-                       , validator AluVM.LibSite?
 
 @mnemonic(eddie-super-cartoon)
 data GlobalDetails     : globalStateSchema GlobalStateSchema, name StrictTypes.FieldName
@@ -230,12 +225,12 @@ data Transition        : ffv Ffv
 @mnemonic(orbit-pattern-goblin)
 data TransitionDetails : transitionSchema TransitionSchema, name StrictTypes.FieldName
 
-@mnemonic(scratch-magnum-polaris)
+@mnemonic(binary-square-basket)
 data TransitionSchema  : metadata {MetaType ^ ..0xff}
                        , globals {GlobalStateType -> ^ ..0xff Occurrences}
                        , inputs {AssignmentType -> ^ ..0xff Occurrences}
                        , assignments {AssignmentType -> ^ ..0xff Occurrences}
-                       , validator AluVM.LibSite?
+                       , verifier Verifier
 
 @mnemonic(picture-reflex-brigade)
 data TransitionType    : U16
@@ -253,6 +248,10 @@ data TypedAssignsBlindSealTxPtr : declarative AssignVecAssignVoidStateBlindSealT
 data TypedAssignsBlindSealTxid : declarative AssignVecAssignVoidStateBlindSealTxid
                        | fungible AssignVecAssignFungibleStateBlindSealTxid
                        | structured AssignVecAssignStructureddDataBlindSealTxid
+
+@mnemonic(escort-pretend-comedy)
+data Verifier          : none | (|)
+
 
 @mnemonic(email-snow-safari)
 data VoidState         : ()

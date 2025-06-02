@@ -20,7 +20,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use aluvm::stl::aluvm_stl;
 pub use bp::bc::stl::{bp_consensus_stl, bp_tx_stl};
 pub use bp::stl::bp_core_stl;
 use bp::Txid;
@@ -35,10 +34,10 @@ use crate::{Genesis, OpCommitment, Schema, Transition, LIB_NAME_RGB_COMMIT, LIB_
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_COMMIT: &str =
-    "stl:4j4rCC1R-6vHqghw-KSKgmbD-Ec9DPDA-IRqa6~L-aZ_1GRM#susan-olympic-minute";
+    "stl:2cchW1ud-aDIF0xy-igHwZpu-9QOBMjc-aiO_rs7-ph0Dua0#ralph-chris-hotel";
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_LOGIC: &str =
-    "stl:iCs0AShc-KXU0vsu-te5lPow-NY7LYgX-i~LFvvl-1hVcbRw#jump-heaven-binary";
+    "stl:NsWww4jr-kCiM8Nn-cCkVgU4-d2BYla2-S0e7r9D-1B8AzBE#malta-dispute-trapeze";
 
 fn _rgb_commit_stl() -> Result<TypeLib, Box<CompileError>> {
     Ok(LibBuilder::with(libname!(LIB_NAME_RGB_COMMIT), [
@@ -47,7 +46,6 @@ fn _rgb_commit_stl() -> Result<TypeLib, Box<CompileError>> {
         commit_verify_stl().to_dependency_types(),
         bp_tx_stl().to_dependency_types(),
         bp_core_stl().to_dependency_types(),
-        aluvm_stl().to_dependency_types(),
     ])
     .transpile::<Schema>()
     .transpile::<Genesis>()
@@ -64,7 +62,6 @@ fn _rgb_logic_stl() -> Result<TypeLib, Box<CompileError>> {
         commit_verify_stl().to_dependency_types(),
         bp_consensus_stl().to_dependency_types(),
         bp_core_stl().to_dependency_types(),
-        aluvm_stl().to_dependency_types(),
         rgb_commit_stl().to_dependency_types(),
     ])
     .transpile::<GlobalOrd>()

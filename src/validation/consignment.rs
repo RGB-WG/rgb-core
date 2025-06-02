@@ -23,8 +23,6 @@
 //! Common API for accessing RGB contract operation graph, including individual
 //! state transitions, genesis, outputs, assignments & single-use-seal data.
 
-use aluvm::library::{Lib, LibId};
-use amplify::confinement::ConfinedOrdMap;
 use bp::Txid;
 use strict_types::TypeSystem;
 
@@ -35,8 +33,6 @@ use crate::{
 };
 
 pub const CONSIGNMENT_MAX_LIBS: usize = 1024;
-
-pub type Scripts = ConfinedOrdMap<LibId, Lib, 0, CONSIGNMENT_MAX_LIBS>;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, From)]
 pub enum OpRef<'op> {
@@ -115,8 +111,6 @@ impl<C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'_, C> {
 
     fn types(&self) -> &TypeSystem { self.0.types() }
 
-    fn scripts(&self) -> &Scripts { self.0.scripts() }
-
     fn operation(&self, opid: OpId) -> Option<OpRef> {
         self.0.operation(opid).filter(|op| op.id() == opid)
     }
@@ -143,10 +137,6 @@ pub trait ConsignmentApi {
 
     /// Returns reference to the type system.
     fn types(&self) -> &TypeSystem;
-
-    /// Returns reference to a collection of AluVM libraries used for the
-    /// validation.
-    fn scripts(&self) -> &Scripts;
 
     /// Retrieves reference to an operation (genesis or state transition) matching the provided id,
     /// or `None` otherwise

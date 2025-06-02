@@ -21,18 +21,16 @@
 // limitations under the License.
 
 use std::borrow::Borrow;
-use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::num::NonZeroU32;
-use std::rc::Rc;
 
 use amplify::num::u24;
 use bp::{BlockHeight, Outpoint, Txid};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    AssignmentType, Assignments, AssignmentsRef, ContractId, FungibleState, Genesis, GlobalState,
+    AssignmentType, AssignmentsRef, ContractId, FungibleState, Genesis, GlobalState,
     GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType, OpId, Operation, StructureddData,
     Transition, TransitionType, TypedAssigns, LIB_NAME_RGB_LOGIC,
 };
@@ -501,30 +499,6 @@ pub trait ContractStateEvolve {
     type Error: std::error::Error;
     fn init(context: Self::Context<'_>) -> Self;
     fn evolve_state(&mut self, op: OrdOpRef) -> Result<(), Self::Error>;
-}
-
-pub struct VmContext<'op, S: ContractStateAccess> {
-    pub contract_id: ContractId,
-    pub op_info: OpInfo<'op>,
-    pub contract_state: Rc<RefCell<S>>,
-}
-
-pub struct OpInfo<'op> {
-    pub id: OpId,
-    pub prev_state: &'op Assignments<GraphSeal>,
-    pub op: &'op OrdOpRef<'op>,
-}
-
-impl<'op> OpInfo<'op> {
-    pub fn with(id: OpId, op: &'op OrdOpRef<'op>, prev_state: &'op Assignments<GraphSeal>) -> Self {
-        OpInfo { id, prev_state, op }
-    }
-
-    pub fn global(&self) -> &'op GlobalState { self.op.globals() }
-
-    pub fn metadata(&self) -> &'op Metadata { self.op.metadata() }
-
-    pub fn owned_state(&self) -> AssignmentsRef<'op> { self.op.assignments() }
 }
 
 #[cfg(test)]

@@ -23,7 +23,6 @@
 use std::fs;
 use std::io::Write;
 
-use aluvm::stl::aluvm_stl;
 use bp::stl::bp_core_stl;
 use commit_verify::stl::commit_verify_stl;
 use commit_verify::CommitmentLayout;
@@ -75,14 +74,11 @@ fn main() {
     let bp = bp_core_stl();
     let cv = commit_verify_stl();
     let st = strict_types_stl();
-    let vm = aluvm_stl();
 
     let sys = SystemBuilder::new()
         .import(rgb_logic)
         .unwrap()
         .import(rgb_commit)
-        .unwrap()
-        .import(vm)
         .unwrap()
         .import(bp)
         .unwrap()
