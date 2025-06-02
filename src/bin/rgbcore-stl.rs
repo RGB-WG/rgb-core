@@ -113,6 +113,7 @@ Transition vesper lexicon=types+commitments
     )
     .unwrap();
     let layout = Transition::commitment_layout();
+    writeln!(file, "{layout}").unwrap();
     let tt = sys.type_tree("RGBCommit.Transition").unwrap();
     writeln!(file, "{tt}").unwrap();
 

@@ -7,6 +7,9 @@
 
 Transition vesper lexicon=types+commitments
 
+commitment OpId, hasher SHA256, tagged urn:lnp-bp:rgb:operation#2024-02-03
+  serialized Transition
+
 rec Transition
   is ffv, U16, aka Ffv
   bytes contractId, len 32, aka ContractId
