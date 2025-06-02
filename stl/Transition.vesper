@@ -69,5 +69,4 @@ rec Transition
           rec secretSeal, tag 1
             bytes seal, len 32, aka SecretSeal
             bytes state, len 0..MAX16, aka StructuredData
-    bytes some, len 64, option, wrapped, aka Signature, tag 1
 

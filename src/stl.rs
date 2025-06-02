@@ -32,10 +32,7 @@ use crate::{Genesis, Schema, Transition, LIB_NAME_RGB_COMMIT};
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_COMMIT: &str =
-    "stl:eBR7hVUY-AAhMZQS-BxMGUdt-D5VCa4l-gvFPe4s-hXYkthg#enrico-ohio-maxwell";
-/// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_LOGIC: &str =
-    "stl:u28Zbwug-pBA9hRj-v_2ofr6-hz9QvYb-_rU0Luy-tBs2YUg#dynamic-first-middle";
+    "stl:w_Ksa~Fy-cqURYmx-8ve0xzB-LSPh_ZM-pnVta9N-wFdJuxA#hope-gong-pedro";
 
 fn _rgb_commit_stl() -> Result<TypeLib, Box<CompileError>> {
     Ok(LibBuilder::with(libname!(LIB_NAME_RGB_COMMIT), [

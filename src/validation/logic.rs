@@ -25,6 +25,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use amplify::confinement::{Confined, NonEmptyVec};
 use amplify::Wrapper;
+use secp256k1::{ecdsa, Message, PublicKey};
 use strict_types::TypeSystem;
 
 use super::{
@@ -187,6 +188,37 @@ impl Schema {
                         .map(Assign::as_state)
                         .collect::<BTreeSet<_>>()
                 {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                }
+            }
+            Verifier::CheckSigEcdsa(glob_ty, meta_ty) => {
+                let genesis = consignment.genesis();
+                let Some(pk) = genesis
+                    .globals
+                    .get(&glob_ty)
+                    .into_iter()
+                    .flatten()
+                    .map(|pk| PublicKey::from_slice(pk.as_slice()).ok())
+                    .next()
+                    .flatten()
+                else {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                };
+                let Some(sig) = op
+                    .metadata()
+                    .get(&meta_ty)
+                    .into_iter()
+                    .map(|meta| ecdsa::Signature::from_compact(&meta).ok())
+                    .next()
+                    .flatten()
+                else {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                };
+                let msg = Message::from_digest(opid.to_byte_array());
+                if sig.verify(&msg, &pk).is_err() {
                     status.add_failure(validation::Failure::Verifier(verifier, opid));
                     return status;
                 }

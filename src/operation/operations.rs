@@ -233,7 +233,6 @@ pub struct Transition {
     pub globals: GlobalState,
     pub inputs: Inputs,
     pub assignments: Assignments<GraphSeal>,
-    pub signature: Option<Signature>,
 }
 
 impl StrictSerialize for Transition {}

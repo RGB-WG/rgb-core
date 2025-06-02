@@ -1,5 +1,5 @@
 {-
-  Id: stl:eBR7hVUY-AAhMZQS-BxMGUdt-D5VCa4l-gvFPe4s-hXYkthg#enrico-ohio-maxwell
+  Id: stl:w_Ksa~Fy-cqURYmx-8ve0xzB-LSPh_ZM-pnVta9N-wFdJuxA#hope-gong-pedro
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -185,13 +185,10 @@ data SchemaId          : [Byte ^ 32]
 data SealClosingStrategy : firstOpretOrTapret | (|)
 
 
-@mnemonic(ferrari-zebra-tempo)
-data Signature         : [Byte ^ 64]
-
 @mnemonic(nirvana-modern-bonjour)
 data StructuredData    : [Byte]
 
-@mnemonic(remark-gravity-vitamin)
+@mnemonic(matrix-yogurt-vienna)
 data Transition        : ffv Ffv
                        , contractId ContractId
                        , nonce U64
@@ -200,7 +197,6 @@ data Transition        : ffv Ffv
                        , globals GlobalState
                        , inputs Inputs
                        , assignments AssignmentsBlindSealTxPtr
-                       , signature Signature?
 
 @mnemonic(orbit-pattern-goblin)
 data TransitionDetails : transitionSchema TransitionSchema, name StrictTypes.FieldName
@@ -225,9 +221,11 @@ data TypedAssignsBlindSealTxid : declarative AssignVecAssignVoidStateBlindSealTx
                        | fungible AssignVecAssignFungibleStateBlindSealTxid
                        | structured AssignVecAssignStructuredDataBlindSealTxid
 
-@mnemonic(escort-pretend-comedy)
-data Verifier          : none | (|)
-
+@mnemonic(dynasty-domingo-robot)
+data Verifier          : none ()
+                       | eqSums AssignmentType
+                       | eqVals AssignmentType
+                       | checkSigEcdsa (GlobalStateType, MetaType)
 
 @mnemonic(email-snow-safari)
 data VoidState         : ()

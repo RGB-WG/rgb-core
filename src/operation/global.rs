@@ -21,7 +21,7 @@
 // limitations under the License.
 
 use std::collections::btree_map;
-use std::vec;
+use std::{slice, vec};
 
 use amplify::confinement::{Confined, TinyOrdMap, U16};
 use amplify::{confinement, Wrapper};
@@ -54,6 +54,13 @@ impl IntoIterator for GlobalValues {
     type IntoIter = vec::IntoIter<StructuredData>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+}
+
+impl<'a> IntoIterator for &'a GlobalValues {
+    type Item = &'a StructuredData;
+    type IntoIter = slice::Iter<'a, StructuredData>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
 }
 
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Default, Debug, From)]

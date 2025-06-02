@@ -176,4 +176,8 @@ pub enum Verifier {
     /// and outputs.
     #[strict_type(tag = 0x02)]
     EqVals(AssignmentType),
+
+    /// Checks that metadata contains a valid ECDSA signature over the operation id.
+    #[strict_type(tag = 0x03)]
+    CheckSigEcdsa(GlobalStateType, MetaType),
 }
