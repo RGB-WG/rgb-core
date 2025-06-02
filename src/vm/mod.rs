@@ -27,6 +27,6 @@
 mod contract;
 
 pub use contract::{
-    ContractStateAccess, ContractStateEvolve, GlobalContractState, GlobalOrd, GlobalStateIter,
-    OpOrd, OrdOpRef, UnknownGlobalStateType, WitnessOrd, WitnessPos,
+    ContractStateAccess, ContractStateEvolve, OpOrd, OrdOpRef, UnknownGlobalStateType, WitnessOrd,
+    WitnessPos,
 };

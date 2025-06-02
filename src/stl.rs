@@ -28,8 +28,7 @@ use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
 
-use crate::vm::GlobalOrd;
-use crate::{Genesis, Schema, Transition, LIB_NAME_RGB_COMMIT, LIB_NAME_RGB_LOGIC};
+use crate::{Genesis, Schema, Transition, LIB_NAME_RGB_COMMIT};
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_COMMIT: &str =
@@ -53,27 +52,9 @@ fn _rgb_commit_stl() -> Result<TypeLib, Box<CompileError>> {
     .compile()?)
 }
 
-fn _rgb_logic_stl() -> Result<TypeLib, Box<CompileError>> {
-    Ok(LibBuilder::with(libname!(LIB_NAME_RGB_LOGIC), [
-        std_stl().to_dependency_types(),
-        strict_types_stl().to_dependency_types(),
-        commit_verify_stl().to_dependency_types(),
-        bp_consensus_stl().to_dependency_types(),
-        bp_seals_stl().to_dependency_types(),
-        rgb_commit_stl().to_dependency_types(),
-    ])
-    .transpile::<GlobalOrd>()
-    .compile()?)
-}
-
 /// Generates strict type library providing data types for RGB consensus.
 pub fn rgb_commit_stl() -> TypeLib {
     _rgb_commit_stl().expect("invalid strict type RGB consensus commitments library")
-}
-
-/// Generates strict type library providing data types for RGB consensus.
-pub fn rgb_logic_stl() -> TypeLib {
-    _rgb_logic_stl().expect("invalid strict type RGB consensus logic library")
 }
 
 #[cfg(test)]
@@ -84,11 +65,5 @@ mod test {
     fn commit_lib_id() {
         let lib = rgb_commit_stl();
         assert_eq!(lib.id().to_string(), LIB_ID_RGB_COMMIT);
-    }
-
-    #[test]
-    fn logic_lib_id() {
-        let lib = rgb_logic_stl();
-        assert_eq!(lib.id().to_string(), LIB_ID_RGB_LOGIC);
     }
 }

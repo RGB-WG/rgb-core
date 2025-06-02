@@ -24,14 +24,13 @@ use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::fmt::{self, Debug, Display, Formatter};
 
-use amplify::num::u24;
 use bc::{Outpoint, Txid};
-use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
+use strict_encoding::StrictDumb;
 
 use crate::{
     AssignmentType, AssignmentsRef, ContractId, FungibleState, Genesis, GlobalState,
     GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType, OpId, Operation, StructuredData,
-    Transition, TransitionType, TypedAssigns, LIB_NAME_RGB_LOGIC,
+    Transition, TransitionType, TypedAssigns,
 };
 
 /// The type is used during validation and computing a contract state. It
@@ -140,8 +139,6 @@ impl<'op> Operation for OrdOpRef<'op> {
 }
 
 #[derive(Getters, Copy, Clone, PartialEq, Eq, Hash, Debug)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_LOGIC)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -240,8 +237,6 @@ impl Display for WitnessPos {
 /// contract global state data, as they are presented to all contract users.
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, From)]
 #[display(lowercase)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = order)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -286,7 +281,6 @@ pub enum WitnessOrd {
     ///   replaced by RBFed successors;
     /// - past state channel transactions once a new channel state is signed (and until they may
     ///   become valid once again due to an uncooperative channel closing).
-    #[strict_type(dumb)]
     Archived,
 }
 
@@ -307,17 +301,13 @@ impl WitnessOrd {
 ///
 /// [RCP-240731A]: https://github.com/RGB-WG/RFC/issues/10
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_LOGIC, tags = custom)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 pub enum OpOrd {
-    #[strict_type(tag = 0x00, dumb)]
     Genesis,
-    #[strict_type(tag = 0xFF)]
     Transition {
         witness: WitnessOrd,
         ty: TransitionType,
@@ -336,140 +326,11 @@ impl OpOrd {
     }
 }
 
-/// Consensus ordering of global state
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-#[derive(StrictType, StrictDumb, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_LOGIC)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct GlobalOrd {
-    pub op_ord: OpOrd,
-    pub idx: u16,
-}
-
-impl GlobalOrd {
-    pub fn genesis(idx: u16) -> Self {
-        Self {
-            op_ord: OpOrd::Genesis,
-            idx,
-        }
-    }
-    pub fn transition(
-        opid: OpId,
-        idx: u16,
-        ty: TransitionType,
-        nonce: u64,
-        witness: WitnessOrd,
-    ) -> Self {
-        Self {
-            op_ord: OpOrd::Transition {
-                witness,
-                ty,
-                nonce,
-                opid,
-            },
-            idx,
-        }
-    }
-}
-
-pub trait GlobalStateIter {
-    type Data: Borrow<StructuredData>;
-    fn size(&mut self) -> u24;
-    fn prev(&mut self) -> Option<(GlobalOrd, Self::Data)>;
-    fn last(&mut self) -> Option<(GlobalOrd, Self::Data)>;
-    fn reset(&mut self, depth: u24);
-}
-
-impl<I: GlobalStateIter> GlobalStateIter for &mut I {
-    type Data = I::Data;
-
-    #[inline]
-    fn size(&mut self) -> u24 { GlobalStateIter::size(*self) }
-
-    #[inline]
-    fn prev(&mut self) -> Option<(GlobalOrd, Self::Data)> { (*self).prev() }
-
-    #[inline]
-    fn last(&mut self) -> Option<(GlobalOrd, Self::Data)> { (*self).last() }
-
-    #[inline]
-    fn reset(&mut self, depth: u24) { (*self).reset(depth) }
-}
-
-pub struct GlobalContractState<I: GlobalStateIter> {
-    checked_depth: u24,
-    last_ord: Option<GlobalOrd>,
-    iter: I,
-}
-
-impl<I: GlobalStateIter> GlobalContractState<I> {
-    #[inline]
-    pub fn new(iter: I) -> Self {
-        Self {
-            iter,
-            checked_depth: u24::ONE,
-            last_ord: None,
-        }
-    }
-
-    #[inline]
-    pub fn size(&mut self) -> u24 { self.iter.size() }
-
-    fn prev_checked(&mut self) -> Option<(GlobalOrd, I::Data)> {
-        let (ord, item) = self.iter.prev()?;
-        self.checked_depth += u24::ONE;
-        self.last_ord = Some(ord);
-        Some((ord, item))
-    }
-
-    /// Retrieves global state data located `depth` items back from the most
-    /// recent global state value. Ensures that the global state ordering is
-    /// consensus-based.
-    pub fn nth(&mut self, depth: u24) -> Option<impl Borrow<StructuredData> + '_> {
-        if depth > self.iter.size() {
-            return None;
-        }
-        if depth >= self.checked_depth {
-            self.iter.reset(depth);
-        } else {
-            self.iter.reset(self.checked_depth);
-            let size = self.iter.size();
-            let to = (self.checked_depth - depth).to_u32();
-            for inc in 0..to {
-                if self.prev_checked().is_none() {
-                    panic!(
-                        "global contract state iterator has invalid implementation: it reports \
-                         more global state items {size} than the contract has ({})",
-                        self.checked_depth + inc
-                    );
-                }
-            }
-        }
-        self.iter.last().map(|(_, item)| item)
-    }
-}
-
-impl<I: GlobalStateIter> Iterator for GlobalContractState<I> {
-    type Item = I::Data;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> { Some(self.prev_checked()?.1) }
-}
-
 #[derive(Copy, Clone, Debug, Display, Error)]
 #[display("unknown global state type {0} requested from the contract")]
 pub struct UnknownGlobalStateType(pub GlobalStateType);
 
 pub trait ContractStateAccess: Debug {
-    fn global(
-        &self,
-        ty: GlobalStateType,
-    ) -> Result<GlobalContractState<impl GlobalStateIter>, UnknownGlobalStateType>;
-
     fn rights(&self, outpoint: Outpoint, ty: AssignmentType) -> u32;
 
     fn fungible(

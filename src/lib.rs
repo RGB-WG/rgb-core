@@ -57,7 +57,6 @@ pub mod prelude {
 pub use prelude::*;
 
 pub const LIB_NAME_RGB_COMMIT: &str = "RGBCommit";
-pub const LIB_NAME_RGB_LOGIC: &str = "RGBLogic";
 
 /// Fast-forward version code
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display)]

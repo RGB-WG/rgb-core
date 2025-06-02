@@ -36,7 +36,6 @@ fn main() {
     let (format, dir) = parse_args();
 
     let rgb_commit = rgbcore::stl::rgb_commit_stl();
-    let rgb_logic = rgbcore::stl::rgb_logic_stl();
 
     rgb_commit
         .serialize(
@@ -53,21 +52,6 @@ fn main() {
         )
         .expect("unable to write to the file");
 
-    rgb_logic
-        .serialize(
-            format,
-            dir.as_ref(),
-            "0.1.0",
-            Some(
-                "
-  Description: Consensus logic layer for RGB smart contracts
-  Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
-  Copyright (C) 2023-2024 LNP/BP Standards Association. All rights reserved.
-  License: Apache-2.0",
-            ),
-        )
-        .expect("unable to write to the file");
-
     let std = std_stl();
     let consensus = bp_consensus_stl();
     let tx = bp_tx_stl();
@@ -76,8 +60,6 @@ fn main() {
     let st = strict_types_stl();
 
     let sys = SystemBuilder::new()
-        .import(rgb_logic)
-        .unwrap()
         .import(rgb_commit)
         .unwrap()
         .import(bp)
