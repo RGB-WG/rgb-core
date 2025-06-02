@@ -460,7 +460,7 @@ impl<
                 continue;
             };
 
-            let seal = if matches!(prev_op.full_type(), OpFullType::StateTransition(_)) {
+            let seal = if prev_op.full_type().is_transition() {
                 let Some(witness_id) = self.consignment.op_witness_id(op) else {
                     self.status
                         .borrow_mut()
