@@ -60,4 +60,4 @@ wasm-bindgen-test = "0.3"
 features = ["all"]
 
 [patch.crates-io]
-bp-seals = { path = "../bp-core" }
+bp-seals = { git = "https://github.com/BP-WG/bp-core", branch = "v0.11.1-revision" }

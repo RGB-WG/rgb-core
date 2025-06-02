@@ -181,6 +181,7 @@ dependencies = [
 [[package]]
 name = "bp-seals"
 version = "0.11.1-beta.1"
+source = "git+https://github.com/BP-WG/bp-core?branch=v0.11.1-revision#d684c4e1fcdb75527a7610ab90578d05117e8560"
 dependencies = [
  "amplify",
  "baid64",
