@@ -25,7 +25,6 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::num::NonZeroU32;
 use std::rc::Rc;
 
-use bp::dbc::Anchor;
 use bp::seals::txout::{CloseMethod, Witness};
 use bp::{dbc, Tx, Txid};
 use commit_verify::mpc;
@@ -505,10 +504,22 @@ impl<
         Witness<Dbc>: SealWitness<Seal, Message = mpc::Commitment>,
     {
         let message = mpc::Message::from(opid);
+        let protocol = mpc::ProtocolId::from(self.contract_id);
         let witness_id = witness.txid;
-        let anchor = Anchor::new(mpc_proof, witness.proof.clone());
+
+        // TODO: Remove these two temporary checks once getting rid of bp-core and bp-dbc
+        assert_eq!(witness.proof.method(), CloseMethod::OpretFirst);
+        for out in witness.tx.outputs() {
+            if out.script_pubkey.is_p2tr() {
+                panic!("Not an Opret commitment!");
+            }
+            if out.script_pubkey.is_op_return() {
+                break;
+            }
+        }
+
         // [VALIDATION]: Checking anchor MPC commitment
-        match anchor.convolve(self.contract_id, message) {
+        match mpc_proof.convolve(protocol, message) {
             Err(err) => {
                 // The operation is not committed to bitcoin transaction graph!
                 // Ultimate failure. But continuing to detect the rest (after reporting it).
@@ -517,28 +528,6 @@ impl<
                     .add_failure(Failure::MpcInvalid(opid, witness_id, err));
             }
             Ok(commitment) => {
-                // [VALIDATION]: Verify commitment
-                let Some(output) = witness
-                    .tx
-                    .outputs()
-                    .find(|out| out.script_pubkey.is_op_return() || out.script_pubkey.is_p2tr())
-                else {
-                    self.status
-                        .borrow_mut()
-                        .add_failure(Failure::NoDbcOutput(witness_id));
-                    return;
-                };
-                let output_method = if output.script_pubkey.is_op_return() {
-                    CloseMethod::OpretFirst
-                } else {
-                    CloseMethod::TapretFirst
-                };
-                let proof_method = witness.proof.method();
-                if proof_method != output_method {
-                    self.status
-                        .borrow_mut()
-                        .add_failure(Failure::InvalidProofType(witness_id, proof_method));
-                }
                 // [VALIDATION]: CHECKING SINGLE-USE-SEALS
                 witness
                     .verify_many_seals(seals, &commitment)

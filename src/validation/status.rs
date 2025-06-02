@@ -25,7 +25,6 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::{self, Display, Formatter};
 
 use amplify::num::u24;
-use bp::seals::txout::CloseMethod;
 use bp::Txid;
 use commit_verify::mpc::InvalidProof;
 use strict_types::SemId;
@@ -281,11 +280,6 @@ pub enum Failure {
     /// transition {0} is not properly anchored to the witness {1}.
     /// Details: {2}
     MpcInvalid(OpId, Txid, InvalidProof),
-    /// witness transaction {0} has no taproot or OP_RETURN output.
-    NoDbcOutput(Txid),
-    /// first DBC-compatible output of witness transaction {0} doesn't match the provided proof
-    /// type ({1})
-    InvalidProofType(Txid, CloseMethod),
 
     // State check errors
     /// state in {opid}/{state_type} is of {found} type, while schema requires
