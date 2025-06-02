@@ -330,7 +330,7 @@ impl CommitEncode for AssignmentCommitment {
 
 impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
     pub fn commitment(&self, ty: AssignmentType) -> AssignmentCommitment {
-        let Self::ConfidentialSeal { seal, state } = self.conceal() else {
+        let Self::SecretSeal { seal, state } = self.conceal() else {
             unreachable!();
         };
         AssignmentCommitment {

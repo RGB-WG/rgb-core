@@ -269,7 +269,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 match context.op_info.prev_state.get($state_type) {
                     Some(TypedAssigns::Fungible(state)) => {
                         let mut values = vec![];
-                        for val in state.iter().map(Assign::as_revealed_state) {
+                        for val in state.iter().map(Assign::as_state) {
                             values.push(val.into_inner())
                         }
                         values
@@ -284,7 +284,7 @@ impl<S: ContractStateAccess> InstructionSet for ContractOp<S> {
                 match context.op_info.owned_state().get(*$state_type) {
                     Some(TypedAssigns::Fungible(state)) => {
                         let mut values = vec![];
-                        for val in state.iter().map(Assign::as_revealed_state) {
+                        for val in state.iter().map(Assign::as_state) {
                             values.push(val.into_inner())
                         }
                         values

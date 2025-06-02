@@ -476,7 +476,7 @@ impl OwnedStateSchema {
     ) -> validation::Status {
         let mut status = validation::Status::new();
         match data {
-            Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
+            Assign::Revealed { state, .. } | Assign::SecretSeal { state, .. } => {
                 match (self, state.state_data()) {
                     (OwnedStateSchema::Declarative, AnyState::Void) => {}
                     (OwnedStateSchema::Fungible, AnyState::Fungible(_)) => {}

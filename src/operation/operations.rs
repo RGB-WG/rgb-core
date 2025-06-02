@@ -143,10 +143,7 @@ pub trait Operation {
                 if let Some(seal) = assignment.revealed_seal() {
                     seals.insert(AssignmentIndex::new(ty, index as u16), seal.to_secret_seal());
                 }
-                state.insert(
-                    AssignmentIndex::new(ty, index as u16),
-                    assignment.as_revealed_state().clone(),
-                );
+                state.insert(AssignmentIndex::new(ty, index as u16), assignment.as_state().clone());
             }
         }
 
