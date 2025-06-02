@@ -31,7 +31,6 @@ commit_verify = { version = "0.11.1-alpha.2", features = ["rand", "derive"] }
 single_use_seals = "~0.11.1-alpha.2"
 bp-core = { version = "~0.11.1-alpha.2" }
 secp256k1 = { version = "0.30.0", features = ["global-context"] }
-mime = "~0.3.17"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 chrono = "0.4.38"
 
