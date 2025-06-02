@@ -38,7 +38,7 @@ pub use commit::{ContractId, OpId};
 pub use data::{StructuredData, VoidState};
 pub use fungible::FungibleState;
 pub use global::{GlobalState, GlobalValues};
-pub use layer1::{ChainNet, Layer1};
+pub use layer1::ChainNet;
 pub use meta::{MetaValue, Metadata, MetadataError};
 pub use operations::{
     Genesis, Identity, Inputs, Operation, Opout, OpoutParseError, SealClosingStrategy, Signature,

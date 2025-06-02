@@ -27,23 +27,6 @@ use strict_encoding::{StrictDecode, StrictEncode, StrictType};
 
 use crate::LIB_NAME_RGB_COMMIT;
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[display(lowercase)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, into_u8, try_from_u8)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-#[repr(u8)]
-#[derive(Default)]
-pub enum Layer1 {
-    #[default]
-    Bitcoin = 0,
-    Liquid = 1,
-}
-
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(inner)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
@@ -76,17 +59,6 @@ impl ChainNet {
             ChainNet::BitcoinSignet => "sb",
             ChainNet::LiquidMainnet => "lq",
             ChainNet::LiquidTestnet => "tl",
-        }
-    }
-
-    pub fn layer1(&self) -> Layer1 {
-        match self {
-            ChainNet::BitcoinMainnet
-            | ChainNet::BitcoinTestnet3
-            | ChainNet::BitcoinTestnet4
-            | ChainNet::BitcoinSignet
-            | ChainNet::BitcoinRegtest => Layer1::Bitcoin,
-            ChainNet::LiquidMainnet | ChainNet::LiquidTestnet => Layer1::Liquid,
         }
     }
 
