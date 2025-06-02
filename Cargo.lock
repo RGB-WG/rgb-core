@@ -669,7 +669,6 @@ dependencies = [
  "amplify",
  "baid64",
  "bp-core",
- "chrono",
  "commit_verify",
  "getrandom 0.3.2",
  "rand 0.9.1",

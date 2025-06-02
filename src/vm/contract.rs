@@ -29,7 +29,6 @@ use std::rc::Rc;
 
 use amplify::num::u24;
 use bp::{BlockHeight, Outpoint, Txid};
-use chrono::{MappedLocalTime, TimeZone, Utc};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
@@ -242,11 +241,7 @@ impl Ord for WitnessPos {
 
 impl Display for WitnessPos {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}, ", self.layer1, self.height)?;
-        match Utc.timestamp_opt(self.timestamp, 0) {
-            MappedLocalTime::Single(time) => write!(f, "{}", time.format("%Y-%m-%d %H:%M:%S")),
-            _ => f.write_str("invalid timestamp"),
-        }
+        write!(f, "{}:{}@{}", self.layer1, self.height, self.timestamp)
     }
 }
 
