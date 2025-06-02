@@ -20,10 +20,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::RefCell;
 use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
-use std::rc::Rc;
 
 use amplify::confinement::{Confined, NonEmptyVec};
 use amplify::Wrapper;
@@ -49,7 +47,7 @@ impl Schema {
         &'validator self,
         consignment: &'validator CheckedConsignment<'_, C>,
         op: FullOpRef,
-        contract_state: Rc<RefCell<S>>,
+        contract_state: &mut S,
     ) -> validation::Status {
         let opid = op.id();
         let mut status = validation::Status::new();
@@ -136,7 +134,7 @@ impl Schema {
         match validator {
             Verifier::None => {}
         }
-        if contract_state.borrow_mut().evolve_state(op).is_err() {
+        if contract_state.evolve_state(op).is_err() {
             status.add_failure(validation::Failure::ContractStateFilled(opid));
             // We return here since all other validations will have no valid state to access
             return status;
