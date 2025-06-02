@@ -31,7 +31,7 @@ use seals::txout::Witness;
 use super::status::{Failure, Warning};
 use super::{CheckedConsignment, ConsignmentApi, Status, Validity};
 use crate::operation::seal::ExposedSeal;
-use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd};
+use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessStatus};
 use crate::{
     validation, ChainNet, ContractId, OpFullType, OpId, Operation, Opout, OutputSeal, Schema,
     SchemaId, Transition,
@@ -58,8 +58,10 @@ pub enum WitnessResolverError {
 pub trait ResolveWitness {
     fn resolve_pub_witness(&self, witness_id: Txid) -> Result<Tx, WitnessResolverError>;
 
-    fn resolve_pub_witness_ord(&self, witness_id: Txid)
-        -> Result<WitnessOrd, WitnessResolverError>;
+    fn resolve_pub_witness_ord(
+        &self,
+        witness_id: Txid,
+    ) -> Result<WitnessStatus, WitnessResolverError>;
 
     fn check_chain_net(&self, chain_net: ChainNet) -> Result<(), WitnessResolverError>;
 }
@@ -72,7 +74,7 @@ impl<T: ResolveWitness> ResolveWitness for &T {
     fn resolve_pub_witness_ord(
         &self,
         witness_id: Txid,
-    ) -> Result<WitnessOrd, WitnessResolverError> {
+    ) -> Result<WitnessStatus, WitnessResolverError> {
         ResolveWitness::resolve_pub_witness_ord(*self, witness_id)
     }
 
@@ -106,7 +108,7 @@ impl<R: ResolveWitness> ResolveWitness for CheckedWitnessResolver<R> {
     fn resolve_pub_witness_ord(
         &self,
         witness_id: Txid,
-    ) -> Result<WitnessOrd, WitnessResolverError> {
+    ) -> Result<WitnessStatus, WitnessResolverError> {
         self.inner.resolve_pub_witness_ord(witness_id)
     }
 
@@ -285,9 +287,7 @@ impl<
             };
             if let Some(safe_height) = self.safe_height {
                 match witness_ord {
-                    WitnessOrd::Mined(witness_pos) => {
-                        let witness_height = witness_pos.height();
-                        // TODO: Safe height can't be "injected" into the consensus!
+                    WitnessStatus::Mined(witness_height) => {
                         if witness_height > safe_height {
                             unsafe_history_map
                                 .entry(witness_height.into())
@@ -295,7 +295,7 @@ impl<
                                 .insert(witness_id);
                         }
                     }
-                    WitnessOrd::Tentative | WitnessOrd::Ignored | WitnessOrd::Archived => {
+                    WitnessStatus::Tentative | WitnessStatus::Ignored | WitnessStatus::Archived => {
                         unsafe_history_map.entry(0).or_default().insert(witness_id);
                     }
                 }

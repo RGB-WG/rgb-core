@@ -22,15 +22,14 @@
 
 use std::borrow::Borrow;
 use std::cmp::Ordering;
-use std::fmt::{self, Debug, Display, Formatter};
+use std::fmt::Debug;
 
 use bc::{Outpoint, Txid};
-use strict_encoding::StrictDumb;
 
 use crate::{
     AssignmentType, AssignmentsRef, ContractId, FungibleState, Genesis, GlobalState,
-    GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType, OpId, Operation, StructuredData,
-    Transition, TransitionType, TypedAssigns,
+    GlobalStateType, GraphSeal, Metadata, OpFullType, OpId, Operation, StructuredData, Transition,
+    TransitionType, TypedAssigns,
 };
 
 /// The type is used during validation and computing a contract state. It
@@ -41,7 +40,7 @@ use crate::{
 pub enum OrdOpRef<'op> {
     #[from]
     Genesis(&'op Genesis),
-    Transition(&'op Transition, Txid, WitnessOrd, OpId),
+    Transition(&'op Transition, Txid, WitnessStatus, OpId),
 }
 
 impl PartialOrd for OrdOpRef<'_> {
@@ -138,100 +137,6 @@ impl<'op> Operation for OrdOpRef<'op> {
     }
 }
 
-#[derive(Getters, Copy, Clone, PartialEq, Eq, Hash, Debug)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
-pub struct WitnessPos {
-    #[getter(as_copy)]
-    layer1: Layer1,
-
-    #[getter(as_copy)]
-    height: u32,
-
-    // TODO: Remove
-    #[getter(as_copy)]
-    timestamp: i64,
-}
-
-impl StrictDumb for WitnessPos {
-    fn strict_dumb() -> Self {
-        Self {
-            layer1: Layer1::Bitcoin,
-            height: 1,
-            timestamp: 1231006505,
-        }
-    }
-}
-
-// Sat Jan 03 18:15:05 2009 UTC
-const BITCOIN_GENESIS_TIMESTAMP: i64 = 1231006505;
-
-// Sat Jan 03 18:15:05 2009 UTC
-const LIQUID_GENESIS_TIMESTAMP: i64 = 1296692202;
-
-impl WitnessPos {
-    pub fn bitcoin(height: u32, timestamp: i64) -> Option<Self> {
-        if timestamp < BITCOIN_GENESIS_TIMESTAMP {
-            return None;
-        }
-        Some(WitnessPos {
-            layer1: Layer1::Bitcoin,
-            height,
-            timestamp,
-        })
-    }
-
-    pub fn liquid(height: u32, timestamp: i64) -> Option<Self> {
-        if timestamp < LIQUID_GENESIS_TIMESTAMP {
-            return None;
-        }
-        Some(WitnessPos {
-            layer1: Layer1::Liquid,
-            height,
-            timestamp,
-        })
-    }
-}
-
-impl PartialOrd for WitnessPos {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-impl Ord for WitnessPos {
-    /// Since we support multiple layer 1, we have to order basing on the
-    /// timestamp information and not height. The timestamp data are consistent
-    /// across multiple blockchains, while height evolves with a different
-    /// speed and can't be used in comparisons.
-    fn cmp(&self, other: &Self) -> Ordering {
-        assert!(self.timestamp > 0);
-        assert!(other.timestamp > 0);
-        const BLOCK_TIME: i64 = 10 /*min*/ * 60 /*secs*/;
-        match (self.layer1, other.layer1) {
-            (a, b) if a == b => self.height.cmp(&other.height),
-            (Layer1::Bitcoin, Layer1::Liquid)
-                if (self.timestamp - other.timestamp).abs() < BLOCK_TIME =>
-            {
-                Ordering::Greater
-            }
-            (Layer1::Liquid, Layer1::Bitcoin)
-                if (other.timestamp - self.timestamp).abs() < BLOCK_TIME =>
-            {
-                Ordering::Less
-            }
-            _ => self.timestamp.cmp(&other.timestamp),
-        }
-    }
-}
-
-impl Display for WitnessPos {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}@{}", self.layer1, self.height, self.timestamp)
-    }
-}
-
 /// RGB consensus information about the status of a witness transaction. This information is used
 /// in ordering state transitions during the validation, as well as consensus ordering of the
 /// contract global state data, as they are presented to all contract users.
@@ -242,15 +147,11 @@ impl Display for WitnessPos {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-pub enum WitnessOrd {
-    /// Transaction is included into layer 1 blockchain at a specific height and
-    /// timestamp.
-    ///
-    /// NB: only timestamp is used in consensus ordering though, see
-    /// [`WitnessPos::cmp`] for the details.
+pub enum WitnessStatus {
+    /// Transaction is included into layer 1 blockchain at a specific height.
     #[from]
     #[display(inner)]
-    Mined(WitnessPos),
+    Mined(u32),
 
     /// Valid witness transaction which commits the most recent RGB state, but
     /// is not (yet) included into a layer 1 blockchain. Such transactions have
@@ -284,7 +185,7 @@ pub enum WitnessOrd {
     Archived,
 }
 
-impl WitnessOrd {
+impl WitnessStatus {
     #[inline]
     pub fn is_valid(self) -> bool { self != Self::Archived }
 }
@@ -294,8 +195,8 @@ impl WitnessOrd {
 ///
 /// The ordering is the following:
 /// - Genesis is processed first.
-/// - Other operations are ordered according to their witness transactions (see [`WitnessOrd`] for
-///   the details).
+/// - Other operations are ordered according to their witness transactions (see [`WitnessStatus`]
+///   for the details).
 /// - If two or more operations share the same witness transaction ordering, they are first ordered
 ///   basing on their `nonce` value, and if it is also the same, basing on their operation id value.
 ///
@@ -309,7 +210,7 @@ impl WitnessOrd {
 pub enum OpOrd {
     Genesis,
     Transition {
-        witness: WitnessOrd,
+        witness: WitnessStatus,
         ty: TransitionType,
         nonce: u64,
         opid: OpId,
@@ -320,7 +221,7 @@ impl OpOrd {
     #[inline]
     pub fn is_archived(&self) -> bool {
         matches!(self, Self::Transition {
-            witness: WitnessOrd::Archived,
+            witness: WitnessStatus::Archived,
             ..
         })
     }
@@ -351,32 +252,4 @@ pub trait ContractStateEvolve {
     type Error: std::error::Error;
     fn init(context: Self::Context<'_>) -> Self;
     fn evolve_state(&mut self, op: OrdOpRef) -> Result<(), Self::Error>;
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn witness_post_timestamp() {
-        assert_eq!(WitnessPos::bitcoin(1, BITCOIN_GENESIS_TIMESTAMP - 1), None);
-        assert_eq!(WitnessPos::liquid(1, LIQUID_GENESIS_TIMESTAMP - 1), None);
-        assert_eq!(WitnessPos::liquid(1, BITCOIN_GENESIS_TIMESTAMP), None);
-        assert!(WitnessPos::bitcoin(1, BITCOIN_GENESIS_TIMESTAMP).is_some());
-        assert!(WitnessPos::liquid(1, LIQUID_GENESIS_TIMESTAMP).is_some());
-        assert!(WitnessPos::bitcoin(1, LIQUID_GENESIS_TIMESTAMP).is_some());
-    }
-
-    #[test]
-    fn witness_pos_getters() {
-        let pos = WitnessPos::bitcoin(1, BITCOIN_GENESIS_TIMESTAMP).unwrap();
-        assert_eq!(pos.height(), 1);
-        assert_eq!(pos.timestamp(), BITCOIN_GENESIS_TIMESTAMP);
-        assert_eq!(pos.layer1(), Layer1::Bitcoin);
-
-        let pos = WitnessPos::liquid(1, LIQUID_GENESIS_TIMESTAMP).unwrap();
-        assert_eq!(pos.height(), 1);
-        assert_eq!(pos.timestamp(), LIQUID_GENESIS_TIMESTAMP);
-        assert_eq!(pos.layer1(), Layer1::Liquid);
-    }
 }
