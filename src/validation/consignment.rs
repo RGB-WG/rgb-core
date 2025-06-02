@@ -146,6 +146,10 @@ pub trait ConsignmentApi {
     fn genesis(&self) -> &Genesis;
 
     /// Returns iterator over all transition ids present in the consignment.
+    ///
+    /// # Nota bene
+    ///
+    /// Operations are validated in the order they are reported by this consignment API
     fn transitions(&self) -> impl Iterator<Item = &Transition>;
 
     /// Returns a an anchor - MPC Merkle proof that a given opid is committed in deterministic

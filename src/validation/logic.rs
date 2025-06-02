@@ -32,7 +32,7 @@ use strict_types::TypeSystem;
 use crate::assignments::AssignVec;
 use crate::schema::{AssignmentsSchema, GlobalSchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
-use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef};
+use crate::vm::{ContractStateAccess, ContractStateEvolve, FullOpRef};
 use crate::{
     validation, AnyState, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal,
     ExposedState, GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema,
@@ -48,7 +48,7 @@ impl Schema {
     >(
         &'validator self,
         consignment: &'validator CheckedConsignment<'_, C>,
-        op: OrdOpRef,
+        op: FullOpRef,
         contract_state: Rc<RefCell<S>>,
     ) -> validation::Status {
         let opid = op.id();
@@ -57,7 +57,7 @@ impl Schema {
         let empty_assign_schema = AssignmentsSchema::default();
         let (metadata_schema, global_schema, owned_schema, assign_schema, validator, ty) = match op
         {
-            OrdOpRef::Genesis(genesis) => {
+            FullOpRef::Genesis(genesis) => {
                 if genesis.seal_closing_strategy != SealClosingStrategy::FirstOpretOrTapret {
                     return validation::Status::with_failure(
                         validation::Failure::SchemaUnknownSealClosingStrategy(
@@ -75,7 +75,7 @@ impl Schema {
                     None::<u16>,
                 )
             }
-            OrdOpRef::Transition(
+            FullOpRef::Transition(
                 Transition {
                     transition_type, ..
                 },
@@ -116,7 +116,7 @@ impl Schema {
         status += self.validate_metadata(opid, op.metadata(), metadata_schema, consignment.types());
         status +=
             self.validate_global_state(opid, op.globals(), global_schema, consignment.types());
-        let prev_state = if let OrdOpRef::Transition(transition, ..) = op {
+        let prev_state = if let FullOpRef::Transition(transition, ..) = op {
             let prev_state = extract_prev_state(consignment, opid, &transition.inputs, &mut status);
             status += self.validate_prev_state(opid, &prev_state, owned_schema);
             prev_state

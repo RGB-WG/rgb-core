@@ -31,7 +31,7 @@ use seals::txout::Witness;
 use super::status::{Failure, Warning};
 use super::{CheckedConsignment, ConsignmentApi, Status, Validity};
 use crate::operation::seal::ExposedSeal;
-use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessStatus};
+use crate::vm::{ContractStateAccess, ContractStateEvolve, FullOpRef, WitnessStatus};
 use crate::{
     validation, ChainNet, ContractId, OpFullType, OpId, Operation, Opout, OutputSeal, Schema,
     SchemaId, Transition,
@@ -260,13 +260,12 @@ impl<
         // [VALIDATION]: Validate genesis
         *self.status.borrow_mut() += schema.validate_state(
             &self.consignment,
-            OrdOpRef::Genesis(self.consignment.genesis()),
+            FullOpRef::Genesis(self.consignment.genesis()),
             self.contract_state.clone(),
         );
 
-        // [VALIDATION]: Iterating over all consignment operations, ordering them according to the
-        //               consensus ordering rules.
-        let mut ops = BTreeSet::<OrdOpRef>::new();
+        // [VALIDATION]: Iterating over all consignment operations
+        let mut ops = Vec::<FullOpRef>::new();
         let mut unsafe_history_map: HashMap<u32, HashSet<Txid>> = HashMap::new();
         for transition in self.consignment.transitions() {
             let opid = transition.id();
@@ -274,8 +273,7 @@ impl<
                 .consignment
                 .anchor(opid)
                 .expect("invalid checked consignment");
-            // TODO: Remove all ordering!
-            let witness_ord = match self.resolver.resolve_pub_witness_ord(witness_id) {
+            let witness_status = match self.resolver.resolve_pub_witness_ord(witness_id) {
                 Ok(ord) => ord,
                 Err(err) => {
                     self.status
@@ -286,7 +284,7 @@ impl<
                 }
             };
             if let Some(safe_height) = self.safe_height {
-                match witness_ord {
+                match witness_status {
                     WitnessStatus::Mined(witness_height) => {
                         if witness_height > safe_height {
                             unsafe_history_map
@@ -300,13 +298,14 @@ impl<
                     }
                 }
             }
-            ops.insert(OrdOpRef::Transition(transition, witness_id, witness_ord, opid));
+            ops.push(FullOpRef::Transition(transition, witness_id, witness_status, opid));
         }
         if self.safe_height.is_some() && !unsafe_history_map.is_empty() {
             self.status
                 .borrow_mut()
                 .add_warning(Warning::UnsafeHistory(unsafe_history_map));
         }
+        // Operations are validated in the order they are reported by the consignment API
         for op in ops {
             // We do not skip validating archive operations since after a re-org they may
             // become valid and thus must be added to the contract state and validated
@@ -315,7 +314,7 @@ impl<
         }
     }
 
-    fn validate_operation(&self, operation: OrdOpRef<'consignment>) {
+    fn validate_operation(&self, operation: FullOpRef<'consignment>) {
         let schema = self.consignment.schema();
         let opid = operation.id();
 
@@ -337,10 +336,10 @@ impl<
             schema.validate_state(&self.consignment, operation, self.contract_state.clone());
 
         match operation {
-            OrdOpRef::Genesis(_) => {
+            FullOpRef::Genesis(_) => {
                 unreachable!("genesis is not a part of the operation history")
             }
-            OrdOpRef::Transition(transition, ..) => {
+            FullOpRef::Transition(transition, ..) => {
                 for input in &transition.inputs {
                     if self.consignment.operation(input.op).is_none() {
                         self.status

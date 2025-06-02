@@ -26,4 +26,4 @@
 
 mod contract;
 
-pub use contract::{ContractStateAccess, ContractStateEvolve, OpOrd, OrdOpRef, WitnessStatus};
+pub use contract::{ContractStateAccess, ContractStateEvolve, FullOpRef, WitnessStatus};
