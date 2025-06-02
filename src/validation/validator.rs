@@ -136,8 +136,6 @@ pub struct Validator<
     contract_state: Rc<RefCell<S>>,
     input_assignments: RefCell<BTreeSet<Opout>>,
 
-    // Operations in this set will not be validated
-    trusted_op_seals: BTreeSet<OpId>,
     resolver: CheckedWitnessResolver<&'resolver R>,
     safe_height: Option<NonZeroU32>,
 }
@@ -155,7 +153,6 @@ impl<
         resolver: &'resolver R,
         context: S::Context<'_>,
         safe_height: Option<NonZeroU32>,
-        trusted_op_seals: BTreeSet<OpId>,
     ) -> Self {
         // We use validation status object to store all detected failures and
         // warnings
@@ -176,7 +173,6 @@ impl<
             schema_id,
             contract_id,
             chain_net,
-            trusted_op_seals,
             input_assignments: input_transitions,
             resolver: CheckedWitnessResolver::from(resolver),
             contract_state: Rc::new(RefCell::new(S::init(context))),
@@ -199,10 +195,8 @@ impl<
         chain_net: ChainNet,
         context: S::Context<'_>,
         safe_height: Option<NonZeroU32>,
-        trusted_op_seals: BTreeSet<OpId>,
     ) -> Status {
-        let mut validator =
-            Self::init(consignment, resolver, context, safe_height, trusted_op_seals);
+        let mut validator = Self::init(consignment, resolver, context, safe_height);
         // If the chain-network pair doesn't match there is no point in validating the contract
         // since all witness transactions will be missed.
         if validator.chain_net != chain_net {
@@ -326,9 +320,6 @@ impl<
     fn validate_operation(&self, operation: OrdOpRef<'consignment>) {
         let schema = self.consignment.schema();
         let opid = operation.id();
-        if self.trusted_op_seals.contains(&opid) {
-            return;
-        }
 
         if operation.contract_id() != self.contract_id {
             self.status
@@ -425,9 +416,6 @@ impl<
         let mut seals = vec![];
 
         let opid = transition.id();
-        if self.trusted_op_seals.contains(&opid) {
-            panic!("remove trusted op seals injection!");
-        }
 
         if !self.status.borrow_mut().validated_opids.insert(opid) {
             self.status
