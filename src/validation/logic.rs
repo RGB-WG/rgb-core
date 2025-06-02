@@ -27,10 +27,11 @@ use amplify::confinement::{Confined, NonEmptyVec};
 use amplify::Wrapper;
 use strict_types::TypeSystem;
 
+use super::{
+    CheckedConsignment, ConsignmentApi, ContractStateAccess, ContractStateEvolve, FullOpRef,
+};
 use crate::assignments::AssignVec;
 use crate::schema::{AssignmentsSchema, GlobalSchema};
-use crate::validation::{CheckedConsignment, ConsignmentApi};
-use crate::vm::{ContractStateAccess, ContractStateEvolve, FullOpRef};
 use crate::{
     validation, AnyState, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal,
     ExposedState, GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema,
@@ -53,8 +54,7 @@ impl Schema {
         let mut status = validation::Status::new();
 
         let empty_assign_schema = AssignmentsSchema::default();
-        let (metadata_schema, global_schema, owned_schema, assign_schema, validator, ty) = match op
-        {
+        let (metadata_schema, global_schema, owned_schema, assign_schema, verifier) = match op {
             FullOpRef::Genesis(genesis) => {
                 if genesis.seal_closing_strategy != SealClosingStrategy::FirstOpretOrTapret {
                     return validation::Status::with_failure(
@@ -70,7 +70,6 @@ impl Schema {
                     &empty_assign_schema,
                     &self.genesis.assignments,
                     Verifier::None,
-                    None::<u16>,
                 )
             }
             FullOpRef::Transition(
@@ -106,7 +105,6 @@ impl Schema {
                     &transition_schema.inputs,
                     &transition_schema.assignments,
                     transition_schema.verifier,
-                    Some(transition_type.into_inner()),
                 )
             }
         };
@@ -131,8 +129,68 @@ impl Schema {
         };
 
         // Run the validation logic
-        match validator {
+        match verifier {
             Verifier::None => {}
+            Verifier::EqSums(ty) => {
+                let Some(sum_in) = prev_state
+                    .get(&ty)
+                    .into_iter()
+                    .flat_map(TypedAssigns::as_fungible)
+                    .map(Assign::as_state)
+                    .try_fold(0u64, |sum, state| sum.checked_add(state.0))
+                else {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                };
+                let Some(sum_out) = op
+                    .assignments()
+                    .get(ty)
+                    .iter()
+                    .flat_map(TypedAssigns::as_fungible)
+                    .map(Assign::as_state)
+                    .try_fold(0u64, |sum, state| sum.checked_add(state.0))
+                else {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                };
+                if sum_in != sum_out {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                }
+            }
+            Verifier::EqVals(ty) => {
+                if prev_state
+                    .get(&ty)
+                    .map(TypedAssigns::len_u16)
+                    .unwrap_or_default()
+                    != op
+                        .assignments()
+                        .get(ty)
+                        .as_ref()
+                        .map(TypedAssigns::len_u16)
+                        .unwrap_or_default()
+                {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                }
+                if prev_state
+                    .get(&ty)
+                    .into_iter()
+                    .flat_map(TypedAssigns::as_declarative)
+                    .map(Assign::as_state)
+                    .collect::<BTreeSet<_>>()
+                    != op
+                        .assignments()
+                        .get(ty)
+                        .iter()
+                        .flat_map(TypedAssigns::as_declarative)
+                        .map(Assign::as_state)
+                        .collect::<BTreeSet<_>>()
+                {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                }
+            }
         }
         if contract_state.evolve_state(op).is_err() {
             status.add_failure(validation::Failure::ContractStateFilled(opid));

@@ -149,14 +149,31 @@ impl OpSchema for TransitionSchema {
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = repr, try_from_u8, into_u8)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
-#[repr(u8)]
 pub enum Verifier {
+    /// No validation applied
     #[default]
-    None = 0,
+    #[strict_type(tag = 0x00)]
+    None,
+
+    /// Checks that the sum of previous assignments of the given type is equal to the sum of
+    /// output assignments of the same type.
+    ///
+    /// Fails if the assignment is not a fungible state, the sum is not equal or if an overflow
+    /// happens.
+    #[strict_type(tag = 0x01)]
+    EqSums(AssignmentType),
+
+    /// Checks that previous assignments of the given type are byte-equal to
+    /// output assignments of the same type. The order is not checked.
+    ///
+    /// Fails if the assignment is not a fungible state, or there is any mismatch between inputs
+    /// and outputs.
+    #[strict_type(tag = 0x02)]
+    EqVals(AssignmentType),
 }

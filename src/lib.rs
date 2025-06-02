@@ -38,8 +38,6 @@ extern crate core;
 mod operation;
 pub mod schema;
 pub mod validation;
-#[macro_use]
-pub mod vm;
 #[cfg(feature = "stl")]
 pub mod stl;
 
@@ -51,7 +49,7 @@ pub mod prelude {
     #[cfg(feature = "stl")]
     pub use super::stl;
     use super::*;
-    pub use super::{schema, validation, vm};
+    pub use super::{schema, validation};
 }
 
 pub use prelude::*;

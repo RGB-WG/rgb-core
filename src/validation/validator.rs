@@ -27,9 +27,11 @@ use commit_verify::mpc;
 use seals::txout::Witness;
 
 use super::status::{Failure, Warning};
-use super::{CheckedConsignment, ConsignmentApi, Status, Validity};
+use super::{
+    CheckedConsignment, ConsignmentApi, ContractStateAccess, ContractStateEvolve, FullOpRef,
+    Status, Validity, WitnessStatus,
+};
 use crate::operation::seal::ExposedSeal;
-use crate::vm::{ContractStateAccess, ContractStateEvolve, FullOpRef, WitnessStatus};
 use crate::{validation, ChainNet, ContractId, OpFullType, Operation, Opout, Schema, SchemaId};
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
@@ -398,18 +400,17 @@ impl<
             // Check that the anchor is committed into a transaction spending all the
             // transition inputs.
             // Here the method can do SPV proof instead of querying the indexer. The SPV
-            // proofs can be part of the consignments, but do not require .
+            // proofs can be part of the consignments.
             match self.resolver.resolve_pub_witness(witness_id) {
                 Err(err) => {
-                    // We wre unable to retrieve corresponding transaction, so can't check.
-                    // Reporting this incident and continuing further. Why this happens? No
-                    // connection to Bitcoin Core, Electrum or other backend etc. So this is not a
-                    // failure in a strict sense, however we can't be sure that the consignment is
+                    // We were unable to retrieve the corresponding transaction, so can't check.
+                    // Reporting this incident and continuing further. Why does this happen? No
+                    // connection to Bitcoin Core, Electrum or another backend etc. So this is not a
+                    // failure in a strict sense, however, we can't be sure that the consignment is
                     // valid.
                     // This also can mean that there is no known transaction with the id provided by
-                    // the anchor, i.e. consignment is invalid. We are proceeding with further
-                    // validation in order to detect the rest of problems (and reporting the
-                    // failure!)
+                    // the anchor, i.e., consignment is invalid. We are proceeding with further
+                    // validation to detect the rest of the problems (and reporting the failure!)
                     self.status
                         .add_failure(Failure::SealNoPubWitness(opid, witness_id, err));
                 }

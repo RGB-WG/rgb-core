@@ -33,7 +33,7 @@ use crate::schema::{self, SchemaId};
 use crate::validation::WitnessResolverError;
 use crate::{
     ChainNet, ContractId, OccurrencesMismatch, OpFullType, OpId, Opout, SealClosingStrategy,
-    StateType,
+    StateType, Verifier,
 };
 
 pub type UnsafeHistoryMap = HashMap<u32, HashSet<Txid>>;
@@ -291,12 +291,10 @@ pub enum Failure {
         found: StateType,
     },
 
+    Verifier(Verifier, OpId),
+
     /// contract state can't fit more data (at operation id {0}).
     ContractStateFilled(OpId),
-
-    /// Custom error by external services on top of RGB Core.
-    #[display(inner)]
-    Custom(String),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]

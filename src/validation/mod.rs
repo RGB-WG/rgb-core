@@ -25,7 +25,9 @@ mod logic;
 mod validator;
 mod consignment;
 mod status;
+mod util;
 
 pub use consignment::{CheckedConsignment, ConsignmentApi, OpRef, CONSIGNMENT_MAX_LIBS};
 pub use status::{Failure, Info, Status, UnsafeHistoryMap, Validity, Warning};
+pub use util::{ContractStateAccess, ContractStateEvolve, FullOpRef, WitnessStatus};
 pub use validator::{ResolveWitness, Validator, WitnessResolverError};
