@@ -33,7 +33,7 @@ use std::hash::Hash;
 
 use strict_encoding::{StrictDecode, StrictEncode};
 
-use crate::{ExposedState, RevealedState, StateType, LIB_NAME_RGB_COMMIT};
+use crate::{AnyState, ExposedState, StateType, LIB_NAME_RGB_COMMIT};
 
 /// An atom of an additive state, which thus can be monomorphically encrypted.
 #[derive(
@@ -52,5 +52,5 @@ pub struct FungibleState(pub u64);
 
 impl ExposedState for FungibleState {
     fn state_type(&self) -> StateType { StateType::Fungible }
-    fn state_data(&self) -> RevealedState { RevealedState::Fungible(*self) }
+    fn state_data(&self) -> AnyState { AnyState::Fungible(*self) }
 }

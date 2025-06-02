@@ -25,14 +25,14 @@ use core::hash::Hash;
 
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
-use crate::{FungibleState, RevealedData};
+use crate::{FungibleState, StructureddData};
 
 /// Marker trait for types of state holding explicit state data.
 pub trait ExposedState:
     Debug + StrictDumb + StrictEncode + StrictDecode + Eq + Ord + Clone
 {
     fn state_type(&self) -> StateType;
-    fn state_data(&self) -> RevealedState;
+    fn state_data(&self) -> AnyState;
 }
 
 /// Categories of the state
@@ -61,18 +61,18 @@ pub enum StateType {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "camelCase", tag = "type")
 )]
-pub enum RevealedState {
+pub enum AnyState {
     Void,
     Fungible(FungibleState),
-    Structured(RevealedData),
+    Structured(StructureddData),
 }
 
-impl RevealedState {
+impl AnyState {
     pub fn state_type(&self) -> StateType {
         match self {
-            RevealedState::Void => StateType::Void,
-            RevealedState::Fungible(_) => StateType::Fungible,
-            RevealedState::Structured(_) => StateType::Structured,
+            AnyState::Void => StateType::Void,
+            AnyState::Fungible(_) => StateType::Fungible,
+            AnyState::Structured(_) => StateType::Structured,
         }
     }
 }

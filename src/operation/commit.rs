@@ -37,9 +37,9 @@ use commit_verify::{
 use strict_encoding::StrictDumb;
 
 use crate::{
-    impl_serde_baid64, Assign, AssignmentType, Assignments, BundleId, ChainNet, ExposedSeal,
-    ExposedState, Ffv, FungibleState, Genesis, GlobalState, GlobalStateType, Operation,
-    RevealedData, RevealedState, SchemaId, SealClosingStrategy, SecretSeal, Transition,
+    impl_serde_baid64, AnyState, Assign, AssignmentType, Assignments, BundleId, ChainNet,
+    ExposedSeal, ExposedState, Ffv, FungibleState, Genesis, GlobalState, GlobalStateType,
+    Operation, SchemaId, SealClosingStrategy, SecretSeal, StructureddData, Transition,
     TransitionBundle, TransitionType, TypedAssigns, LIB_NAME_RGB_COMMIT,
 };
 
@@ -189,7 +189,7 @@ pub struct OpDisclose {
     pub id: OpId,
     pub seals: MediumOrdMap<AssignmentIndex, SecretSeal>,
     pub fungible: MediumOrdMap<AssignmentIndex, FungibleState>,
-    pub data: MediumOrdMap<AssignmentIndex, RevealedData>,
+    pub data: MediumOrdMap<AssignmentIndex, StructureddData>,
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -300,7 +300,7 @@ impl Transition {
     }
 }
 
-impl RevealedState {
+impl AnyState {
     fn commit_encode(&self, e: &mut CommitEngine) {
         match self {
             Self::Void => {}
@@ -313,7 +313,7 @@ impl RevealedState {
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct AssignmentCommitment {
     pub ty: AssignmentType,
-    pub state: RevealedState,
+    pub state: AnyState,
     pub seal: SecretSeal,
 }
 
@@ -371,7 +371,7 @@ impl<Seal: ExposedSeal> MerkleLeaves for Assignments<Seal> {
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GlobalCommitment {
     pub ty: GlobalStateType,
-    pub state: RevealedData,
+    pub state: StructureddData,
 }
 
 impl CommitEncode for GlobalCommitment {

@@ -25,7 +25,7 @@ use amplify::Wrapper;
 use strict_encoding::StrictType;
 
 use super::ExposedState;
-use crate::{RevealedState, StateType, LIB_NAME_RGB_COMMIT};
+use crate::{AnyState, StateType, LIB_NAME_RGB_COMMIT};
 
 /// Struct using for storing Void (i.e. absent) state
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Display, Default)]
@@ -37,7 +37,7 @@ pub struct VoidState(());
 
 impl ExposedState for VoidState {
     fn state_type(&self) -> StateType { StateType::Void }
-    fn state_data(&self) -> RevealedState { RevealedState::Void }
+    fn state_data(&self) -> AnyState { AnyState::Void }
 }
 
 #[derive(Wrapper, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, From, Display, Default)]
@@ -45,16 +45,16 @@ impl ExposedState for VoidState {
 #[wrapper(Deref, AsSlice, BorrowSlice, Hex)]
 #[derive(StrictType, StrictEncode, StrictDecode)]
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-pub struct RevealedData(SmallBlob);
+pub struct StructureddData(SmallBlob);
 
-impl RevealedData {
+impl StructureddData {
     /// Convenience constructor.
     pub fn new(value: impl Into<SmallBlob>) -> Self { Self(value.into()) }
 }
 
-impl ExposedState for RevealedData {
+impl ExposedState for StructureddData {
     fn state_type(&self) -> StateType { StateType::Structured }
-    fn state_data(&self) -> RevealedState { RevealedState::Structured(self.clone()) }
+    fn state_data(&self) -> AnyState { AnyState::Structured(self.clone()) }
 }
 
 #[cfg(feature = "serde")]
@@ -65,14 +65,14 @@ mod _serde {
 
     use super::*;
 
-    impl Serialize for RevealedData {
+    impl Serialize for StructureddData {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer {
             serializer.serialize_str(&self.to_string())
         }
     }
 
-    impl<'de> Deserialize<'de> for RevealedData {
+    impl<'de> Deserialize<'de> for StructureddData {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de> {
             let s = String::deserialize(deserializer)?;

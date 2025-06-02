@@ -40,7 +40,7 @@ pub use commit::{
     AssignmentCommitment, AssignmentIndex, BaseCommitment, BundleDisclosure, ContractId,
     DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
 };
-pub use data::{RevealedData, VoidState};
+pub use data::{StructureddData, VoidState};
 pub use fungible::FungibleState;
 pub use global::{GlobalState, GlobalValues};
 pub use layer1::{ChainNet, Layer1};
@@ -50,4 +50,4 @@ pub use operations::{
     Transition,
 };
 pub use seal::{ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal};
-pub use state::{ExposedState, RevealedState, StateType};
+pub use state::{AnyState, ExposedState, StateType};

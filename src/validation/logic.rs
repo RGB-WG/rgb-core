@@ -38,9 +38,9 @@ use crate::schema::{AssignmentsSchema, GlobalSchema};
 use crate::validation::{CheckedConsignment, ConsignmentApi};
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OrdOpRef, RgbIsa, VmContext};
 use crate::{
-    validation, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal, ExposedState,
-    GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId,
-    Operation, Opout, OwnedStateSchema, RevealedState, Schema, SealClosingStrategy, Transition,
+    validation, AnyState, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal,
+    ExposedState, GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema,
+    Metadata, OpId, Operation, Opout, OwnedStateSchema, Schema, SealClosingStrategy, Transition,
     TypedAssigns,
 };
 
@@ -478,9 +478,9 @@ impl OwnedStateSchema {
         match data {
             Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
                 match (self, state.state_data()) {
-                    (OwnedStateSchema::Declarative, RevealedState::Void) => {}
-                    (OwnedStateSchema::Fungible, RevealedState::Fungible(_)) => {}
-                    (OwnedStateSchema::Structured(sem_id), RevealedState::Structured(data)) => {
+                    (OwnedStateSchema::Declarative, AnyState::Void) => {}
+                    (OwnedStateSchema::Fungible, AnyState::Fungible(_)) => {}
+                    (OwnedStateSchema::Structured(sem_id), AnyState::Structured(data)) => {
                         if type_system
                             .strict_deserialize_type(*sem_id, data.as_ref())
                             .is_err()
