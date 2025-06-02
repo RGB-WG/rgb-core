@@ -33,8 +33,8 @@ use strict_types::SemId;
 use crate::schema::{self, SchemaId};
 use crate::validation::WitnessResolverError;
 use crate::{
-    BundleId, ChainNet, ContractId, OccurrencesMismatch, OpFullType, OpId, Opout,
-    SealClosingStrategy, StateType, Vin,
+    ChainNet, ContractId, OccurrencesMismatch, OpFullType, OpId, Opout, SealClosingStrategy,
+    StateType,
 };
 
 pub type UnsafeHistoryMap = HashMap<u32, HashSet<Txid>>;
@@ -243,31 +243,18 @@ pub enum Failure {
     CyclicGraph(OpId),
     /// operation {0} is absent from the consignment.
     OperationAbsent(OpId),
-    /// transition bundle {0} is absent in the consignment.
-    BundleAbsent(BundleId),
-    /// anchor for transitio bundle {0} is absent in the consignment.
-    AnchorAbsent(BundleId),
-    /// witness id for transition bundle {0} is absent in the consignment.
-    WitnessIdAbsent(BundleId),
+    /// anchor for transitio {0} is absent in the consignment.
+    AnchorAbsent(OpId),
+    /// witness id for transition {0} is absent in the consignment.
+    WitnessIdAbsent(OpId),
     /// bundle {0} public witness {1} is not known to the resolver; validation
     /// stopped since operations can't be consensus-ordered. The resolver
     /// responded with error {2}
-    WitnessUnresolved(BundleId, Txid, WitnessResolverError),
+    WitnessUnresolved(OpId, Txid, WitnessResolverError),
     /// operation {0} is under a different contract {1}.
     ContractMismatch(OpId, ContractId),
     /// opout {0} appears more than once as input
     DoubleSpend(Opout),
-
-    // Errors checking bundle commitments
-    /// transition bundle {0} references state transition {1} which is not
-    /// included into the bundle input map.
-    BundleExtraTransition(BundleId, OpId),
-    /// transition bundle {0} references non-existing input in witness {2} for
-    /// the state transition {1}.
-    BundleInvalidInput(BundleId, OpId, Txid),
-    /// transition bundle {0} doesn't commit to the input {1} in the witness {2}
-    /// which is an input of the state transition {3}.
-    BundleInvalidCommitment(BundleId, Vin, Txid, OpId),
 
     // Errors checking seal closing
     /// transition {opid} references state type {state_type} absent in the
@@ -282,18 +269,18 @@ pub enum Failure {
     /// seal defined in the history as a part of operation output {0} is
     /// confidential and can't be validated.
     ConfidentialSeal(Opout),
-    /// bundle {0} public witness {1} is not known to the resolver. Resolver
+    /// transition {0} public witness {1} is not known to the resolver. Resolver
     /// reported error {2}
-    SealNoPubWitness(BundleId, Txid, WitnessResolverError),
-    /// transition bundle {0} doesn't close seal with the witness {1}. Details:
+    SealNoPubWitness(OpId, Txid, WitnessResolverError),
+    /// transition {0} doesn't close seal with the witness {1}. Details:
     /// {2}
-    SealsInvalid(BundleId, Txid, String),
+    SealsInvalid(OpId, Txid, String),
     /// single-use seals for the operation {0} were not validated, which
     /// probably indicates unanchored state transition.
     SealsUnvalidated(OpId),
-    /// transition bundle {0} is not properly anchored to the witness {1}.
+    /// transition {0} is not properly anchored to the witness {1}.
     /// Details: {2}
-    MpcInvalid(BundleId, Txid, InvalidProof),
+    MpcInvalid(OpId, Txid, InvalidProof),
     /// witness transaction {0} has no taproot or OP_RETURN output.
     NoDbcOutput(Txid),
     /// first DBC-compatible output of witness transaction {0} doesn't match the provided proof

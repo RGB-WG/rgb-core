@@ -31,10 +31,7 @@ use strict_types::{CompileError, TypeLib};
 
 use crate::validation::DbcProof;
 use crate::vm::GlobalOrd;
-use crate::{
-    BundleId, Genesis, OpCommitment, Schema, TransitionBundle, LIB_NAME_RGB_COMMIT,
-    LIB_NAME_RGB_LOGIC,
-};
+use crate::{Genesis, OpCommitment, Schema, LIB_NAME_RGB_COMMIT, LIB_NAME_RGB_LOGIC};
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_COMMIT: &str =
@@ -56,8 +53,6 @@ fn _rgb_commit_stl() -> Result<TypeLib, Box<CompileError>> {
     .transpile::<Schema>()
     .transpile::<Genesis>()
     .transpile::<Txid>()
-    .transpile::<TransitionBundle>()
-    .transpile::<BundleId>()
     .transpile::<OpCommitment>()
     .compile()?)
 }

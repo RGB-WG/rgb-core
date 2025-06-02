@@ -28,17 +28,15 @@ mod state;
 pub mod seal;
 pub mod assignments;
 mod operations;
-mod bundle;
 mod layer1;
 mod commit;
 
 pub use assignments::{
     Assign, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef, TypedAssigns,
 };
-pub use bundle::{BundleId, InputOpids, TransitionBundle, UnrelatedTransition, Vin};
 pub use commit::{
-    AssignmentCommitment, AssignmentIndex, BaseCommitment, BundleDisclosure, ContractId,
-    DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
+    AssignmentCommitment, AssignmentIndex, BaseCommitment, ContractId, DiscloseHash,
+    GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
 };
 pub use data::{StructureddData, VoidState};
 pub use fungible::FungibleState;

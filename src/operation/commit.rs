@@ -20,12 +20,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::BTreeSet;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::{fmt, vec};
 
-use amplify::confinement::{Confined, MediumOrdMap, U16 as U16MAX};
+use amplify::confinement::MediumOrdMap;
 use amplify::hex::{FromHex, ToHex};
 use amplify::num::u256;
 use amplify::{hex, ByteArray, Bytes32, FromSliceError, Wrapper};
@@ -37,10 +36,10 @@ use commit_verify::{
 use strict_encoding::StrictDumb;
 
 use crate::{
-    impl_serde_baid64, AnyState, Assign, AssignmentType, Assignments, BundleId, ChainNet,
-    ExposedSeal, ExposedState, Ffv, FungibleState, Genesis, GlobalState, GlobalStateType,
-    Operation, SchemaId, SealClosingStrategy, SecretSeal, StructureddData, Transition,
-    TransitionBundle, TransitionType, TypedAssigns, LIB_NAME_RGB_COMMIT,
+    impl_serde_baid64, AnyState, Assign, AssignmentType, Assignments, ChainNet, ExposedSeal,
+    ExposedState, Ffv, FungibleState, Genesis, GlobalState, GlobalStateType, Operation, SchemaId,
+    SealClosingStrategy, SecretSeal, StructureddData, Transition, TransitionType, TypedAssigns,
+    LIB_NAME_RGB_COMMIT,
 };
 
 /// Unique contract identifier equivalent to the contract genesis commitment
@@ -120,6 +119,14 @@ impl CommitmentId for OpId {
     const TAG: &'static str = "urn:lnp-bp:rgb:operation#2024-02-03";
 }
 
+impl From<OpId> for mpc::Message {
+    fn from(id: OpId) -> Self { mpc::Message::from_inner(id.into_inner()) }
+}
+
+impl From<mpc::Message> for OpId {
+    fn from(id: mpc::Message) -> Self { OpId(id.into_inner()) }
+}
+
 impl FromStr for OpId {
     type Err = hex::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> { Self::from_hex(s) }
@@ -190,40 +197,6 @@ pub struct OpDisclose {
     pub seals: MediumOrdMap<AssignmentIndex, SecretSeal>,
     pub fungible: MediumOrdMap<AssignmentIndex, FungibleState>,
     pub data: MediumOrdMap<AssignmentIndex, StructureddData>,
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictType, StrictEncode, StrictDecode)]
-#[strict_type(lib = LIB_NAME_RGB_COMMIT)]
-#[derive(CommitEncode)]
-#[commit_encode(strategy = strict, id = DiscloseHash)]
-pub struct BundleDisclosure {
-    pub id: BundleId,
-    pub known_transitions: Confined<BTreeSet<DiscloseHash>, 1, U16MAX>,
-}
-
-impl StrictDumb for BundleDisclosure {
-    fn strict_dumb() -> Self {
-        Self {
-            id: strict_dumb!(),
-            known_transitions: Confined::with(strict_dumb!()),
-        }
-    }
-}
-
-impl TransitionBundle {
-    /// Provides summary about parts of the bundle which are revealed.
-    pub fn disclose(&self) -> BundleDisclosure {
-        BundleDisclosure {
-            id: self.bundle_id(),
-            known_transitions: Confined::from_iter_checked(
-                self.known_transitions.values().map(|t| t.disclose_hash()),
-            ),
-        }
-    }
-
-    /// Returns commitment to the bundle plus revealed data within it.
-    pub fn disclose_hash(&self) -> DiscloseHash { self.disclose().commit_id() }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]

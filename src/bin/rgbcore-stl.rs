@@ -28,7 +28,7 @@ use bp::stl::bp_core_stl;
 use commit_verify::stl::commit_verify_stl;
 use commit_verify::CommitmentLayout;
 use rgbcore::stl::{bp_consensus_stl, bp_tx_stl};
-use rgbcore::{Schema, Transition, TransitionBundle};
+use rgbcore::{Genesis, Schema, Transition};
 use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::parse_args;
 use strict_types::SystemBuilder;
@@ -138,10 +138,12 @@ Transition vesper lexicon=types+commitments
     writeln!(file, "{layout}").unwrap();
     let tt = sys.type_tree("RGBCommit.OpCommitment").unwrap();
     writeln!(file, "{tt}").unwrap();
+    let tt = sys.type_tree("RGBLogic.DbcProof").unwrap();
+    writeln!(file, "{tt}").unwrap();
     let tt = sys.type_tree("RGBCommit.Transition").unwrap();
     writeln!(file, "{tt}").unwrap();
 
-    let mut file = fs::File::create(format!("{dir}/TransitionBundle.vesper")).unwrap();
+    let mut file = fs::File::create(format!("{dir}/Genesis.vesper")).unwrap();
     writeln!(
         file,
         "{{-
@@ -155,10 +157,8 @@ Bundles vesper lexicon=types+commitments
 "
     )
     .unwrap();
-    let layout = TransitionBundle::commitment_layout();
+    let layout = Genesis::commitment_layout();
     writeln!(file, "{layout}").unwrap();
-    let tt = sys.type_tree("RGBLogic.DbcProof").unwrap();
-    writeln!(file, "{tt}").unwrap();
-    let tt = sys.type_tree("RGBCommit.TransitionBundle").unwrap();
+    let tt = sys.type_tree("RGBCommit.Genesis").unwrap();
     writeln!(file, "{tt}").unwrap();
 }

@@ -32,9 +32,9 @@ use bp::{BlockHeight, Outpoint, Txid};
 use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 
 use crate::{
-    AssignmentType, Assignments, AssignmentsRef, BundleId, ContractId, FungibleState, Genesis,
-    GlobalState, GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType, OpId, Operation,
-    StructureddData, Transition, TransitionType, TypedAssigns, LIB_NAME_RGB_LOGIC,
+    AssignmentType, Assignments, AssignmentsRef, ContractId, FungibleState, Genesis, GlobalState,
+    GlobalStateType, GraphSeal, Layer1, Metadata, OpFullType, OpId, Operation, StructureddData,
+    Transition, TransitionType, TypedAssigns, LIB_NAME_RGB_LOGIC,
 };
 
 /// The type is used during validation and computing a contract state. It
@@ -45,7 +45,7 @@ use crate::{
 pub enum OrdOpRef<'op> {
     #[from]
     Genesis(&'op Genesis),
-    Transition(&'op Transition, Txid, WitnessOrd, BundleId),
+    Transition(&'op Transition, Txid, WitnessOrd, OpId),
 }
 
 impl PartialOrd for OrdOpRef<'_> {
@@ -64,10 +64,10 @@ impl OrdOpRef<'_> {
         }
     }
 
-    pub fn bundle_id(&self) -> Option<BundleId> {
+    pub fn opid(&self) -> Option<OpId> {
         match self {
             OrdOpRef::Genesis(_) => None,
-            OrdOpRef::Transition(_, _, _, bundle_id) => Some(*bundle_id),
+            OrdOpRef::Transition(_, _, _, opid) => Some(*opid),
         }
     }
 
@@ -157,6 +157,7 @@ pub struct WitnessPos {
     #[getter(as_copy)]
     height: BlockHeight,
 
+    // TODO: Remove
     #[getter(as_copy)]
     timestamp: i64,
 }

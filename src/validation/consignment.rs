@@ -30,8 +30,8 @@ use strict_types::TypeSystem;
 
 use super::EAnchor;
 use crate::{
-    AssignmentType, AssignmentsRef, BundleId, ContractId, Genesis, GlobalState, GraphSeal,
-    Metadata, OpFullType, OpId, Operation, Schema, Transition, TransitionBundle, TypedAssigns,
+    AssignmentType, AssignmentsRef, ContractId, Genesis, GlobalState, GraphSeal, Metadata,
+    OpFullType, OpId, Operation, Schema, Transition, TypedAssigns,
 };
 
 pub const CONSIGNMENT_MAX_LIBS: usize = 1024;
@@ -123,15 +123,9 @@ impl<C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'_, C> {
 
     fn genesis(&self) -> &Genesis { self.0.genesis() }
 
-    fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter { self.0.bundle_ids() }
+    fn transitions(&self) -> impl Iterator<Item = &Transition> { self.0.transitions() }
 
-    fn bundle(&self, bundle_id: BundleId) -> Option<&TransitionBundle> {
-        self.0
-            .bundle(bundle_id)
-            .filter(|b| b.bundle_id() == bundle_id)
-    }
-
-    fn anchor(&self, bundle_id: BundleId) -> Option<(Txid, &EAnchor)> { self.0.anchor(bundle_id) }
+    fn anchor(&self, opid: OpId) -> Option<(Txid, &EAnchor)> { self.0.anchor(opid) }
 
     fn op_witness_id(&self, opid: OpId) -> Option<Txid> { self.0.op_witness_id(opid) }
 }
@@ -161,14 +155,11 @@ pub trait ConsignmentApi {
     /// Contract genesis.
     fn genesis(&self) -> &Genesis;
 
-    /// Returns iterator over all bundle ids present in the consignment.
-    fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter;
-
-    /// Returns reference to a bundle given a bundle id.
-    fn bundle(&self, bundle_id: BundleId) -> Option<&TransitionBundle>;
+    /// Returns iterator over all transition ids present in the consignment.
+    fn transitions(&self) -> impl Iterator<Item = &Transition>;
 
     /// Returns a grip given a bundle id.
-    fn anchor(&self, bundle_id: BundleId) -> Option<(Txid, &EAnchor)>;
+    fn anchor(&self, opid: OpId) -> Option<(Txid, &EAnchor)>;
 
     /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<Txid>;
