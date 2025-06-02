@@ -20,7 +20,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use aluvm::library::LibSite;
 use amplify::confinement::{TinyOrdMap, TinyOrdSet};
 use amplify::Wrapper;
 
@@ -108,8 +107,6 @@ pub struct GenesisSchema {
     pub metadata: MetaSchema,
     pub globals: GlobalSchema,
     pub assignments: AssignmentsSchema,
-    // NB: it is possible to transform option into enum covering other virtual machines
-    pub validator: Option<LibSite>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
@@ -125,7 +122,7 @@ pub struct TransitionSchema {
     pub globals: GlobalSchema,
     pub inputs: InputsSchema,
     pub assignments: AssignmentsSchema,
-    pub validator: Option<LibSite>,
+    pub verifier: Verifier,
 }
 
 impl OpSchema for GenesisSchema {
@@ -148,4 +145,39 @@ impl OpSchema for TransitionSchema {
     fn inputs(&self) -> Option<&AssignmentsSchema> { Some(&self.inputs) }
     #[inline]
     fn assignments(&self) -> &AssignmentsSchema { &self.assignments }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(StrictType, StrictEncode, StrictDecode)]
+#[strict_type(lib = LIB_NAME_RGB_COMMIT, tags = custom)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
+pub enum Verifier {
+    /// No validation applied
+    #[default]
+    #[strict_type(tag = 0x00)]
+    None,
+
+    /// Checks that the sum of previous assignments of the given type is equal to the sum of
+    /// output assignments of the same type.
+    ///
+    /// Fails if the assignment is not a fungible state, the sum is not equal or if an overflow
+    /// happens.
+    #[strict_type(tag = 0x01)]
+    EqSums(AssignmentType),
+
+    /// Checks that previous assignments of the given type are byte-equal to
+    /// output assignments of the same type. The order is not checked.
+    ///
+    /// Fails if the assignment is not a fungible state, or there is any mismatch between inputs
+    /// and outputs.
+    #[strict_type(tag = 0x02)]
+    EqVals(AssignmentType),
+
+    /// Checks that metadata contains a valid ECDSA signature over the operation id.
+    #[strict_type(tag = 0x03)]
+    CheckSigEcdsa(GlobalStateType, MetaType),
 }

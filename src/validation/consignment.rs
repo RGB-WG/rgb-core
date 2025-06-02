@@ -23,20 +23,16 @@
 //! Common API for accessing RGB contract operation graph, including individual
 //! state transitions, genesis, outputs, assignments & single-use-seal data.
 
-use aluvm::library::{Lib, LibId};
-use amplify::confinement::ConfinedOrdMap;
-use bp::Txid;
+use bc::Txid;
+use commit_verify::mpc;
 use strict_types::TypeSystem;
 
-use super::EAnchor;
 use crate::{
-    AssignmentType, AssignmentsRef, BundleId, ContractId, Genesis, GlobalState, GraphSeal,
-    Metadata, OpFullType, OpId, Operation, Schema, Transition, TransitionBundle, TypedAssigns,
+    AssignmentType, AssignmentsRef, ContractId, Genesis, GlobalState, GraphSeal, Metadata,
+    OpFullType, OpId, Operation, Schema, Transition, TypedAssigns,
 };
 
 pub const CONSIGNMENT_MAX_LIBS: usize = 1024;
-
-pub type Scripts = ConfinedOrdMap<LibId, Lib, 0, CONSIGNMENT_MAX_LIBS>;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, From)]
 pub enum OpRef<'op> {
@@ -115,23 +111,15 @@ impl<C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'_, C> {
 
     fn types(&self) -> &TypeSystem { self.0.types() }
 
-    fn scripts(&self) -> &Scripts { self.0.scripts() }
-
     fn operation(&self, opid: OpId) -> Option<OpRef> {
         self.0.operation(opid).filter(|op| op.id() == opid)
     }
 
     fn genesis(&self) -> &Genesis { self.0.genesis() }
 
-    fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter { self.0.bundle_ids() }
+    fn transitions(&self) -> impl Iterator<Item = &Transition> { self.0.transitions() }
 
-    fn bundle(&self, bundle_id: BundleId) -> Option<&TransitionBundle> {
-        self.0
-            .bundle(bundle_id)
-            .filter(|b| b.bundle_id() == bundle_id)
-    }
-
-    fn anchor(&self, bundle_id: BundleId) -> Option<(Txid, &EAnchor)> { self.0.anchor(bundle_id) }
+    fn anchor(&self, opid: OpId) -> Option<(&mpc::MerkleProof, Txid)> { self.0.anchor(opid) }
 
     fn op_witness_id(&self, opid: OpId) -> Option<Txid> { self.0.op_witness_id(opid) }
 }
@@ -150,10 +138,6 @@ pub trait ConsignmentApi {
     /// Returns reference to the type system.
     fn types(&self) -> &TypeSystem;
 
-    /// Returns reference to a collection of AluVM libraries used for the
-    /// validation.
-    fn scripts(&self) -> &Scripts;
-
     /// Retrieves reference to an operation (genesis or state transition) matching the provided id,
     /// or `None` otherwise
     fn operation(&self, opid: OpId) -> Option<OpRef>;
@@ -161,14 +145,16 @@ pub trait ConsignmentApi {
     /// Contract genesis.
     fn genesis(&self) -> &Genesis;
 
-    /// Returns iterator over all bundle ids present in the consignment.
-    fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter;
+    /// Returns iterator over all transition ids present in the consignment.
+    ///
+    /// # Nota bene
+    ///
+    /// Operations are validated in the order they are reported by this consignment API
+    fn transitions(&self) -> impl Iterator<Item = &Transition>;
 
-    /// Returns reference to a bundle given a bundle id.
-    fn bundle(&self, bundle_id: BundleId) -> Option<&TransitionBundle>;
-
-    /// Returns a grip given a bundle id.
-    fn anchor(&self, bundle_id: BundleId) -> Option<(Txid, &EAnchor)>;
+    /// Returns a an anchor - MPC Merkle proof that a given opid is committed in deterministic
+    /// bitcoin commitment.
+    fn anchor(&self, opid: OpId) -> Option<(&mpc::MerkleProof, Txid)>;
 
     /// Returns witness id for a given operation.
     fn op_witness_id(&self, opid: OpId) -> Option<Txid>;

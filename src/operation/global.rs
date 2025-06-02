@@ -21,13 +21,13 @@
 // limitations under the License.
 
 use std::collections::btree_map;
-use std::vec;
+use std::{slice, vec};
 
 use amplify::confinement::{Confined, TinyOrdMap, U16};
 use amplify::{confinement, Wrapper};
 use strict_encoding::StrictDumb;
 
-use crate::{schema, RevealedData, LIB_NAME_RGB_COMMIT};
+use crate::{schema, StructuredData, LIB_NAME_RGB_COMMIT};
 
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]
@@ -39,21 +39,28 @@ use crate::{schema, RevealedData, LIB_NAME_RGB_COMMIT};
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-pub struct GlobalValues(Confined<Vec<RevealedData>, 1, U16>);
+pub struct GlobalValues(Confined<Vec<StructuredData>, 1, U16>);
 
 impl StrictDumb for GlobalValues {
-    fn strict_dumb() -> Self { Self(Confined::with(RevealedData::strict_dumb())) }
+    fn strict_dumb() -> Self { Self(Confined::with(StructuredData::strict_dumb())) }
 }
 
 impl GlobalValues {
-    pub fn with(state: RevealedData) -> Self { GlobalValues(Confined::with(state)) }
+    pub fn with(state: StructuredData) -> Self { GlobalValues(Confined::with(state)) }
 }
 
 impl IntoIterator for GlobalValues {
-    type Item = RevealedData;
-    type IntoIter = vec::IntoIter<RevealedData>;
+    type Item = StructuredData;
+    type IntoIter = vec::IntoIter<StructuredData>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+}
+
+impl<'a> IntoIterator for &'a GlobalValues {
+    type Item = &'a StructuredData;
+    type IntoIter = slice::Iter<'a, StructuredData>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
 }
 
 #[derive(Wrapper, WrapperMut, Clone, PartialEq, Eq, Hash, Default, Debug, From)]
@@ -72,7 +79,7 @@ impl GlobalState {
     pub fn add_state(
         &mut self,
         ty: schema::GlobalStateType,
-        state: RevealedData,
+        state: StructuredData,
     ) -> Result<(), confinement::Error> {
         match self.0.get_mut(&ty) {
             Some(vec) => vec.push(state),
@@ -83,7 +90,7 @@ impl GlobalState {
     pub fn extend_state(
         &mut self,
         ty: schema::GlobalStateType,
-        iter: impl IntoIterator<Item = RevealedData>,
+        iter: impl IntoIterator<Item = StructuredData>,
     ) -> Result<(), confinement::Error> {
         match self.0.get_mut(&ty) {
             Some(vec) => vec.extend(iter),

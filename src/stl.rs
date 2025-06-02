@@ -20,28 +20,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use aluvm::stl::aluvm_stl;
-pub use bp::bc::stl::{bp_consensus_stl, bp_tx_stl};
-pub use bp::stl::bp_core_stl;
-use bp::Txid;
+pub use bc::stl::{bp_consensus_stl, bp_tx_stl};
+use bc::Txid;
 use commit_verify::stl::commit_verify_stl;
+pub use seals::stl::bp_seals_stl;
 use strict_types::stl::{std_stl, strict_types_stl};
 use strict_types::typelib::LibBuilder;
 use strict_types::{CompileError, TypeLib};
 
-use crate::validation::DbcProof;
-use crate::vm::GlobalOrd;
-use crate::{
-    BundleId, Genesis, OpCommitment, Schema, TransitionBundle, LIB_NAME_RGB_COMMIT,
-    LIB_NAME_RGB_LOGIC,
-};
+use crate::{Genesis, Schema, Transition, LIB_NAME_RGB_COMMIT};
 
 /// Strict types id for the library providing data types for RGB consensus.
 pub const LIB_ID_RGB_COMMIT: &str =
-    "stl:XbiECcs9-xlyofco-wkXoupT-gJ61JJf-XWL0DWf-INKzIp0#support-iris-depend";
-/// Strict types id for the library providing data types for RGB consensus.
-pub const LIB_ID_RGB_LOGIC: &str =
-    "stl:qolQpjNB-4ZkpJIo-U1tktjI-mwAYyEg-kOGQttY-ZoK3Loo#colombo-famous-erosion";
+    "stl:w_Ksa~Fy-cqURYmx-8ve0xzB-LSPh_ZM-pnVta9N-wFdJuxA#hope-gong-pedro";
 
 fn _rgb_commit_stl() -> Result<TypeLib, Box<CompileError>> {
     Ok(LibBuilder::with(libname!(LIB_NAME_RGB_COMMIT), [
@@ -49,42 +40,18 @@ fn _rgb_commit_stl() -> Result<TypeLib, Box<CompileError>> {
         strict_types_stl().to_dependency_types(),
         commit_verify_stl().to_dependency_types(),
         bp_tx_stl().to_dependency_types(),
-        bp_core_stl().to_dependency_types(),
-        aluvm_stl().to_dependency_types(),
+        bp_seals_stl().to_dependency_types(),
     ])
-    .transpile::<Schema>()
     .transpile::<Schema>()
     .transpile::<Genesis>()
+    .transpile::<Transition>()
     .transpile::<Txid>()
-    .transpile::<TransitionBundle>()
-    .transpile::<BundleId>()
-    .transpile::<OpCommitment>()
-    .compile()?)
-}
-
-fn _rgb_logic_stl() -> Result<TypeLib, Box<CompileError>> {
-    Ok(LibBuilder::with(libname!(LIB_NAME_RGB_LOGIC), [
-        std_stl().to_dependency_types(),
-        strict_types_stl().to_dependency_types(),
-        commit_verify_stl().to_dependency_types(),
-        bp_consensus_stl().to_dependency_types(),
-        bp_core_stl().to_dependency_types(),
-        aluvm_stl().to_dependency_types(),
-        rgb_commit_stl().to_dependency_types(),
-    ])
-    .transpile::<GlobalOrd>()
-    .transpile::<DbcProof>()
     .compile()?)
 }
 
 /// Generates strict type library providing data types for RGB consensus.
 pub fn rgb_commit_stl() -> TypeLib {
     _rgb_commit_stl().expect("invalid strict type RGB consensus commitments library")
-}
-
-/// Generates strict type library providing data types for RGB consensus.
-pub fn rgb_logic_stl() -> TypeLib {
-    _rgb_logic_stl().expect("invalid strict type RGB consensus logic library")
 }
 
 #[cfg(test)]
@@ -95,11 +62,5 @@ mod test {
     fn commit_lib_id() {
         let lib = rgb_commit_stl();
         assert_eq!(lib.id().to_string(), LIB_ID_RGB_COMMIT);
-    }
-
-    #[test]
-    fn logic_lib_id() {
-        let lib = rgb_logic_stl();
-        assert_eq!(lib.id().to_string(), LIB_ID_RGB_LOGIC);
     }
 }

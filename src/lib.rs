@@ -38,26 +38,23 @@ extern crate core;
 mod operation;
 pub mod schema;
 pub mod validation;
-#[macro_use]
-pub mod vm;
 #[cfg(feature = "stl")]
 pub mod stl;
 
 pub mod prelude {
-    pub use bp::Txid;
+    pub use bc::Txid;
     pub use operation::*;
     pub use schema::*;
 
     #[cfg(feature = "stl")]
     pub use super::stl;
     use super::*;
-    pub use super::{schema, validation, vm};
+    pub use super::{schema, validation};
 }
 
 pub use prelude::*;
 
 pub const LIB_NAME_RGB_COMMIT: &str = "RGBCommit";
-pub const LIB_NAME_RGB_LOGIC: &str = "RGBLogic";
 
 /// Fast-forward version code
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display)]

@@ -20,28 +20,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::RefCell;
 use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
-use std::rc::Rc;
 
-use aluvm::data::Number;
-use aluvm::isa::Instr;
-use aluvm::reg::{Reg32, RegA};
-use aluvm::Vm;
 use amplify::confinement::{Confined, NonEmptyVec};
 use amplify::Wrapper;
+use secp256k1::{ecdsa, Message, PublicKey};
 use strict_types::TypeSystem;
 
+use super::{
+    CheckedConsignment, ConsignmentApi, ContractStateAccess, ContractStateEvolve, FullOpRef,
+};
 use crate::assignments::AssignVec;
 use crate::schema::{AssignmentsSchema, GlobalSchema};
-use crate::validation::{CheckedConsignment, ConsignmentApi};
-use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OrdOpRef, RgbIsa, VmContext};
 use crate::{
-    validation, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal, ExposedState,
-    GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema, Metadata, OpId,
-    Operation, Opout, OwnedStateSchema, RevealedState, Schema, SealClosingStrategy, Transition,
-    TypedAssigns,
+    validation, AnyState, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal,
+    ExposedState, GlobalState, GlobalStateSchema, GlobalValues, GraphSeal, Inputs, MetaSchema,
+    Metadata, OpId, Operation, Opout, OwnedStateSchema, Schema, SealClosingStrategy, Transition,
+    TypedAssigns, Verifier,
 };
 
 impl Schema {
@@ -52,16 +48,15 @@ impl Schema {
     >(
         &'validator self,
         consignment: &'validator CheckedConsignment<'_, C>,
-        op: OrdOpRef,
-        contract_state: Rc<RefCell<S>>,
+        op: FullOpRef,
+        contract_state: &mut S,
     ) -> validation::Status {
         let opid = op.id();
         let mut status = validation::Status::new();
 
         let empty_assign_schema = AssignmentsSchema::default();
-        let (metadata_schema, global_schema, owned_schema, assign_schema, validator, ty) = match op
-        {
-            OrdOpRef::Genesis(genesis) => {
+        let (metadata_schema, global_schema, owned_schema, assign_schema, verifier) = match op {
+            FullOpRef::Genesis(genesis) => {
                 if genesis.seal_closing_strategy != SealClosingStrategy::FirstOpretOrTapret {
                     return validation::Status::with_failure(
                         validation::Failure::SchemaUnknownSealClosingStrategy(
@@ -75,11 +70,10 @@ impl Schema {
                     &self.genesis.globals,
                     &empty_assign_schema,
                     &self.genesis.assignments,
-                    self.genesis.validator,
-                    None::<u16>,
+                    Verifier::None,
                 )
             }
-            OrdOpRef::Transition(
+            FullOpRef::Transition(
                 Transition {
                     transition_type, ..
                 },
@@ -111,8 +105,7 @@ impl Schema {
                     &transition_schema.globals,
                     &transition_schema.inputs,
                     &transition_schema.assignments,
-                    transition_schema.validator,
-                    Some(transition_type.into_inner()),
+                    transition_schema.verifier,
                 )
             }
         };
@@ -120,7 +113,7 @@ impl Schema {
         status += self.validate_metadata(opid, op.metadata(), metadata_schema, consignment.types());
         status +=
             self.validate_global_state(opid, op.globals(), global_schema, consignment.types());
-        let prev_state = if let OrdOpRef::Transition(transition, ..) = op {
+        let prev_state = if let FullOpRef::Transition(transition, ..) = op {
             let prev_state = extract_prev_state(consignment, opid, &transition.inputs, &mut status);
             status += self.validate_prev_state(opid, &prev_state, owned_schema);
             prev_state
@@ -136,40 +129,107 @@ impl Schema {
             }
         };
 
-        let genesis = consignment.genesis();
-        let op_info = OpInfo::with(opid, &op, &prev_state);
-        let context = VmContext {
-            contract_id: genesis.contract_id(),
-            op_info,
-            contract_state,
-        };
-
-        // We need to run scripts as the very last step, since before that
-        // we need to make sure that the operation data match the schema, so
-        // scripts are not required to validate the structure of the state
-        if let Some(validator) = validator {
-            let scripts = consignment.scripts();
-            let mut vm = Vm::<Instr<RgbIsa<S>>>::new();
-            if let Some(ty) = ty {
-                vm.registers.set_n(RegA::A16, Reg32::Reg0, ty);
+        // Run the validation logic
+        match verifier {
+            Verifier::None => {}
+            Verifier::EqSums(ty) => {
+                let Some(sum_in) = prev_state
+                    .get(&ty)
+                    .into_iter()
+                    .flat_map(TypedAssigns::as_fungible)
+                    .map(Assign::as_state)
+                    .try_fold(0u64, |sum, state| sum.checked_add(state.0))
+                else {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                };
+                let Some(sum_out) = op
+                    .assignments()
+                    .get(ty)
+                    .iter()
+                    .flat_map(TypedAssigns::as_fungible)
+                    .map(Assign::as_state)
+                    .try_fold(0u64, |sum, state| sum.checked_add(state.0))
+                else {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                };
+                if sum_in != sum_out {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                }
             }
-            if !vm.exec(validator, |id| scripts.get(&id), &context) {
-                let error_code: Option<Number> = vm.registers.get_n(RegA::A8, Reg32::Reg0).into();
-                status.add_failure(validation::Failure::ScriptFailure(
-                    opid,
-                    error_code.map(u8::from),
-                    None,
-                ));
-                // We return here since all other validations will have no valid state to access
-                return status;
+            Verifier::EqVals(ty) => {
+                if prev_state
+                    .get(&ty)
+                    .map(TypedAssigns::len_u16)
+                    .unwrap_or_default()
+                    != op
+                        .assignments()
+                        .get(ty)
+                        .as_ref()
+                        .map(TypedAssigns::len_u16)
+                        .unwrap_or_default()
+                {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                }
+                if prev_state
+                    .get(&ty)
+                    .into_iter()
+                    .flat_map(TypedAssigns::as_declarative)
+                    .map(Assign::as_state)
+                    .collect::<BTreeSet<_>>()
+                    != op
+                        .assignments()
+                        .get(ty)
+                        .iter()
+                        .flat_map(TypedAssigns::as_declarative)
+                        .map(Assign::as_state)
+                        .collect::<BTreeSet<_>>()
+                {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                }
             }
-            let contract_state = context.contract_state;
-            if contract_state.borrow_mut().evolve_state(op).is_err() {
-                status.add_failure(validation::Failure::ContractStateFilled(opid));
-                // We return here since all other validations will have no valid state to access
-                return status;
+            Verifier::CheckSigEcdsa(glob_ty, meta_ty) => {
+                let genesis = consignment.genesis();
+                let Some(pk) = genesis
+                    .globals
+                    .get(&glob_ty)
+                    .into_iter()
+                    .flatten()
+                    .map(|pk| PublicKey::from_slice(pk.as_slice()).ok())
+                    .next()
+                    .flatten()
+                else {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                };
+                let Some(sig) = op
+                    .metadata()
+                    .get(&meta_ty)
+                    .into_iter()
+                    .map(|meta| ecdsa::Signature::from_compact(meta).ok())
+                    .next()
+                    .flatten()
+                else {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                };
+                let msg = Message::from_digest(opid.to_byte_array());
+                if sig.verify(&msg, &pk).is_err() {
+                    status.add_failure(validation::Failure::Verifier(verifier, opid));
+                    return status;
+                }
             }
         }
+        if contract_state.evolve_state(op).is_err() {
+            status.add_failure(validation::Failure::ContractStateFilled(opid));
+            // We return here since all other validations will have no valid state to access
+            return status;
+        }
+
         status
     }
 
@@ -476,21 +536,11 @@ impl OwnedStateSchema {
     ) -> validation::Status {
         let mut status = validation::Status::new();
         match data {
-            Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => {
+            Assign::Revealed { state, .. } | Assign::SecretSeal { state, .. } => {
                 match (self, state.state_data()) {
-                    (OwnedStateSchema::Declarative, RevealedState::Void) => {}
-                    (OwnedStateSchema::Fungible(schema), RevealedState::Fungible(v))
-                        if v.as_inner().fungible_type() != *schema =>
-                    {
-                        status.add_failure(validation::Failure::FungibleTypeMismatch {
-                            opid,
-                            state_type,
-                            expected: *schema,
-                            found: v.as_inner().fungible_type(),
-                        });
-                    }
-                    (OwnedStateSchema::Fungible(_), RevealedState::Fungible(_)) => {}
-                    (OwnedStateSchema::Structured(sem_id), RevealedState::Structured(data)) => {
+                    (OwnedStateSchema::Declarative, AnyState::Void) => {}
+                    (OwnedStateSchema::Fungible, AnyState::Fungible(_)) => {}
+                    (OwnedStateSchema::Structured(sem_id), AnyState::Structured(data)) => {
                         if type_system
                             .strict_deserialize_type(*sem_id, data.as_ref())
                             .is_err()

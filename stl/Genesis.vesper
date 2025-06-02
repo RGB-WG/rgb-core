@@ -1,0 +1,63 @@
+{-
+  Description: RGB Transition Bundles
+  Author: Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+  Copyright (C) 2024 LNP/BP Standards Association. All rights reserved.
+  License: Apache-2.0
+-}
+
+Bundles vesper lexicon=types+commitments
+
+commitment OpId, hasher SHA256, tagged urn:lnp-bp:rgb:operation#2024-02-03
+  serialized Genesis
+
+rec Genesis
+  is ffv, U16, aka Ffv
+  bytes schemaId, len 32, aka SchemaId
+  is timestamp, I64
+  ascii issuer, aka Identity, first AsciiPrintable, rest AsciiPrintable, len 1..4096
+  enum chainNet, ChainNet, bitcoinMainnet 0, bitcoinTestnet3 1, bitcoinTestnet4 2, bitcoinSignet 3, bitcoinRegtest 4, liquidMainnet 5, liquidTestnet 6
+  enum sealClosingStrategy, SealClosingStrategy, firstOpretOrTapret 0
+  map metadata, len 0..MAX8, aka Metadata
+    is key, U16, aka MetaType
+    bytes value, len 0..MAX16, aka MetaValue
+  map globals, len 0..MAX8, aka GlobalState
+    is key, U16, aka GlobalStateType
+    list value, len 1..MAX16, aka GlobalValues
+      bytes element, len 0..MAX16, aka StructuredData
+  map assignments, len 0..MAX16, aka AssignmentsBlindSealTxid
+    is key, U16, aka AssignmentType
+    union value, TypedAssignsBlindSealTxid
+      list declarative, len 1..MAX16, wrapped, aka AssignVecAssignVoidStateBlindSealTxid, tag 0
+        union AssignVoidStateBlindSealTxid
+          rec revealed, tag 0
+            rec seal, BlindSealTxid
+              bytes txid, len 32, aka Txid
+              is vout, U32, aka Vout
+              is blinding, U64
+            is state, Unit, aka VoidState
+          rec secretSeal, tag 1
+            bytes seal, len 32, aka SecretSeal
+            is state, Unit, aka VoidState
+      list fungible, len 1..MAX16, wrapped, aka AssignVecAssignFungibleStateBlindSealTxid, tag 1
+        union AssignFungibleStateBlindSealTxid
+          rec revealed, tag 0
+            rec seal, BlindSealTxid
+              bytes txid, len 32, aka Txid
+              is vout, U32, aka Vout
+              is blinding, U64
+            is state, U64, aka FungibleState
+          rec secretSeal, tag 1
+            bytes seal, len 32, aka SecretSeal
+            is state, U64, aka FungibleState
+      list structured, len 1..MAX16, wrapped, aka AssignVecAssignStructuredDataBlindSealTxid, tag 2
+        union AssignStructuredDataBlindSealTxid
+          rec revealed, tag 0
+            rec seal, BlindSealTxid
+              bytes txid, len 32, aka Txid
+              is vout, U32, aka Vout
+              is blinding, U64
+            bytes state, len 0..MAX16, aka StructuredData
+          rec secretSeal, tag 1
+            bytes seal, len 32, aka SecretSeal
+            bytes state, len 0..MAX16, aka StructuredData
+

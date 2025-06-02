@@ -28,26 +28,21 @@ mod state;
 pub mod seal;
 pub mod assignments;
 mod operations;
-mod bundle;
 mod layer1;
 mod commit;
 
 pub use assignments::{
     Assign, AssignData, AssignFungible, AssignRights, Assignments, AssignmentsRef, TypedAssigns,
 };
-pub use bundle::{BundleId, InputOpids, TransitionBundle, UnrelatedTransition, Vin};
-pub use commit::{
-    AssignmentCommitment, AssignmentIndex, BaseCommitment, BundleDisclosure, ContractId,
-    DiscloseHash, GlobalCommitment, OpCommitment, OpDisclose, OpId, TypeCommitment,
-};
-pub use data::{RevealedData, VoidState};
-pub use fungible::{FungibleState, RevealedValue};
+pub use commit::{ContractId, OpId};
+pub use data::{StructuredData, VoidState};
+pub use fungible::FungibleState;
 pub use global::{GlobalState, GlobalValues};
-pub use layer1::{ChainNet, Layer1};
+pub use layer1::ChainNet;
 pub use meta::{MetaValue, Metadata, MetadataError};
 pub use operations::{
     Genesis, Identity, Inputs, Operation, Opout, OpoutParseError, SealClosingStrategy, Signature,
     Transition,
 };
 pub use seal::{ExposedSeal, GenesisSeal, GraphSeal, OutputSeal, SecretSeal, TxoSeal};
-pub use state::{ExposedState, RevealedState, StateType};
+pub use state::{AnyState, ExposedState, StateType};

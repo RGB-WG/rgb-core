@@ -32,7 +32,7 @@ use strict_encoding::{StrictDecode, StrictDumb, StrictEncode};
 use super::ExposedState;
 use crate::operation::seal::GenesisSeal;
 use crate::{
-    AssignmentType, ExposedSeal, GraphSeal, RevealedData, RevealedValue, SecretSeal, StateType,
+    AssignmentType, ExposedSeal, FungibleState, GraphSeal, SecretSeal, StateType, StructuredData,
     VoidState, LIB_NAME_RGB_COMMIT,
 };
 
@@ -70,8 +70,8 @@ impl<A: StrictDumb + StrictEncode + StrictDecode> IntoIterator for AssignVec<A> 
 pub struct UnknownDataError;
 
 pub type AssignRights<Seal> = Assign<VoidState, Seal>;
-pub type AssignFungible<Seal> = Assign<RevealedValue, Seal>;
-pub type AssignData<Seal> = Assign<RevealedData, Seal>;
+pub type AssignFungible<Seal> = Assign<FungibleState, Seal>;
+pub type AssignData<Seal> = Assign<StructuredData, Seal>;
 
 /// State data are assigned to a seal definition, which means that they are
 /// owned by a person controlling spending of the seal UTXO, unless the seal
@@ -92,7 +92,7 @@ pub enum Assign<State: ExposedState, Seal: ExposedSeal> {
     #[strict_type(tag = 0x00)]
     Revealed { seal: Seal, state: State },
     #[strict_type(tag = 0x01)]
-    ConfidentialSeal { seal: SecretSeal, state: State },
+    SecretSeal { seal: SecretSeal, state: State },
 }
 
 // Consensus-critical!
@@ -115,7 +115,7 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
 
     pub fn with_seal_replaced(assignment: &Self, seal: Seal) -> Self {
         match assignment {
-            Assign::ConfidentialSeal { seal: _, state } | Assign::Revealed { seal: _, state } => {
+            Assign::SecretSeal { seal: _, state } | Assign::Revealed { seal: _, state } => {
                 Assign::Revealed {
                     seal,
                     state: state.clone(),
@@ -127,32 +127,32 @@ impl<State: ExposedState, Seal: ExposedSeal> Assign<State, Seal> {
     pub fn to_confidential_seal(&self) -> SecretSeal {
         match self {
             Assign::Revealed { seal, .. } => seal.conceal(),
-            Assign::ConfidentialSeal { seal, .. } => *seal,
+            Assign::SecretSeal { seal, .. } => *seal,
         }
     }
 
     pub fn revealed_seal(&self) -> Option<Seal> {
         match self {
             Assign::Revealed { seal, .. } => Some(*seal),
-            Assign::ConfidentialSeal { .. } => None,
+            Assign::SecretSeal { .. } => None,
         }
     }
 
-    pub fn as_revealed_state(&self) -> &State {
+    pub fn as_state(&self) -> &State {
         match self {
-            Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => state,
+            Assign::Revealed { state, .. } | Assign::SecretSeal { state, .. } => state,
         }
     }
 
-    pub fn as_revealed_state_mut(&mut self) -> &mut State {
+    pub fn as_state_mut(&mut self) -> &mut State {
         match self {
-            Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => state,
+            Assign::Revealed { state, .. } | Assign::SecretSeal { state, .. } => state,
         }
     }
 
-    pub fn into_revealed_state(self) -> State {
+    pub fn into_state(self) -> State {
         match self {
-            Assign::Revealed { state, .. } | Assign::ConfidentialSeal { state, .. } => state,
+            Assign::Revealed { state, .. } | Assign::SecretSeal { state, .. } => state,
         }
     }
 
@@ -185,11 +185,11 @@ where Self: Clone
 
     fn conceal(&self) -> Self::Concealed {
         match self {
-            Assign::Revealed { seal, state } => Self::ConfidentialSeal {
+            Assign::Revealed { seal, state } => Self::SecretSeal {
                 seal: seal.conceal(),
                 state: state.clone(),
             },
-            Assign::ConfidentialSeal { .. } => self.clone(),
+            Assign::SecretSeal { .. } => self.clone(),
         }
     }
 }
@@ -197,7 +197,7 @@ where Self: Clone
 impl<State: ExposedState> Assign<State, GenesisSeal> {
     pub fn transmutate_seals(&self) -> Assign<State, GraphSeal> {
         match self {
-            Assign::ConfidentialSeal { seal, state } => Assign::ConfidentialSeal {
+            Assign::SecretSeal { seal, state } => Assign::SecretSeal {
                 seal: *seal,
                 state: state.clone(),
             },
@@ -365,7 +365,7 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         ) {
             for assign in vec.iter_mut() {
                 match assign {
-                    Assign::ConfidentialSeal { seal, state } if *seal == revealed.conceal() => {
+                    Assign::SecretSeal { seal, state } if *seal == revealed.conceal() => {
                         *assign = Assign::Revealed {
                             seal: revealed,
                             state: state.clone(),
@@ -400,45 +400,43 @@ impl<Seal: ExposedSeal> TypedAssigns<Seal> {
         }
     }
 
-    pub fn as_structured_state_at(&self, index: u16) -> Result<&RevealedData, UnknownDataError> {
-        match self {
-            TypedAssigns::Structured(vec) => Ok(vec
-                .get(index as usize)
-                .ok_or(UnknownDataError)?
-                .as_revealed_state()),
-            _ => Err(UnknownDataError),
-        }
-    }
-
-    pub fn as_fungible_state_at(&self, index: u16) -> Result<&RevealedValue, UnknownDataError> {
-        match self {
-            TypedAssigns::Fungible(vec) => Ok(vec
-                .get(index as usize)
-                .ok_or(UnknownDataError)?
-                .as_revealed_state()),
-            _ => Err(UnknownDataError),
-        }
-    }
-
-    pub fn into_structured_state_at(self, index: u16) -> Result<RevealedData, UnknownDataError> {
+    pub fn as_structured_state_at(&self, index: u16) -> Result<&StructuredData, UnknownDataError> {
         match self {
             TypedAssigns::Structured(vec) => {
-                if index as usize >= vec.len() {
-                    return Err(UnknownDataError);
-                }
-                Ok(vec.0.release().remove(index as usize).into_revealed_state())
+                Ok(vec.get(index as usize).ok_or(UnknownDataError)?.as_state())
             }
             _ => Err(UnknownDataError),
         }
     }
 
-    pub fn into_fungible_state_at(self, index: u16) -> Result<RevealedValue, UnknownDataError> {
+    pub fn as_fungible_state_at(&self, index: u16) -> Result<&FungibleState, UnknownDataError> {
+        match self {
+            TypedAssigns::Fungible(vec) => {
+                Ok(vec.get(index as usize).ok_or(UnknownDataError)?.as_state())
+            }
+            _ => Err(UnknownDataError),
+        }
+    }
+
+    pub fn into_structured_state_at(self, index: u16) -> Result<StructuredData, UnknownDataError> {
+        match self {
+            TypedAssigns::Structured(vec) => {
+                if index as usize >= vec.len() {
+                    return Err(UnknownDataError);
+                }
+                Ok(vec.0.release().remove(index as usize).into_state())
+            }
+            _ => Err(UnknownDataError),
+        }
+    }
+
+    pub fn into_fungible_state_at(self, index: u16) -> Result<FungibleState, UnknownDataError> {
         match self {
             TypedAssigns::Fungible(vec) => {
                 if index as usize >= vec.len() {
                     return Err(UnknownDataError);
                 }
-                Ok(vec.0.release().remove(index as usize).into_revealed_state())
+                Ok(vec.0.release().remove(index as usize).into_state())
             }
             _ => Err(UnknownDataError),
         }
