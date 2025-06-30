@@ -35,7 +35,7 @@ use strict_types::TypeSystem;
 
 use crate::assignments::AssignVec;
 use crate::schema::{AssignmentsSchema, GlobalSchema};
-use crate::validation::{CheckedConsignment, ConsignmentApi};
+use crate::validation::{CheckedConsignment, ConsignmentApi, Validity};
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OpInfo, OrdOpRef, RgbIsa, VmContext};
 use crate::{
     validation, Assign, AssignmentType, Assignments, AssignmentsRef, ExposedSeal, ExposedState,
@@ -120,6 +120,10 @@ impl Schema {
         status += self.validate_metadata(opid, op.metadata(), metadata_schema, consignment.types());
         status +=
             self.validate_global_state(opid, op.globals(), global_schema, consignment.types());
+        // if we detect an invalid global state there is no point in continuing validation
+        if status.validity() == Validity::Invalid {
+            return status;
+        }
         let prev_state = if let OrdOpRef::Transition(transition, ..) = op {
             let prev_state = extract_prev_state(consignment, opid, &transition.inputs, &mut status);
             status += self.validate_prev_state(opid, &prev_state, owned_schema);

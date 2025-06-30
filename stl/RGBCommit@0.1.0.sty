@@ -1,5 +1,5 @@
 {-
-  Id: stl:XbiECcs9-xlyofco-wkXoupT-gJ61JJf-XWL0DWf-INKzIp0#support-iris-depend
+  Id: stl:f9ccbAlh-W010xVQ-RGvgiOB-FddwvKC-~zlOn90-j_YOqvw#jimmy-clark-canary
   Name: RGBCommit
   Version: 0.1.0
   Description: Consensus commitment layer for RGB smart contracts
@@ -160,11 +160,11 @@ data GlobalValues      : [RevealedData ^ 1..]
 @mnemonic(smart-pioneer-nominal)
 data Identity          : Std.AsciiPrintable, [Std.AsciiPrintable ^ ..0xfff]
 
-@mnemonic(legal-milk-gold)
-data InputOpids        : {OpId ^ 1..}
-
 @mnemonic(judo-invest-thermos)
 data Inputs            : {Opout ^ 1..}
+
+@mnemonic(voltage-vincent-exile)
+data KnownTransition   : opid OpId, transition Transition
 
 @mnemonic(arena-janet-prepare)
 data MetaDetails       : semId StrictTypes.SemId, name StrictTypes.FieldName
@@ -240,8 +240,8 @@ data Transition        : ffv Ffv
                        , assignments AssignmentsBlindSealTxPtr
                        , signature Signature?
 
-@mnemonic(isabel-duet-cover)
-data TransitionBundle  : inputMap {Bitcoin.Vout -> ^ 1.. InputOpids}, knownTransitions {OpId -> ^ 1.. Transition}
+@mnemonic(poker-harbor-today)
+data TransitionBundle  : inputMap {Opout -> ^ 1.. OpId}, knownTransitions [KnownTransition ^ 1..]
 
 @mnemonic(orbit-pattern-goblin)
 data TransitionDetails : transitionSchema TransitionSchema, name StrictTypes.FieldName

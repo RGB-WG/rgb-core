@@ -34,7 +34,7 @@ use crate::schema::{self, SchemaId};
 use crate::validation::WitnessResolverError;
 use crate::{
     BundleId, ChainNet, ContractId, OccurrencesMismatch, OpFullType, OpId, Opout,
-    SealClosingStrategy, StateType, Vin,
+    SealClosingStrategy, StateType,
 };
 
 pub type UnsafeHistoryMap = HashMap<u32, HashSet<Txid>>;
@@ -243,8 +243,6 @@ pub enum Failure {
     CyclicGraph(OpId),
     /// operation {0} is absent from the consignment.
     OperationAbsent(OpId),
-    /// transition bundle {0} is absent in the consignment.
-    BundleAbsent(BundleId),
     /// anchor for transitio bundle {0} is absent in the consignment.
     AnchorAbsent(BundleId),
     /// witness id for transition bundle {0} is absent in the consignment.
@@ -257,17 +255,20 @@ pub enum Failure {
     ContractMismatch(OpId, ContractId),
     /// opout {0} appears more than once as input
     DoubleSpend(Opout),
+    /// transition bundle {0} known transitions references a state transition which is not
+    /// in the bundle input map.
+    ExtraKnownTransition(BundleId),
+    /// transition claims ID {0} which differs from the actual one {1}
+    TransitionIdMismatch(OpId, OpId),
+    /// found a transition {0} not in order.
+    UnorderedTransition(OpId),
 
     // Errors checking bundle commitments
-    /// transition bundle {0} references state transition {1} which is not
-    /// included into the bundle input map.
-    BundleExtraTransition(BundleId, OpId),
     /// transition bundle {0} references non-existing input in witness {2} for
     /// the state transition {1}.
-    BundleInvalidInput(BundleId, OpId, Txid),
-    /// transition bundle {0} doesn't commit to the input {1} in the witness {2}
-    /// which is an input of the state transition {3}.
-    BundleInvalidCommitment(BundleId, Vin, Txid, OpId),
+    WitnessMissingInput(BundleId, OpId, Txid),
+    /// transition bundle {0} input map is missing an opout {1} in input on a known transition
+    MissingInputMapTransition(BundleId, OpId),
 
     // Errors checking seal closing
     /// transition {opid} references state type {state_type} absent in the

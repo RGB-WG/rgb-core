@@ -123,6 +123,8 @@ impl<C: ConsignmentApi> ConsignmentApi for CheckedConsignment<'_, C> {
 
     fn genesis(&self) -> &Genesis { self.0.genesis() }
 
+    fn bundles<'iter>(&self) -> impl Iterator<Item = TransitionBundle> + 'iter { self.0.bundles() }
+
     fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter { self.0.bundle_ids() }
 
     fn bundle(&self, bundle_id: BundleId) -> Option<&TransitionBundle> {
@@ -160,6 +162,9 @@ pub trait ConsignmentApi {
 
     /// Contract genesis.
     fn genesis(&self) -> &Genesis;
+
+    /// Returns iterator over all bundles present in the consignment.
+    fn bundles<'iter>(&self) -> impl Iterator<Item = TransitionBundle> + 'iter;
 
     /// Returns iterator over all bundle ids present in the consignment.
     fn bundle_ids<'iter>(&self) -> impl Iterator<Item = BundleId> + 'iter;

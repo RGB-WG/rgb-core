@@ -8,9 +8,9 @@
 Bundles vesper lexicon=types+commitments
 
 commitment BundleId, hasher SHA256, tagged urn:lnp-bp:rgb:bundle#2024-02-03
-  map InputOpids, len 1..MAX16
-    mapKey Vout
-    mapValue InputOpids
+  map OpId, len 1..MAX16
+    mapKey Opout
+    mapValue OpId
 
 union DbcProof
   rec tapret, TapretProof, wrapped, tag 0
@@ -29,71 +29,74 @@ union DbcProof
 
 rec TransitionBundle
   map inputMap, len 1..MAX16
-    is key, U32, aka Vout
-    set value, len 1..MAX16, aka InputOpids
-      bytes element, len 32, aka OpId
-  map knownTransitions, len 1..MAX16
-    bytes key, len 32, aka OpId
-    rec value, Transition
-      is ffv, U16, aka Ffv
-      bytes contractId, len 32, aka ContractId
-      is nonce, U64
-      is transitionType, U16, aka TransitionType
-      map metadata, len 0..MAX8, aka Metadata
-        is key, U16, aka MetaType
-        bytes value, len 0..MAX16, aka MetaValue
-      map globals, len 0..MAX8, aka GlobalState
-        is key, U16, aka GlobalStateType
-        list value, len 1..MAX16, aka GlobalValues
-          bytes element, len 0..MAX16, aka RevealedData
-      set inputs, len 1..MAX16, aka Inputs
-        rec Opout
-          bytes op, len 32, aka OpId
-          is ty, U16, aka AssignmentType
-          is no, U16
-      map assignments, len 0..MAX16, aka AssignmentsBlindSealTxPtr
-        is key, U16, aka AssignmentType
-        union value, TypedAssignsBlindSealTxPtr
-          list declarative, len 1..MAX16, wrapped, aka AssignVecAssignVoidStateBlindSealTxPtr, tag 0
-            union AssignVoidStateBlindSealTxPtr
-              rec revealed, tag 0
-                rec seal, BlindSealTxPtr
-                  union txid, TxPtr
-                    is witnessTx, Unit, tag 0
-                    bytes txid, len 32, wrapped, aka Txid, tag 1
-                  is vout, U32, aka Vout
-                  is blinding, U64
-                is state, Unit, aka VoidState
-              rec confidentialSeal, tag 1
-                bytes seal, len 32, aka SecretSeal
-                is state, Unit, aka VoidState
-          list fungible, len 1..MAX16, wrapped, aka AssignVecAssignRevealedValueBlindSealTxPtr, tag 1
-            union AssignRevealedValueBlindSealTxPtr
-              rec revealed, tag 0
-                rec seal, BlindSealTxPtr
-                  union txid, TxPtr
-                    is witnessTx, Unit, tag 0
-                    bytes txid, len 32, wrapped, aka Txid, tag 1
-                  is vout, U32, aka Vout
-                  is blinding, U64
-                union state, FungibleState, aka RevealedValue
-                  is bits64, U64, wrapped, tag 0
-              rec confidentialSeal, tag 1
-                bytes seal, len 32, aka SecretSeal
-                union state, FungibleState, aka RevealedValue
-                  is bits64, U64, wrapped, tag 0
-          list structured, len 1..MAX16, wrapped, aka AssignVecAssignRevealedDataBlindSealTxPtr, tag 2
-            union AssignRevealedDataBlindSealTxPtr
-              rec revealed, tag 0
-                rec seal, BlindSealTxPtr
-                  union txid, TxPtr
-                    is witnessTx, Unit, tag 0
-                    bytes txid, len 32, wrapped, aka Txid, tag 1
-                  is vout, U32, aka Vout
-                  is blinding, U64
-                bytes state, len 0..MAX16, aka RevealedData
-              rec confidentialSeal, tag 1
-                bytes seal, len 32, aka SecretSeal
-                bytes state, len 0..MAX16, aka RevealedData
-        bytes some, len 64, option, wrapped, aka Signature, tag 1
+    rec key, Opout
+      bytes op, len 32, aka OpId
+      is ty, U16, aka AssignmentType
+      is no, U16
+    bytes value, len 32, aka OpId
+  list knownTransitions, len 1..MAX16
+    rec KnownTransition
+      bytes opid, len 32, aka OpId
+      rec transition, Transition
+        is ffv, U16, aka Ffv
+        bytes contractId, len 32, aka ContractId
+        is nonce, U64
+        is transitionType, U16, aka TransitionType
+        map metadata, len 0..MAX8, aka Metadata
+          is key, U16, aka MetaType
+          bytes value, len 0..MAX16, aka MetaValue
+        map globals, len 0..MAX8, aka GlobalState
+          is key, U16, aka GlobalStateType
+          list value, len 1..MAX16, aka GlobalValues
+            bytes element, len 0..MAX16, aka RevealedData
+        set inputs, len 1..MAX16, aka Inputs
+          rec Opout
+            bytes op, len 32, aka OpId
+            is ty, U16, aka AssignmentType
+            is no, U16
+        map assignments, len 0..MAX16, aka AssignmentsBlindSealTxPtr
+          is key, U16, aka AssignmentType
+          union value, TypedAssignsBlindSealTxPtr
+            list declarative, len 1..MAX16, wrapped, aka AssignVecAssignVoidStateBlindSealTxPtr, tag 0
+              union AssignVoidStateBlindSealTxPtr
+                rec revealed, tag 0
+                  rec seal, BlindSealTxPtr
+                    union txid, TxPtr
+                      is witnessTx, Unit, tag 0
+                      bytes txid, len 32, wrapped, aka Txid, tag 1
+                    is vout, U32, aka Vout
+                    is blinding, U64
+                  is state, Unit, aka VoidState
+                rec confidentialSeal, tag 1
+                  bytes seal, len 32, aka SecretSeal
+                  is state, Unit, aka VoidState
+            list fungible, len 1..MAX16, wrapped, aka AssignVecAssignRevealedValueBlindSealTxPtr, tag 1
+              union AssignRevealedValueBlindSealTxPtr
+                rec revealed, tag 0
+                  rec seal, BlindSealTxPtr
+                    union txid, TxPtr
+                      is witnessTx, Unit, tag 0
+                      bytes txid, len 32, wrapped, aka Txid, tag 1
+                    is vout, U32, aka Vout
+                    is blinding, U64
+                  union state, FungibleState, aka RevealedValue
+                    is bits64, U64, wrapped, tag 0
+                rec confidentialSeal, tag 1
+                  bytes seal, len 32, aka SecretSeal
+                  union state, FungibleState, aka RevealedValue
+                    is bits64, U64, wrapped, tag 0
+            list structured, len 1..MAX16, wrapped, aka AssignVecAssignRevealedDataBlindSealTxPtr, tag 2
+              union AssignRevealedDataBlindSealTxPtr
+                rec revealed, tag 0
+                  rec seal, BlindSealTxPtr
+                    union txid, TxPtr
+                      is witnessTx, Unit, tag 0
+                      bytes txid, len 32, wrapped, aka Txid, tag 1
+                    is vout, U32, aka Vout
+                    is blinding, U64
+                  bytes state, len 0..MAX16, aka RevealedData
+                rec confidentialSeal, tag 1
+                  bytes seal, len 32, aka SecretSeal
+                  bytes state, len 0..MAX16, aka RevealedData
+          bytes some, len 64, option, wrapped, aka Signature, tag 1
 

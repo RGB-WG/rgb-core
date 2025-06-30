@@ -42,6 +42,12 @@ macro_rules! isa_instr {
     (sps $no:ident) => {{
         RgbIsa::Contract(ContractOp::Sps($no))
     }};
+    (cnp $t:ident,a16[$a_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::CnP($t, Reg32::from(u5::with($a_idx))))
+    }};
+    (cns $t:ident,a16[$a_idx:literal]) => {{
+        RgbIsa::Contract(ContractOp::CnS($t, Reg32::from(u5::with($a_idx))))
+    }};
     (cng $t:ident,a8[$a_idx:literal]) => {{
         RgbIsa::Contract(ContractOp::CnG($t, Reg32::from(u5::with($a_idx))))
     }};

@@ -217,7 +217,9 @@ impl TransitionBundle {
         BundleDisclosure {
             id: self.bundle_id(),
             known_transitions: Confined::from_iter_checked(
-                self.known_transitions.values().map(|t| t.disclose_hash()),
+                self.known_transitions
+                    .iter()
+                    .map(|kt| kt.transition.disclose_hash()),
             ),
         }
     }

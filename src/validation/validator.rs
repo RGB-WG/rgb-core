@@ -36,8 +36,8 @@ use super::{CheckedConsignment, ConsignmentApi, EAnchor, Status, Validity};
 use crate::operation::seal::ExposedSeal;
 use crate::vm::{ContractStateAccess, ContractStateEvolve, OrdOpRef, WitnessOrd};
 use crate::{
-    validation, BundleId, ChainNet, ContractId, OpFullType, OpId, Operation, Opout, OutputSeal,
-    Schema, SchemaId, TransitionBundle,
+    validation, BundleId, ChainNet, ContractId, KnownTransition, OpFullType, OpId, Operation,
+    Opout, OutputSeal, Schema, SchemaId, TransitionBundle,
 };
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, Error, From)]
@@ -271,15 +271,10 @@ impl<
             self.contract_state.clone(),
         );
 
-        // [VALIDATION]: Iterating over all consignment operations, ordering them according to the
-        //               consensus ordering rules.
-        let mut ops = BTreeSet::<OrdOpRef>::new();
+        // [VALIDATION]: Iterating over all consignment operations
         let mut unsafe_history_map: HashMap<u32, HashSet<Txid>> = HashMap::new();
-        for bundle_id in self.consignment.bundle_ids() {
-            let bundle = self
-                .consignment
-                .bundle(bundle_id)
-                .expect("invalid checked consignment");
+        for bundle in self.consignment.bundles() {
+            let bundle_id = bundle.bundle_id();
             let (witness_id, _) = self
                 .consignment
                 .anchor(bundle_id)
@@ -291,7 +286,6 @@ impl<
                         self.status.borrow_mut().add_failure(
                             validation::Failure::WitnessUnresolved(bundle_id, witness_id, err),
                         );
-                        // We need to stop validation there since we can't order operations
                         return;
                     }
                 };
@@ -311,20 +305,19 @@ impl<
                     }
                 }
             }
-            for op in bundle.known_transitions.values() {
-                ops.insert(OrdOpRef::Transition(op, witness_id, witness_ord, bundle_id));
+            for KnownTransition { transition, .. } in &bundle.known_transitions {
+                self.validate_operation(OrdOpRef::Transition(
+                    transition,
+                    witness_id,
+                    witness_ord,
+                    bundle_id,
+                ));
             }
         }
         if self.safe_height.is_some() && !unsafe_history_map.is_empty() {
             self.status
                 .borrow_mut()
                 .add_warning(Warning::UnsafeHistory(unsafe_history_map));
-        }
-        for op in ops {
-            // We do not skip validating archive operations since after a re-org they may
-            // become valid and thus must be added to the contract state and validated
-            // beforehand.
-            self.validate_operation(op);
         }
     }
 
@@ -370,22 +363,22 @@ impl<
 
     // *** PART III: Validating single-use-seals
     fn validate_commitments(&mut self) {
-        for bundle_id in self.consignment.bundle_ids() {
-            let Some(bundle) = self.consignment.bundle(bundle_id) else {
-                self.status
-                    .borrow_mut()
-                    .add_failure(Failure::BundleAbsent(bundle_id));
-                continue;
-            };
+        for bundle in self.consignment.bundles() {
+            let bundle_id = bundle.bundle_id();
             let Some((witness_id, anchor)) = self.consignment.anchor(bundle_id) else {
                 self.status
                     .borrow_mut()
                     .add_failure(Failure::AnchorAbsent(bundle_id));
                 continue;
             };
+            if bundle.check_opid_commitments().is_err() {
+                self.status
+                    .borrow_mut()
+                    .add_failure(Failure::ExtraKnownTransition(bundle.bundle_id()));
+            }
 
             // [VALIDATION]: We validate that the seals were properly defined on BP-type layer
-            let (seals, input_map) = self.validate_seal_definitions(bundle);
+            let (seals, input_map) = self.validate_seal_definitions(&bundle);
 
             // [VALIDATION]: We validate that the seals were properly closed on BP-type layer
             let Some(witness_tx) =
@@ -395,7 +388,7 @@ impl<
             };
 
             // [VALIDATION]: We validate bundle commitments to the input map
-            self.validate_bundle_commitments(bundle_id, bundle, witness_tx, input_map);
+            self.validate_bundle_commitments(bundle_id, &bundle, witness_tx, input_map);
         }
     }
 
@@ -411,29 +404,18 @@ impl<
         input_map: BTreeMap<OpId, BTreeSet<Outpoint>>,
     ) {
         let witness_id = pub_witness.txid();
-        for (vin, opids) in &bundle.input_map {
-            for opid in opids {
-                if self.trusted_op_seals.contains(&opid) {
-                    continue;
-                }
-                let Some(outpoints) = input_map.get(&opid) else {
+        let witness_inputs = BTreeSet::from_iter(pub_witness.inputs.iter().map(|i| i.prev_output));
+
+        for (_opout, opid) in &bundle.input_map {
+            if self.trusted_op_seals.contains(opid) {
+                continue;
+            }
+            if let Some(outpoints) = input_map.get(opid) {
+                if !outpoints.is_subset(&witness_inputs) {
                     self.status
                         .borrow_mut()
-                        .add_failure(Failure::BundleExtraTransition(bundle_id, opid));
+                        .add_failure(Failure::WitnessMissingInput(bundle_id, *opid, witness_id));
                     continue;
-                };
-                let Some(input) = pub_witness.inputs.get(vin.to_usize()) else {
-                    self.status
-                        .borrow_mut()
-                        .add_failure(Failure::BundleInvalidInput(bundle_id, opid, witness_id));
-                    continue;
-                };
-                if !outpoints.contains(&input.prev_output) {
-                    self.status
-                        .borrow_mut()
-                        .add_failure(Failure::BundleInvalidCommitment(
-                            bundle_id, *vin, witness_id, opid,
-                        ));
                 }
             }
         }
@@ -486,11 +468,16 @@ impl<
     ) -> (Vec<OutputSeal>, BTreeMap<OpId, BTreeSet<Outpoint>>) {
         let mut input_map: BTreeMap<OpId, BTreeSet<Outpoint>> = bmap!();
         let mut seals = vec![];
-        for (opid, transition) in &bundle.known_transitions {
-            if self.trusted_op_seals.contains(opid) {
+        for KnownTransition { opid, transition } in &bundle.known_transitions {
+            let opid = *opid;
+            if opid != transition.id() {
+                self.status
+                    .borrow_mut()
+                    .add_failure(Failure::TransitionIdMismatch(opid, transition.id()));
+            }
+            if self.trusted_op_seals.contains(&opid) {
                 continue;
             }
-            let opid = *opid;
 
             if !self.status.borrow_mut().validated_opids.insert(opid) {
                 self.status
@@ -507,6 +494,11 @@ impl<
                         .borrow_mut()
                         .add_failure(Failure::DoubleSpend(input));
                 }
+                if !bundle.input_map.contains_key(&input) {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::MissingInputMapTransition(bundle.bundle_id(), op));
+                }
 
                 let Some(prev_op) = self.consignment.operation(op) else {
                     // Node, referenced as the ancestor, was not found in the consignment.
@@ -516,6 +508,15 @@ impl<
                         .add_failure(Failure::OperationAbsent(op));
                     continue;
                 };
+
+                if !self.status.borrow().validated_opids.contains(&op)
+                    && prev_op.full_type().is_transition()
+                    && !self.trusted_op_seals.contains(&op)
+                {
+                    self.status
+                        .borrow_mut()
+                        .add_failure(Failure::UnorderedTransition(op));
+                }
 
                 let Some(variant) = prev_op.assignments_by_type(ty) else {
                     self.status.borrow_mut().add_failure(Failure::NoPrevState {

@@ -21,8 +21,10 @@
 // limitations under the License.
 
 use std::collections::{btree_set, BTreeMap};
+use std::hash::{Hash, Hasher};
 use std::iter;
 use std::num::ParseIntError;
+use std::str::FromStr;
 
 use amplify::confinement::{Confined, NonEmptyOrdSet, TinyOrdSet, U16};
 use amplify::{hex, Bytes64, Wrapper};
@@ -42,11 +44,6 @@ use crate::{
 #[strict_type(lib = LIB_NAME_RGB_COMMIT)]
 #[derive(CommitEncode)]
 #[commit_encode(strategy = strict, id = MerkleHash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "camelCase")
-)]
 #[display("{op}/{ty}/{no}")]
 /// RGB contract operation output pointer, defined by the operation ID and
 /// output number.
@@ -61,18 +58,87 @@ impl Opout {
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
-#[display(inner)]
+#[display(doc_comments)]
 pub enum OpoutParseError {
+    /// malformed opid. Details: {0}
     #[from]
-    InvalidNodeId(hex::Error),
+    InvalidOpid(hex::Error),
 
+    /// malformed assignment type. Details: {0}
     InvalidType(ParseIntError),
 
+    /// malformed output no. Details: {0}
     InvalidOutputNo(ParseIntError),
 
     /// invalid operation outpoint format ('{0}')
     #[display(doc_comments)]
     WrongFormat(String),
+}
+
+impl FromStr for Opout {
+    type Err = OpoutParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split('/').collect();
+        if parts.len() != 3 {
+            return Err(OpoutParseError::WrongFormat(s.to_owned()));
+        }
+
+        let op = parts[0].parse()?;
+        let ty = parts[1].parse().map_err(OpoutParseError::InvalidType)?;
+        let no = parts[2].parse().map_err(OpoutParseError::InvalidOutputNo)?;
+
+        Ok(Opout { op, ty, no })
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde_utils {
+    use serde_crate::ser::SerializeStruct;
+    use serde_crate::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::*;
+
+    impl Serialize for Opout {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            if serializer.is_human_readable() {
+                serializer.serialize_str(&self.to_string())
+            } else {
+                let mut s = serializer.serialize_struct("Opout", 3)?;
+                s.serialize_field("op", &self.op)?;
+                s.serialize_field("ty", &self.ty)?;
+                s.serialize_field("no", &self.no)?;
+                s.end()
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Opout {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            if deserializer.is_human_readable() {
+                let s = String::deserialize(deserializer)?;
+                s.parse::<Opout>().map_err(serde::de::Error::custom)
+            } else {
+                #[cfg_attr(
+                    feature = "serde",
+                    derive(Deserialize),
+                    serde(crate = "serde_crate", rename = "Opout")
+                )]
+                struct OpoutData {
+                    op: OpId,
+                    ty: AssignmentType,
+                    no: u16,
+                }
+
+                let data = OpoutData::deserialize(deserializer)?;
+                Ok(Opout {
+                    op: data.op,
+                    ty: data.ty,
+                    no: data.no,
+                })
+            }
+        }
+    }
 }
 
 #[derive(Wrapper, WrapperMut, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
@@ -283,6 +349,10 @@ pub struct Transition {
 
 impl StrictSerialize for Transition {}
 impl StrictDeserialize for Transition {}
+
+impl Hash for Transition {
+    fn hash<H: Hasher>(&self, state: &mut H) { state.write(self.id().as_slice()) }
+}
 
 impl CommitEncode for Genesis {
     type CommitmentId = OpId;
