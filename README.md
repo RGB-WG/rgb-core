@@ -1,8 +1,8 @@
 # RGB Core Library
 
-![Build](https://github.com/RGB-WG/rgb-core/workflows/Build/badge.svg)
-![Tests](https://github.com/RGB-WG/rgb-core/workflows/Tests/badge.svg)
-![Lints](https://github.com/RGB-WG/rgb-core/workflows/Lints/badge.svg)
+[![Build](https://github.com/RGB-WG/rgb-core/workflows/Build/badge.svg)](https://github.com/RGB-WG/rgb-core/actions/workflows/build.yml)
+[![Tests](https://github.com/RGB-WG/rgb-core/workflows/Tests/badge.svg)](https://github.com/RGB-WG/rgb-core/actions/workflows/test.yml)
+[![Lints](https://github.com/RGB-WG/rgb-core/workflows/Lints/badge.svg)](https://github.com/RGB-WG/rgb-core/actions/workflows/lint.yml)
 [![codecov](https://codecov.io/gh/RGB-WG/rgb-core/branch/master/graph/badge.svg)](https://codecov.io/gh/RGB-WG/rgb-core)
 
 [![crates.io](https://img.shields.io/crates/v/rgb-core)](https://crates.io/crates/rgb-core)
